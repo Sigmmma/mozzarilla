@@ -46,3 +46,11 @@ Troubleshooting:
 *    If you changed config settings and now it wont load or stuff is too screwed up to use, delete the config. You can find it at mozzarilla\mozzarilla.cfg
 
 *    Cant think of anything else, but I'll add anything I can think of.
+
+
+
+## Who do I talk to?
+
+
+
+* Devin Bobadilla (Author of mozzarilla) mosesbobadilla@gmail.com
