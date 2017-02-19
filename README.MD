@@ -1,6 +1,4 @@
-Mo's Editing Kit is a collection of tools for aiding in editing the game Halo Custom Edition. The most prominent of these tools is Mozzarilla, so here is a description of it:
-
-Mozzarilla is intended to be a complete replacement for Guerilla with additional tools and ease of use upgrades.
+Mozzarilla is a file editing program, and is intended to be a complete replacement for Halo Custom Edition's Guerilla, with additional tools and ease of use upgrades. This is a screenshot of it with some of its extra tools shown.
 ![mozzarilla_0_9_3_by_chief_01-dasy581.png](https://bitbucket.org/repo/75eEL8/images/1306443699-mozzarilla_0_9_3_by_chief_01-dasy581.png)
 
 This is the last version that I'll be releasing for a while, since I'm going back to school and looking for a job. Mozzarilla is still incomplete, however it is completely capable of replacing most of Guerilla's features right now(except previewing bitmaps and sounds). New in this version is a fully functional undo/redo system. The only thing you cant undo is importing blocks, which will warn you that it will erase your undo history. Here is a current list of the most prominent features of mozz:
