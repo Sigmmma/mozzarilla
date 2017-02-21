@@ -8,8 +8,8 @@ except ImportError:
 curr_dir = dirname(__file__)
 
 #               YYYY.MM.DD
-release_date = "2017.02.15"
-version = (0, 9, 3)
+release_date = "2017.02.20"
+version = (0, 9, 5)
 
 try:
     try:
@@ -24,7 +24,7 @@ setup(
     description='A variant of Binilla for editing binary structures for \
 games built with the Blam engine.',
     long_description=long_desc,
-    version='0.9.3',
+    version='%s.%s.%s' % version,
     url='http://bitbucket.org/moses_of_egypt/mozzarilla',
     author='Devin Bobadilla',
     author_email='MosesBobadilla@gmail.com',
@@ -33,7 +33,7 @@ games built with the Blam engine.',
         'mozzarilla',
         ],
     package_data={
-        '': ['*.txt', '*.md', '*.rst'],
+        '': ['*.txt', '*.md', '*.rst', '*.pyw'],
         'mozzarilla': [
             'styles/*.*',
             ]

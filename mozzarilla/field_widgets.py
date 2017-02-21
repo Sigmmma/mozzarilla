@@ -109,14 +109,14 @@ class DependencyFrame(ContainerFrame):
         del self.f_widget_ids_map
         del self.f_widget_ids_map_inv
 
-        self.f_widgets = self.content.children
         f_widget_ids = self.f_widget_ids
         f_widget_ids_map = self.f_widget_ids_map = {}
         f_widget_ids_map_inv = self.f_widget_ids_map_inv = {}
 
         # destroy all the child widgets of the content
-        for c in list(self.f_widgets.values()):
-            c.destroy()
+        if isinstance(self.f_widgets, dict):
+            for c in list(self.f_widgets.values()):
+                c.destroy()
 
         # if the orientation is horizontal, remake its label
         if orient == 'h':
@@ -202,6 +202,8 @@ class DependencyFrame(ContainerFrame):
                 widget.entry_string.trace('w', self.validate_filepath)
                 self.validate_filepath()
 
+        self.build_f_widget_cache()
+
         # now that the field widgets are created, position them
         if self.show.get():
             self.pose_fields()
@@ -209,8 +211,8 @@ class DependencyFrame(ContainerFrame):
     def validate_filepath(self, *args):
         try:
             desc = self.desc
-            widget_id = self.f_widget_ids_map.get(desc['NAME_MAP']['filepath'])
-            widget = self.f_widgets.get(str(widget_id))
+            wid = self.f_widget_ids_map.get(desc['NAME_MAP']['filepath'])
+            widget = self.f_widgets.get(wid)
             if widget is None:
                 return
 
@@ -267,7 +269,7 @@ class DependencyFrame(ContainerFrame):
                 if i == 0 and sub_desc['ENTRIES'] <= 2:
                     continue
 
-                w = f_widgets.get(str(f_widget_ids_map.get(i)))
+                w = f_widgets.get(f_widget_ids_map.get(i))
 
                 # if neither would be visible, dont worry about checking it
                 if not(sub_desc.get('VISIBLE',1) or all_visible) and w is None:
@@ -279,7 +281,7 @@ class DependencyFrame(ContainerFrame):
                     return
                 
             for wid in self.f_widget_ids:
-                w = f_widgets[str(wid)]
+                w = f_widgets[wid]
 
                 w.parent, w.node = node, node[w.attr_index]
                 w.reload()
@@ -319,7 +321,7 @@ class HaloRawdataFrame(RawdataFrame):
         if w_parent is not None:
             try:
                 w = w_parent.f_widgets[
-                    str(w_parent.f_widget_ids_map[attr_index])]
+                    w_parent.f_widget_ids_map[attr_index]]
                 if w.desc is not edit_state.desc:
                     return
 
