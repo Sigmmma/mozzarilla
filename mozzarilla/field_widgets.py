@@ -197,12 +197,11 @@ class DependencyFrame(ContainerFrame):
             f_widget_ids.append(wid)
             f_widget_ids_map[i] = wid
             f_widget_ids_map_inv[wid] = i
+            self.build_f_widget_cache()
 
             if sub_desc.get('NAME') == 'filepath':
                 widget.entry_string.trace('w', self.validate_filepath)
                 self.validate_filepath()
-
-        self.build_f_widget_cache()
 
         # now that the field widgets are created, position them
         if self.show.get():
