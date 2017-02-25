@@ -150,6 +150,9 @@ open_halo_tag = Container("open_tag",
     StrRawAscii("filepath", SIZE='.filepath_len'),
     Pad(8),
     UInt16("extra_data_size"),
+
+    # this extra data seems to contain things like the indices
+    # that the reflexives were on when the tag was last open
     BytesRaw("extra_data", SIZE=extra_data_size),
     )
 
