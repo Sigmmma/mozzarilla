@@ -23,15 +23,23 @@ from reclaimer.stubbs.handler import StubbsHandler
 from .config_def import config_def, guerilla_workspace_def
 from .widget_picker import *
 from .tag_window import HaloTagWindow
+from supyr_struct.defs.bitmaps.dds import dds_def
 
 default_hotkeys.update({
     '<F1>': "show_dependency_viewer",
     '<F2>': "show_tag_scanner",
+    '<F3>': "show_search_and_replace",
+    #'<F4>': "???",
 
     '<F5>': "switch_tags_dir",
     '<F6>': "set_tags_dir",
     '<F7>': "add_tags_dir",
-    '<F8>': "remove_tags_dir",
+    #'<F8>': "???",
+
+    '<F9>': "bitmap_from_dds",
+    #'<F10>': "???",
+    #'<F11>': "???",
+    #'<F12>': "???",
     })
 
 this_curr_dir = os.path.abspath(os.curdir) + PATHDIV
@@ -41,7 +49,7 @@ def sanitize_path(path):
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '0.9.3.A'
+    version = '0.9.9'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -50,6 +58,7 @@ class Mozzarilla(Binilla):
     styles_dir = dirname(__file__) + s_c.PATHDIV + "styles"
     config_path = dirname(__file__) + '%smozzarilla.cfg' % PATHDIV
     config_def = config_def
+    config_version = 2
 
     handlers = (
         HaloHandler,
@@ -142,6 +151,9 @@ class Mozzarilla(Binilla):
             label="Scan tags directory", command=self.show_tag_scanner)
         self.tools_menu.add_command(
             label="Search and replace", command=self.show_search_and_replace)
+        self.tools_menu.add_separator()
+        self.tools_menu.add_command(
+            label="Bitmap from DDS", command=self.bitmap_from_dds)
 
         self.defs_menu.add_separator()
         self.handlers = list(self.handlers)
@@ -279,6 +291,7 @@ class Mozzarilla(Binilla):
         defs = self.handler.defs
         for def_id in sorted(defs.keys()):
             filetypes.append((def_id, defs[def_id].ext))
+
         fp = askopenfilename(initialdir=self.last_load_dir,
                              filetypes=filetypes,
                              title="Select the tag to load")
@@ -684,6 +697,176 @@ class Mozzarilla(Binilla):
         self.s_and_r_window = SearchAndReplaceWindow(self)
         self.place_window_relative(self.s_and_r_window, 30, 50)
         self.s_and_r_window.focus_set()
+
+    def bitmap_from_dds(self, e=None):
+        fp = askopenfilename(initialdir=self.last_load_dir,
+                             filetypes=(("DDS image", "*.dds"), ("All", "*")),
+                             title="Select the dds to turn into a bitmap tag")
+
+        if not fp:
+            return
+
+        try:
+            dds_tag = dds_def.build(filepath=fp)
+            dds_head = dds_tag.data.header
+            caps  = dds_head.caps
+            caps2 = dds_head.caps2
+            pixelformat = dds_head.dds_pixelformat
+            pf_flags = pixelformat.flags
+            dds_pixels = dds_tag.data.pixel_data
+            if caps2.cubemap and not(caps2.pos_x and caps2.neg_x and
+                                     caps2.pos_y and caps2.neg_y and
+                                     caps2.pos_z and caps2.neg_z):
+                print("DDS image is malformed and does not " +
+                      "contain all six necessary cubemap faces.")
+                return
+            if not dds_head.flags.pixelformat:
+                print("DDS image is malformed and does not " +
+                      "contain a pixelformat structure.")
+        except Exception:
+            print("Could not load dds image")
+            return
+
+        p_of_2 = set([1 << i for i in range(32)])
+        self.last_load_dir = dirname(fp.lower())
+
+        # make the tag window
+        window = self.load_tags(filepaths='', def_id='bitm')
+        if not window:
+            return
+        window = window[0]
+
+        # get the bitmap tag and make a new bitmap block
+        bitm_tag = window.tag
+        bitm_data = bitm_tag.data.tagdata
+        bitm_data.bitmaps.STEPTREE.append()
+        bitm_block = bitm_data.bitmaps.STEPTREE[-1]
+        bitm_block.bitm_id.set_to("bitm")
+
+        # get the dimensions
+        width = dds_head.width
+        height = dds_head.height
+        depth = dds_head.depth
+        if not caps2.volume:
+            depth = 1
+
+        # set up the dimensions
+        bitm_block.width = width
+        bitm_block.height = height
+        bitm_block.depth = depth
+
+        # set the mipmap count
+        if dds_head.caps.mipmaps:
+            bitm_block.mipmaps = max(dds_head.mipmap_count-1, 0)
+
+        # set up the flags
+        fcc = pixelformat.four_cc.enum_name
+        min_w = min_h = min_d = 1
+        if fcc in ("DXT1", "DXT2", "DXT3", "DXT4", "DXT5"):
+            bitm_block.flags.compressed = True
+            min_w = min_h = 4
+        bitm_block.flags.power_of_2_dim = (
+            width in p_of_2 and height in p_of_2 and depth in p_of_2)
+
+        bitm_block.format.data = -1
+        bpp = 0  # bits per pixel
+
+        # choose bitmap format
+        if fcc == "DXT1":
+            bitm_data.format.data = 0
+            bitm_block.format.set_to("dxt1")
+            bpp = 4
+        elif fcc in ("DXT2", "DXT3"):
+            bitm_data.format.data = 1
+            bitm_block.format.set_to("dxt3")
+            bpp = 8
+        elif fcc in ("DXT4", "DXT5"):
+            bitm_data.format.data = 2
+            bitm_block.format.set_to("dxt5")
+            bpp = 8
+        elif pf_flags.RGB:
+            bitcount = pixelformat.rgb_bitcount
+            bitm_data.format.data = 4
+            bpp = 32
+            if pf_flags.has_alpha and bitcount == 32:
+                bitm_block.format.set_to("a8r8g8b8")
+            elif bitcount == 32:
+                bitm_block.format.set_to("x8r8g8b8")
+            elif bitcount in (15, 16):
+                bpp = 16
+                bitm_data.format.data = 3
+                a_mask = pixelformat.a_bitmask
+                r_mask = pixelformat.r_bitmask
+                g_mask = pixelformat.g_bitmask
+                b_mask = pixelformat.b_bitmask
+                # shift the masks right until they're all the same scale
+                while a_mask and not(a_mask&1): a_mask >> 1
+                while r_mask and not(r_mask&1): r_mask >> 1
+                while g_mask and not(g_mask&1): g_mask >> 1
+                while b_mask and not(b_mask&1): b_mask >> 1
+
+                mask_set = set((a_mask, r_mask, g_mask, b_mask))
+                if mask_set == set((5, 6)):
+                    bitm_block.format.set_to("r5g6b5")
+                elif mask_set == set((1, 5)):
+                    bitm_block.format.set_to("a1r5g5b5")
+                elif mask_set == set((4, )):
+                    bitm_block.format.set_to("a4r4g4b4")
+
+        elif pf_flags.alpha_only:
+            bpp = 8
+            bitm_block.format.set_to("a8")
+
+        elif pf_flags.luminance:
+            bpp = 8
+            if pf_flags.has_alpha:
+                bitm_block.format.set_to("a8y8")
+            else:
+                bitm_block.format.set_to("y8")
+
+        if bitm_block.format.data == -1:
+            bitm_block.format.data = 0
+            print("Unknown dds image format.")
+
+        # choose the texture type
+        pixels = dds_pixels
+        if caps2.volume:
+            bitm_data.type.data = 1
+            bitm_block.type.set_to("texture_3d")
+        elif caps2.cubemap:
+            # gotta rearrange the mipmaps and cubemap faces
+            pixels = b''
+            mip_count = bitm_block.mipmaps + 1
+            images = [None]*6*(mip_count)
+            pos = 0
+
+            # dds images store all mips for one face next to each
+            # other, and then the next set of mips for the next face.
+            for face in range(6):
+                w, h, d = width, height, depth
+                for mip in range(mip_count):
+                    i = mip*6 + face
+                    image_size = (bpp*w*h*d)//8
+                    images[i] = dds_pixels[pos: pos + image_size]
+                    
+                    w, h, d = (max(w//2, min_w),
+                               max(h//2, min_h),
+                               max(d//2, min_d))
+                    pos += image_size
+
+            for image in images:
+                pixels += image
+
+            bitm_data.type.data = 2
+            bitm_block.type.set_to("cubemap")
+
+        # place the pixels from the dds tag into the bitmap tag
+        bitm_data.processed_pixel_data.data = pixels
+
+        # reload the window to display the newly entered info
+        window.reload()
+        # prompt the user to save the tag somewhere
+        self.save_tag_as()
 
     def update_window_settings(self):
         if not self._initialized:
