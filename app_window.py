@@ -767,7 +767,8 @@ class Mozzarilla(Binilla):
         if fcc in ("DXT1", "DXT2", "DXT3", "DXT4", "DXT5"):
             bitm_block.flags.compressed = True
             min_w = min_h = 4
-        bitm_block.flags.power_of_2_dim = True
+        bitm_block.flags.power_of_2_dim = True  # even if it isn't actually a
+        # power of 2 texture, this flag need to be checked or tool will bitch
 
         bitm_block.format.data = -1
         bpp = 0  # bits per pixel
@@ -801,17 +802,17 @@ class Mozzarilla(Binilla):
                 g_mask = pixelformat.g_bitmask
                 b_mask = pixelformat.b_bitmask
                 # shift the masks right until they're all the same scale
-                while a_mask and not(a_mask&1): a_mask >> 1
-                while r_mask and not(r_mask&1): r_mask >> 1
-                while g_mask and not(g_mask&1): g_mask >> 1
-                while b_mask and not(b_mask&1): b_mask >> 1
+                while a_mask and not(a_mask&1): a_mask = a_mask >> 1
+                while r_mask and not(r_mask&1): r_mask = r_mask >> 1
+                while g_mask and not(g_mask&1): g_mask = g_mask >> 1
+                while b_mask and not(b_mask&1): b_mask = b_mask >> 1
 
                 mask_set = set((a_mask, r_mask, g_mask, b_mask))
-                if mask_set == set((5, 6)):
+                if mask_set == set((31, 63, 0)):
                     bitm_block.format.set_to("r5g6b5")
-                elif mask_set == set((1, 5)):
+                elif mask_set == set((1, 31)):
                     bitm_block.format.set_to("a1r5g5b5")
-                elif mask_set == set((4, )):
+                elif mask_set == set((15, )):
                     bitm_block.format.set_to("a4r4g4b4")
 
         elif pf_flags.alpha_only:
