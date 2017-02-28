@@ -207,8 +207,8 @@ class Mozzarilla(Binilla):
         pad_x = self.io_text.winfo_rootx() - self.winfo_x()
         pad_y = self.io_text.winfo_rooty() - self.winfo_y()
 
-        tl_corner = workspace.data.window_header.top_left_corner
-        br_corner = workspace.data.window_header.bottom_right_corner
+        tl_corner = workspace.data.window_header.t_l_corner
+        br_corner = workspace.data.window_header.b_r_corner
 
         self.geometry("%sx%s+%s+%s" % (
             br_corner.x - tl_corner.x - pad_x,
@@ -225,8 +225,8 @@ class Mozzarilla(Binilla):
 
             w = windows[0]
 
-            tl_corner = tag.window_header.top_left_corner
-            br_corner = tag.window_header.bottom_right_corner
+            tl_corner = tag.window_header.t_l_corner
+            br_corner = tag.window_header.b_r_corner
 
             self.place_window_relative(w, pad_x + tl_corner.x,
                                           pad_y + tl_corner.y)
