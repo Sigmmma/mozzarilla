@@ -94,13 +94,13 @@ config_def = TagDef("mozzarilla_config",
     )
 
 
-def extra_data_size(parent=None, new_value=None, **kwargs):
+def reflexives_size(parent=None, new_value=None, **kwargs):
     if parent is None:
         raise KeyError()
     if new_value is None:
-        return parent.extra_data_size * 4
+        return parent.reflexive_count * 4
 
-    parent.extra_data_size = new_value // 4
+    parent.reflexive_count = new_value // 4
 
 
 def has_next_tag(rawdata=None, **kwargs):
@@ -115,7 +115,7 @@ def has_next_tag(rawdata=None, **kwargs):
     except AttributeError:
         return False
 
-extra_data_sizes = {
+reflexive_counts = {
     "actv": 1, "tagc": 1, "mgs2": 1, "lens": 1,
     "elec": 2,
     "bitm": 3, "sky ": 3, "phys": 3,
@@ -129,8 +129,7 @@ extra_data_sizes = {
     "matg": 19,
     "sbsp": 53,
     "scnr": 61,
-    # This dictionary is incomplete since I havent
-    # checked all of known tags for their sizes.
+    # This is incomplete
     }
 
 window_header = Struct("window_header",
@@ -141,8 +140,8 @@ window_header = Struct("window_header",
     # These raw bytes seem to be some sort of window coordinates, but idc
     #BytesRaw("unknown3", DEFAULT=b'\xff'*16, SIZE=16),
 
-    QStruct("top_left_corner",     UInt32("x"), UInt32("y"), ORIENT="h"),
-    QStruct("bottom_right_corner", UInt32("x"), UInt32("y"), ORIENT="h"),
+    QStruct("t_l_corner",     SInt32("x"), SInt32("y"), ORIENT="h"),
+    QStruct("b_r_corner", SInt32("x"), SInt32("y"), ORIENT="h"),
     SIZE=44
     )
 
@@ -152,11 +151,11 @@ open_halo_tag = Container("open_tag",
     UInt8("filepath_len"),
     StrRawAscii("filepath", SIZE='.filepath_len'),
     Pad(8),
-    UInt16("extra_data_size"),
+    UInt16("reflexive_count"),
 
-    # this extra data seems to contain things like the indices
-    # that the reflexives were on when the tag was last open
-    BytesRaw("extra_data", SIZE=extra_data_size),
+    # this seems to contain the indices that the
+    # reflexives were on when the tag was last open
+    SInt32Array("reflexive_indices", SIZE=reflexives_size),
     )
 
 guerilla_workspace_def = TagDef("guerilla_workspace",
