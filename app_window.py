@@ -49,7 +49,7 @@ def sanitize_path(path):
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '0.9.9'
+    version = '0.9.10'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -717,12 +717,14 @@ class Mozzarilla(Binilla):
             if caps2.cubemap and not(caps2.pos_x and caps2.neg_x and
                                      caps2.pos_y and caps2.neg_y and
                                      caps2.pos_z and caps2.neg_z):
-                print("DDS image is malformed and does not " +
-                      "contain all six necessary cubemap faces.")
-                return
-            if not dds_head.flags.pixelformat:
-                print("DDS image is malformed and does not " +
-                      "contain a pixelformat structure.")
+                raise TypeError(
+                    "DDS image is malformed and does not " +
+                    "contain all six necessary cubemap faces.")
+                
+            elif not dds_head.flags.pixelformat:
+                raise TypeError(
+                    "DDS image is malformed and does not " +
+                    "contain a pixelformat structure.")
         except Exception:
             print("Could not load dds image")
             return
@@ -765,8 +767,7 @@ class Mozzarilla(Binilla):
         if fcc in ("DXT1", "DXT2", "DXT3", "DXT4", "DXT5"):
             bitm_block.flags.compressed = True
             min_w = min_h = 4
-        bitm_block.flags.power_of_2_dim = (
-            width in p_of_2 and height in p_of_2 and depth in p_of_2)
+        bitm_block.flags.power_of_2_dim = True
 
         bitm_block.format.data = -1
         bpp = 0  # bits per pixel
