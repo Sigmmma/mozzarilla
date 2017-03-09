@@ -771,7 +771,7 @@ class Mozzarilla(Binilla):
         # power of 2 texture, this flag need to be checked or tool will bitch
 
         bitm_block.format.data = -1
-        bpp = 0  # bits per pixel
+        bpp = 8  # bits per pixel
 
         # choose bitmap format
         if fcc == "DXT1":
@@ -781,11 +781,9 @@ class Mozzarilla(Binilla):
         elif fcc in ("DXT2", "DXT3"):
             bitm_data.format.data = 1
             bitm_block.format.set_to("dxt3")
-            bpp = 8
         elif fcc in ("DXT4", "DXT5"):
             bitm_data.format.data = 2
             bitm_block.format.set_to("dxt5")
-            bpp = 8
         elif pf_flags.RGB:
             bitcount = pixelformat.rgb_bitcount
             bitm_data.format.data = 4
@@ -816,19 +814,50 @@ class Mozzarilla(Binilla):
                     bitm_block.format.set_to("a4r4g4b4")
 
         elif pf_flags.alpha_only:
-            bpp = 8
             bitm_block.format.set_to("a8")
 
         elif pf_flags.luminance:
-            bpp = 8
             if pf_flags.has_alpha:
                 bitm_block.format.set_to("a8y8")
             else:
                 bitm_block.format.set_to("y8")
 
         if bitm_block.format.data == -1:
-            bitm_block.format.data = 0
+            bitm_block.format.data = bpp = 0
             print("Unknown dds image format.")
+
+        # make sure the number of mipmaps is accurate
+        face_count = 6 if caps2.cubemap else 1
+        w, h, d = width, height, depth
+        pixel_counts = []
+
+        # make a list of all the pixel counts of all the mipmaps.
+        for mip in range(bitm_block.mipmaps):
+            pixel_counts.append(w*h*d)
+            w, h, d = (max(w//2, min_w),
+                       max(h//2, min_h),
+                       max(d//2, min_d))
+
+        # see how many mipmaps can fit in the number of pixels in the dds file.
+        while True:
+            if (sum(pixel_counts)*bpp*face_count)//8 <= len(dds_pixels):
+                break
+
+            pixel_counts.pop(-1)
+
+            #the mipmap count is zero and the bitmap still will
+            #not fit within the space provided. Something's wrong
+            if len(pixel_counts) == 0:
+                print("Size of the pixel data is too small to read even " +
+                      "the fullsize image from. This dds file is malformed.")
+                break
+
+        if len(pixel_counts) != bitm_block.mipmaps:
+            print("Mipmap count is too high for the number of pixels stored " +
+                  "in the dds file. The mipmap count has been reduced from " +
+                  "%s to %s." % (bitm_block.mipmaps, len(pixel_counts)))
+
+        bitm_block.mipmaps = len(pixel_counts)
 
         # choose the texture type
         pixels = dds_pixels
