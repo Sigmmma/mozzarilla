@@ -9,6 +9,11 @@ mozz_flag_tooltips = (
     ("Whether to recalculate certain hidden values when saving.\n" +
      "For all intents and purposes, this should stay on unless\n" +
      "you are doing some form of experimenting or debugging."),
+    ("Whether or not to change the way certain fields of certain tags are\n" +
+     "displayed, so as to make it easy to write tags for a 60fps tag set.\n" +
+     "For example, the gravity scale on a physics tag must be set to 0.25\n" +
+     "if used for 60fps, but you will want it to LOOK like it is set to 1.0\n" +
+     "in the tag. Checking this flag will enable those display changes.")
     )
 
 new_method_enums = (
@@ -55,6 +60,7 @@ mozzarilla = Container("mozzarilla",
         {NAME: "show_hierarchy_window", TOOLTIP: mozz_flag_tooltips[0]},
         {NAME: "show_console_window", TOOLTIP: mozz_flag_tooltips[1]},
         {NAME: "calc_internal_data", TOOLTIP: mozz_flag_tooltips[2]},
+        {NAME: "fps_60", GUI_NAME: "60fps", TOOLTIP: mozz_flag_tooltips[3]},
         DEFAULT=sum([1<<i for i in (0, 1, 2)])
         ),
     UEnum16("selected_handler",
