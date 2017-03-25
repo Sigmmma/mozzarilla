@@ -11,8 +11,8 @@ mozz_flag_tooltips = (
      "you are doing some form of experimenting or debugging."),
     ("Whether or not to change the way certain fields of certain tags are\n" +
      "displayed, so as to make it easy to write tags for a 60fps tag set.\n" +
-     "For example, the gravity scale on a physics tag must be set to 0.25\n" +
-     "if used for 60fps, but you will want it to LOOK like it is set to 1.0\n" +
+     "For example, the rounds_per_second in a weapon must be multiplied\n" +
+     "by 1/2 if used for 60fps, but you will want it to LOOK like it isn't\n" +
      "in the tag. Checking this flag will enable those display changes.")
     )
 
