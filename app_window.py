@@ -362,8 +362,8 @@ class Mozzarilla(Binilla):
 
     def remove_tags_dir(self, e=None, index=None, manual=True):
         dirs_count = len(self.tags_dirs)
-        # need at least 2 tags dirs to delete one
-        if dirs_count < 2:
+        # need at least 2 tags dirs to delete one manually
+        if dirs_count < 2 and manual:
             return
 
         if index is None:
