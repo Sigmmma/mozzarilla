@@ -73,7 +73,8 @@ mozzarilla = Container("mozzarilla",
         EDITABLE=False, VISIBLE=False
         ),
     UInt16("last_tags_dir", VISIBLE=False, EDITABLE=False),
-    Pad(64 - 2*3),
+    UInt16("sash_position", VISIBLE=False, EDITABLE=False),
+    Pad(64 - 2*4),
 
     UInt16("tags_dirs_count", VISIBLE=False, EDITABLE=False, MIN=1),
     Pad(64 - 2*1),
