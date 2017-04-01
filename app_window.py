@@ -79,14 +79,14 @@ class Mozzarilla(Binilla):
         )
 
     # names of the handlers that MUST load tags from within their tags_dir
-    tags_dir_relative = (
+    tags_dir_relative = set((
         "Halo 1",
         "Halo 1 OS v3",
         "Halo 1 OS v4",
         "Stubbs the Zombie",
-        )
+        ))
 
-    tags_dir = ()
+    tags_dirs = ()
 
     _curr_handler_index = 0
     _curr_tags_dir_index = 0
@@ -896,9 +896,12 @@ class Mozzarilla(Binilla):
 
         tags_dir = tag.tags_dir
 
-        if tag is self.config_file or not tags_dir:
-            return
         try:
+            if tag is self.config_file or not tags_dir:
+                return
+            handler_name = self.handler_names[self._curr_handler_index]
+            if handler_name not in self.tags_dir_relative:
+                return
             handler_i = self.handlers.index(window.handler)
             title = "[%s][%s] %s" % (
                 self.handler_names[handler_i], tags_dir[:-1], tag.rel_filepath)
