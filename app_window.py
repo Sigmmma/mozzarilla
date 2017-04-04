@@ -49,7 +49,7 @@ def sanitize_path(path):
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '0.9.14'
+    version = '0.9.16'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -1086,6 +1086,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         handler = self.handler
         def_id = tag.def_id
         dependency_cache = handler.tag_ref_cache.get(def_id)
+        tags_dir = self.dependency_window.tags_dir
 
         if not dependency_cache:
             return ()
@@ -1102,7 +1103,8 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
             try:
                 ext = '.' + node.tag_class.enum_name
                 if (self.handler.treat_mode_as_mod2 and (
-                    ext == '.model' and not exists(node.filepath + ext))):
+                    ext == '.model' and not exists(
+                        tags_dir + node.filepath + ext))):
                     ext = '.gbxmodel'
             except Exception:
                 ext = ''
@@ -1126,7 +1128,8 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
             tags_dir = handler.tagsdir.lower()
 
         filepath = sani(filepath.lower())
-        if len(filepath.split(tags_dir)) != 2:
+        rel_filepath = filepath.split(tags_dir)
+        if len(rel_filepath) != 2:
             print("Specified tag is not located within the tags directory")
             return
 
@@ -1138,6 +1141,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         self.dependency_window.handler = handler
         self.dependency_window.tags_dir = tags_dir
         self.dependency_window.root_tag_path = tag.filepath
+        self.dependency_window.root_tag_text = rel_filepath[-1]
 
         self.dependency_window.reload()
 
@@ -1873,6 +1877,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
 class DependencyFrame(HierarchyFrame):
     root_tag_path = ''
+    root_tag_text = None
     _initialized = False
     handler = None
 
@@ -1905,17 +1910,20 @@ class DependencyFrame(HierarchyFrame):
             except Exception: pass
 
         root = self.root_tag_path
+        text = self.root_tag_text
+        if text is None:
+            text = root
 
         iid = self.tag_dirs_tree.insert(
-            '', 'end', iid=self.root_tag_path, text=root,
+            '', 'end', iid=self.root_tag_path, text=text,
             tags=(root, 'item'), values=('', root))
         self.destroy_subitems(iid)
 
     def get_dependencies(self, tag_path):
         tag = self.master.get_tag(tag_path)
         if tag is None:
-            print("Unable to load '%s'.\n" +
-                  "You may need to change the tag set to load this tag.")
+            print(("Unable to load '%s'.\n" % tag_path) +
+                  "    You may need to change the tag set to load this tag.")
             return ()
         handler = self.handler
         d_id = tag.def_id
@@ -1968,7 +1976,8 @@ class DependencyFrame(HierarchyFrame):
             try:
                 ext = '.' + tag_ref_block.tag_class.enum_name
                 if (self.handler.treat_mode_as_mod2 and (
-                    ext == '.model' and not exists(tag_ref_block.filepath + ext))):
+                    ext == '.model' and not exists(
+                        tags_dir + tag_ref_block.filepath + ext))):
                     ext = '.gbxmodel'
             except Exception:
                 ext = ''
