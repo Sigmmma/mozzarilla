@@ -1101,6 +1101,9 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
                 continue
             try:
                 ext = '.' + node.tag_class.enum_name
+                if (self.handler.treat_mode_as_mod2 and (
+                    ext == '.model' and not exists(node.filepath + ext))):
+                    ext = '.gbxmodel'
             except Exception:
                 ext = ''
             dependencies.append(node.filepath + ext)
@@ -1910,6 +1913,10 @@ class DependencyFrame(HierarchyFrame):
 
     def get_dependencies(self, tag_path):
         tag = self.master.get_tag(tag_path)
+        if tag is None:
+            print("Unable to load '%s'.\n" +
+                  "You may need to change the tag set to load this tag.")
+            return ()
         handler = self.handler
         d_id = tag.def_id
         dependency_cache = handler.tag_ref_cache.get(d_id)
@@ -1960,6 +1967,9 @@ class DependencyFrame(HierarchyFrame):
         for tag_ref_block in self.get_dependencies(parent_tag_path):
             try:
                 ext = '.' + tag_ref_block.tag_class.enum_name
+                if (self.handler.treat_mode_as_mod2 and (
+                    ext == '.model' and not exists(tag_ref_block.filepath + ext))):
+                    ext = '.gbxmodel'
             except Exception:
                 ext = ''
             tag_path = tag_ref_block.filepath + ext
@@ -1980,7 +1990,7 @@ class DependencyFrame(HierarchyFrame):
                 last_block = parent
                 parent = last_block.parent
 
-            # slice off the 4cc id and the period
+            # slice off the extension and the period
             dependency_name = dependency_name.split('.', 1)[-1]
 
             iid = dir_tree.insert(
