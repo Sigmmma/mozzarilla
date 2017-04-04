@@ -80,10 +80,17 @@ class DependencyFrame(ContainerFrame):
 
             self.flush()
 
-            rel_filepath = '%s.%s' % (self.node.filepath,
-                                      self.node.tag_class.enum_name)
+            ext = '.' + self.node.tag_class.enum_name
+            filepath = tags_dir + self.node.filepath
+            try:
+                if (self.tag_window.handler.treat_mode_as_mod2 and
+                    ext == '.model' and not exists(filepath + ext)):
+                    ext = '.gbxmodel'
+            except AttributeError:
+                pass
+
             app.set_handler(new_handler)
-            app.load_tags(filepaths=tags_dir + rel_filepath)
+            app.load_tags(filepaths=filepath + ext)
             app.set_handler(cur_handler)
         except Exception:
             print(format_exc())
@@ -219,8 +226,16 @@ class DependencyFrame(ContainerFrame):
             if not tags_dir.endswith(PATHDIV):
                 tags_dir += PATHDIV
 
-            filepath = '%s%s.%s' % (tags_dir, self.node.filepath,
-                                    self.node.tag_class.enum_name)
+            ext = '.' + self.node.tag_class.enum_name
+            filepath = tags_dir + self.node.filepath
+            try:
+                if (self.tag_window.handler.treat_mode_as_mod2 and
+                    ext == '.model' and not exists(filepath + ext)):
+                    ext = '.gbxmodel'
+            except AttributeError:
+                pass
+
+            filepath = filepath + ext
 
             filepath = filepath.replace('/', '\\').replace('\\', PATHDIV)
             if exists(filepath):
