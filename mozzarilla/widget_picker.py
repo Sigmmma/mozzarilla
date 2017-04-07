@@ -1,8 +1,14 @@
+from traceback import format_exc
+
 from binilla import editor_constants as e_c
 from binilla.widget_picker import *
 from binilla.widgets import BinillaWidget
 from .field_widgets import *
 from reclaimer.field_types import *
+try:
+    from reclaimer.h2x.field_types import *
+except Exception:
+    print(format_exc())
 
 e_c.TITLE_WIDTH = 28
 e_c.DEF_STRING_ENTRY_WIDTH = 30
@@ -44,3 +50,14 @@ dhwp.copy_widget(Reflexive, Struct)
 dhwp.copy_widget(TagIndex, Array)
 dhwp.copy_widget(Rawdata, BytearrayRaw)
 dhwp.copy_widget(StrLatin1Enum, SEnum32)
+
+
+#############################
+#           Halo 2
+#############################
+try:
+    dhwp.copy_widget(H2XTagIndexRef, TagIndexRef)
+    dhwp.copy_widget(H2XRawdataRef, RawdataRef)
+    dhwp.copy_widget(H2XReflexive, Reflexive)
+except Exception:
+    print(format_exc())

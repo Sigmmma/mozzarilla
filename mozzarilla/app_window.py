@@ -20,6 +20,8 @@ from reclaimer.os_v3_hek.handler import OsV3HaloHandler
 from reclaimer.os_v4_hek.handler import OsV4HaloHandler
 from reclaimer.misc.handler import MiscHaloLoader
 from reclaimer.stubbs.handler import StubbsHandler
+from reclaimer.h2x.handler import Halo2XboxHandler
+
 from .config_def import config_def, guerilla_workspace_def
 from .widget_picker import *
 from .tag_window import HaloTagWindow
@@ -67,6 +69,7 @@ class Mozzarilla(Binilla):
         MapLoader,
         MiscHaloLoader,
         StubbsHandler,
+        Halo2XboxHandler,
         )
 
     handler_names = (
@@ -76,6 +79,7 @@ class Mozzarilla(Binilla):
         "Halo 1 Map",
         "Halo 1 Misc",
         "Stubbs the Zombie",
+        "Halo 2 Xbox",
         )
 
     # names of the handlers that MUST load tags from within their tags_dir
@@ -84,6 +88,7 @@ class Mozzarilla(Binilla):
         "Halo 1 OS v3",
         "Halo 1 OS v4",
         "Stubbs the Zombie",
+        "Halo 2 Xbox",
         ))
 
     tags_dirs = ()
