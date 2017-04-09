@@ -6,7 +6,7 @@ from binilla.widgets import BinillaWidget
 from .field_widgets import *
 from reclaimer.field_types import *
 try:
-    from reclaimer.h2x.field_types import *
+    from reclaimer.h2v.field_types import *
 except Exception:
     print(format_exc())
 
@@ -56,8 +56,9 @@ dhwp.copy_widget(StrLatin1Enum, SEnum32)
 #           Halo 2
 #############################
 try:
-    dhwp.copy_widget(H2XTagIndexRef, TagIndexRef)
-    dhwp.copy_widget(H2XRawdataRef, RawdataRef)
-    dhwp.copy_widget(H2XReflexive, Reflexive)
+    dhwp.copy_widget(H2TagIndexRef, TagIndexRef)
+    dhwp.copy_widget(H2RawdataRef, RawdataRef)
+    dhwp.copy_widget(H2Reflexive, Reflexive)
+    dhwp.copy_widget(TBFDContainer, Container)
 except Exception:
     print(format_exc())
