@@ -769,6 +769,10 @@ class Mozzarilla(Binilla):
     def select_defs(self, menu_index=None, manual=True):
         names = self.handler_names
         if menu_index is None:
+            try:
+                names[self._curr_handler_index]
+            except Exception:
+                self._curr_handler_index = 0
             menu_index = self._curr_handler_index
 
         name = names[menu_index]
