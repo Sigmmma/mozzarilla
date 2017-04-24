@@ -16,7 +16,10 @@ class DependencyFrame(ContainerFrame):
 
     def browse_tag(self):
         try:
-            tags_dir = self.tag_window.tag.tags_dir
+            try:
+                tags_dir = self.tag_window.tag.tags_dir
+            except AttributeError as e:
+                return
             if not tags_dir.endswith(PATHDIV):
                 tags_dir += PATHDIV
 
@@ -69,7 +72,11 @@ class DependencyFrame(ContainerFrame):
 
     def open_tag(self):
         t_w = self.tag_window
-        tag, app = t_w.tag, t_w.app_root
+        try:
+            tag, app = t_w.tag, t_w.app_root
+        except AttributeError:
+            return
+
         cur_handler = app.handler
         new_handler = t_w.handler
 
@@ -215,35 +222,36 @@ class DependencyFrame(ContainerFrame):
             self.pose_fields()
 
     def validate_filepath(self, *args):
+        desc = self.desc
+        wid = self.f_widget_ids_map.get(desc['NAME_MAP']['filepath'])
+        widget = self.f_widgets.get(wid)
+        if widget is None:
+            return
+
         try:
-            desc = self.desc
-            wid = self.f_widget_ids_map.get(desc['NAME_MAP']['filepath'])
-            widget = self.f_widgets.get(wid)
-            if widget is None:
-                return
-
             tags_dir = self.tag_window.tag.tags_dir
-            if not tags_dir.endswith(PATHDIV):
-                tags_dir += PATHDIV
+        except AttributeError:
+            return
 
-            ext = '.' + self.node.tag_class.enum_name
-            filepath = tags_dir + self.node.filepath
-            try:
-                if (self.tag_window.handler.treat_mode_as_mod2 and
-                    ext == '.model' and not exists(filepath + ext)):
-                    ext = '.gbxmodel'
-            except AttributeError:
-                pass
+        if not tags_dir.endswith(PATHDIV):
+            tags_dir += PATHDIV
 
-            filepath = filepath + ext
+        ext = '.' + self.node.tag_class.enum_name
+        filepath = tags_dir + self.node.filepath
+        try:
+            if (self.tag_window.handler.treat_mode_as_mod2 and
+                ext == '.model' and not exists(filepath + ext)):
+                ext = '.gbxmodel'
+        except AttributeError:
+            pass
 
-            filepath = filepath.replace('/', '\\').replace('\\', PATHDIV)
-            if exists(filepath):
-                widget.data_entry.config(fg=self.text_normal_color)
-            else:
-                widget.data_entry.config(fg=self.invalid_path_color)
-        except Exception:
-            raise
+        filepath = filepath + ext
+
+        filepath = filepath.replace('/', '\\').replace('\\', PATHDIV)
+        if exists(filepath):
+            widget.data_entry.config(fg=self.text_normal_color)
+        else:
+            widget.data_entry.config(fg=self.invalid_path_color)
 
     def pose_fields(self):
         ContainerFrame.pose_fields(self)
