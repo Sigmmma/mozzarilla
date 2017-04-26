@@ -67,7 +67,6 @@ mozzarilla = Container("mozzarilla",
         "halo_1",
         "halo_1_os_v3",
         "halo_1_os_v4",
-        "halo_1_map",
         "halo_1_misc",
         "stubbs",
         EDITABLE=False, VISIBLE=False
