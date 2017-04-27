@@ -24,6 +24,7 @@ from reclaimer.stubbs.handler import StubbsHandler
 from reclaimer.meta.halo1_map import get_map_version, get_map_header,\
      get_tag_index, get_index_magic, get_map_magic, decompress_map
 
+from .ripper.hash_cacher import HashCacher
 from .config_def import config_def, guerilla_workspace_def
 from .widget_picker import *
 from .tag_window import HaloTagWindow
@@ -47,13 +48,38 @@ default_hotkeys.update({
     })
 
 this_curr_dir = os.path.abspath(os.curdir) + PATHDIV
+curr_dir = dirname(__file__)
+
+RESERVED_WINDOWS_FILENAME_MAP = {}
+INVALID_PATH_CHARS = set([str(i.to_bytes(1, 'little'), 'ascii')
+                          for i in range(32)])
+for name in ('CON', 'PRN', 'AUX', 'NUL'):
+    RESERVED_WINDOWS_FILENAME_MAP[name] = '_' + name
+for i in range(1, 9):
+    RESERVED_WINDOWS_FILENAME_MAP['COM%s' % i] = '_COM%s' % i
+    RESERVED_WINDOWS_FILENAME_MAP['LPT%s' % i] = '_LPT%s' % i
+INVALID_PATH_CHARS.add(('<', '>', ':', '"', '/', '\\', '|', '?', '*'))
 
 def sanitize_path(path):
     return path.replace('\\', '/').replace('/', PATHDIV)
 
+
+def sanitize_filename(name):
+    # make sure to rename reserved windows filenames to a valid one
+    if name in RESERVED_WINDOWS_FILENAME_MAP:
+        return RESERVED_WINDOWS_FILENAME_MAP[name]
+    final_name = ''
+    for c in name:
+        if c not in INVALID_PATH_CHARS:
+            final_name += c
+    if final_name == '':
+        raise Exception('BAD %s CHAR FILENAME' % len(name))
+    return final_name
+
+
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '0.9.16'
+    version = '0.9.18'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -95,10 +121,7 @@ class Mozzarilla(Binilla):
 
     widget_picker = def_halo_widget_picker
 
-    dependency_window = None
-    tag_scanner_window = None
-    tag_extractor_window = None
-    s_and_r_window = None
+    tool_windows = None
 
     window_panes = None
     directory_frame = None
@@ -151,11 +174,14 @@ class Mozzarilla(Binilla):
         self.tools_menu.add_command(
             label="Dependency viewer", command=self.show_dependency_viewer)
         self.tools_menu.add_command(
-            label="Tag directory scanner", command=self.show_tag_scanner)
+            label="Tags directory scanner", command=self.show_tag_scanner)
+        self.tools_menu.add_command(
+            label="Search and replace", command=self.show_search_and_replace)
+        self.tools_menu.add_separator()
         self.tools_menu.add_command(
             label="Tag extractor", command=self.show_tag_extractor_window)
         self.tools_menu.add_command(
-            label="Search and replace", command=self.show_search_and_replace)
+            label="Tag hashcacher", command=self.show_hashcacher_window)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
             label="Bitmap from DDS", command=self.bitmap_from_dds)
@@ -165,6 +191,8 @@ class Mozzarilla(Binilla):
         self.handler_names = list(self.handler_names)
 
         self.select_defs(manual=False)
+        self.tool_windows = {}
+        self.hashcacher = HashCacher()
         self._mozzarilla_initialized = True
 
         self.make_window_panes()
@@ -196,7 +224,7 @@ class Mozzarilla(Binilla):
 
     def add_tags_dir(self, e=None, tags_dir=None, manual=True):
         if tags_dir is None:
-            tags_dir = askdirectory(initialdir=self.tags_dir,
+            tags_dir = askdirectory(initialdir=self.tags_dir, parent=self,
                                     title="Select the tags directory to add")
 
         if not tags_dir:
@@ -247,7 +275,7 @@ class Mozzarilla(Binilla):
 
     def set_tags_dir(self, e=None, tags_dir=None, manual=True):
         if tags_dir is None:
-            tags_dir = askdirectory(initialdir=self.tags_dir,
+            tags_dir = askdirectory(initialdir=self.tags_dir, parent=self,
                                     title="Select the tags directory to add")
 
         if not tags_dir:
@@ -320,7 +348,7 @@ class Mozzarilla(Binilla):
             except Exception: pass
 
     def bitmap_from_dds(self, e=None):
-        fp = askopenfilename(initialdir=self.last_load_dir,
+        fp = askopenfilename(initialdir=self.last_load_dir, parent=self,
                              filetypes=(("DDS image", "*.dds"), ("All", "*")),
                              title="Select the dds to turn into a bitmap tag")
 
@@ -525,9 +553,10 @@ class Mozzarilla(Binilla):
             Binilla.load_last_workspace(self)
 
     def load_guerilla_config(self):
-        fp = askopenfilename(
-            initialdir=self.last_load_dir, title="Select the tag to load",
-            filetypes=(('Guerilla config', '*.cfg'), ('All', '*')))
+        fp = askopenfilename(initialdir=self.last_load_dir, parent=self,
+                             title="Select the tag to load",
+                             filetypes=(('Guerilla config', '*.cfg'),
+                                        ('All', '*')))
 
         if not fp:
             return
@@ -578,7 +607,7 @@ class Mozzarilla(Binilla):
             for id in sorted(defs.keys()):
                 filetypes.append((id, defs[id].ext))
             filepaths = askopenfilenames(initialdir=self.last_load_dir,
-                                         filetypes=filetypes,
+                                         filetypes=filetypes, parent=self,
                                          title="Select the tag to load")
             if not filepaths:
                 return
@@ -624,7 +653,7 @@ class Mozzarilla(Binilla):
             filetypes.append((def_id, defs[def_id].ext))
 
         fp = askopenfilename(initialdir=self.last_load_dir,
-                             filetypes=filetypes,
+                             filetypes=filetypes, parent=self,
                              title="Select the tag to load")
 
         if not fp:
@@ -748,9 +777,9 @@ class Mozzarilla(Binilla):
         if filepath is None:
             ext = tag.ext
             filepath = asksaveasfilename(
-                initialdir=dirname(tag.filepath), defaultextension=ext,
-                title="Save tag as...", filetypes=[
-                    (ext[1:], "*" + ext), ('All', '*')] )
+                initialdir=dirname(tag.filepath), parent=self,
+                defaultextension=ext, title="Save tag as...",
+                filetypes=[(ext[1:], "*" + ext), ('All', '*')])
         else:
             filepath = tag.filepath
 
@@ -820,52 +849,73 @@ class Mozzarilla(Binilla):
             self.handler = self.handlers[handler_index]
 
     def show_dependency_viewer(self, e=None):
-        if self.dependency_window is not None:
-            try: self.dependency_window.destroy()
+        w = self.tool_windows.get("dependency_window")
+        if w is not None:
+            try: w.destroy()
             except Exception: pass
+            del self.tool_windows["dependency_window"]
             return
 
         if not hasattr(self.handler, 'tag_ref_cache'):
             print("Change the current tag set.")
             return
 
-        self.dependency_window = DependencyWindow(self)
-        self.place_window_relative(self.dependency_window, 30, 50)
-        self.dependency_window.focus_set()
+        self.tool_windows["dependency_window"] = w = DependencyWindow(self)
+        self.place_window_relative(w, 30, 50); w.focus_set()
 
     def show_tag_scanner(self, e=None):
-        if self.tag_scanner_window is not None:
-            try: self.tag_scanner_window.destroy()
+        w = self.tool_windows.get("tag_scanner_window")
+        if w is not None:
+            try: w.destroy()
             except Exception: pass
+            del self.tool_windows["tag_scanner_window"]
             return
 
         if not hasattr(self.handler, 'tag_ref_cache'):
             print("Change the current tag set.")
             return
 
-        self.tag_scanner_window = TagScannerWindow(self)
-        self.place_window_relative(self.tag_scanner_window, 30, 50)
-        self.tag_scanner_window.focus_set()
+        self.tool_windows["tag_scanner_window"] = w = TagScannerWindow(self)
+        self.place_window_relative(w, 30, 50); w.focus_set()
+
+    def show_hashcacher_window(self, e=None):
+        if not self.debug_mode:
+            print("Still working on this")
+            return
+        w = self.tool_windows.get("hashcacher_window")
+        if w is not None:
+            try: w.destroy()
+            except Exception: pass
+            del self.tool_windows["hashcacher_window"]
+            return
+
+        self.tool_windows["hashcacher_window"] = w = HashcacherWindow(self)
+        self.place_window_relative(w, 30, 50); w.focus_set()
 
     def show_tag_extractor_window(self, e=None):
-        if self.tag_extractor_window is not None:
-            try: self.tag_extractor_window.destroy()
+        if not self.debug_mode:
+            print("Still working on this")
+            return
+        w = self.tool_windows.get("tag_extractor_window")
+        if w is not None:
+            try: w.destroy()
             except Exception: pass
+            del self.tool_windows["tag_extractor_window"]
             return
 
-        self.tag_extractor_window = TagExtractorWindow(self)
-        self.place_window_relative(self.tag_extractor_window, 30, 50)
-        self.tag_extractor_window.focus_set()
+        self.tool_windows["tag_extractor_window"] = w = TagExtractorWindow(self)
+        self.place_window_relative(w, 30, 50); w.focus_set()
 
     def show_search_and_replace(self, e=None):
-        if self.s_and_r_window is not None:
-            try: self.s_and_r_window.destroy()
+        w = self.tool_windows.get("s_and_r_window")
+        if w is not None:
+            try: w.destroy()
             except Exception: pass
+            del self.tool_windows["s_and_r_window"]
             return
 
-        self.s_and_r_window = SearchAndReplaceWindow(self)
-        self.place_window_relative(self.s_and_r_window, 30, 50)
-        self.s_and_r_window.focus_set()
+        self.tool_windows["s_and_r_window"] = w = SearchAndReplaceWindow(self)
+        self.place_window_relative(w, 30, 50); w.focus_set()
 
     def update_config(self, config_file=None):
         if config_file is None:
@@ -929,14 +979,9 @@ class Mozzarilla(Binilla):
             self.window_panes.config(
                 bg=self.frame_bg_color, bd=self.frame_depth)
             self.directory_frame.apply_style()
-            if self.dependency_window is not None:
-                self.dependency_window.apply_style()
-            if self.tag_scanner_window is not None:
-                self.tag_scanner_window.apply_style()
-            if self.tag_extractor_window is not None:
-                self.tag_extractor_window.apply_style()
-            if self.s_and_r_window is not None:
-                self.s_and_r_window.apply_style()
+            for w in self.tool_windows.values():
+                if w is not None:
+                    w.apply_style()
 
             try:
                 mozz = self.config_file.data.mozzarilla
@@ -965,12 +1010,13 @@ class Mozzarilla(Binilla):
         except AttributeError: print(format_exc())
         except Exception: print(format_exc())
 
+
 class DependencyWindow(tk.Toplevel, BinillaWidget):
 
     app_root = None
     handler = None
 
-    zipping = False
+    _zipping = False
     stop_zipping = False
 
     def __init__(self, app_root, *args, **kwargs): 
@@ -1047,7 +1093,8 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         for def_id in sorted(defs.keys()):
             filetypes.append((def_id, defs[def_id].ext))
         fp = askopenfilename(initialdir=self.app_root.last_load_dir,
-                             filetypes=filetypes, title="Select a tag")
+                             filetypes=filetypes,
+                             parent=self, title="Select a tag")
 
         if not fp:
             return
@@ -1057,10 +1104,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         self.tag_filepath.set(fp)
 
     def destroy(self):
-        try:
-            self.app_root.dependency_window = None
-        except AttributeError:
-            pass
+        self.app_root.tool_windows.pop("dependency_window", None)
         self.stop_zipping = True
         tk.Toplevel.destroy(self)
 
@@ -1140,7 +1184,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         self.dependency_window.reload()
 
     def recursive_zip(self):
-        if self.zipping:
+        if self._zipping:
             return
         try: self.zip_thread.join()
         except Exception: pass
@@ -1149,12 +1193,12 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         self.zip_thread.start()
 
     def _recursive_zip(self):
-        self.zipping = True
+        self._zipping = True
         try:
             self.do_recursive_zip()
         except Exception:
             print(format_exc())
-        self.zipping = False
+        self._zipping = False
 
     def do_recursive_zip(self):
         tag_path = self.tag_filepath.get().lower()
@@ -1177,11 +1221,9 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
             print("Specified tag is not located within the tags directory")
             return
 
-        self.app_root.update()
-        self.app_root.update_idletasks()
         tagzip_path = asksaveasfilename(
-            initialdir=self.app_root.last_load_dir, title="Save zipfile to...",
-            filetypes=(("zipfile", "*.zip"), ))
+            initialdir=self.app_root.last_load_dir, parent=self,
+            title="Save zipfile to...", filetypes=(("zipfile", "*.zip"), ))
 
         if not tagzip_path:
             return
@@ -1190,8 +1232,6 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         if tag is None:
             print("Could not load tag:\n    %s" % tag_path)
             return
-        self.app_root.update()
-        self.app_root.update_idletasks()
 
         # make the zipfile to put everything in
         tagzip_path = splitext(tagzip_path)[0] + ".zip"
@@ -1199,8 +1239,6 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         tags_to_zip = [tag_path.split(tags_dir)[-1]]
         new_tags_to_zip = []
         seen_tags = set()
-        self.app_root.update()
-        self.app_root.update_idletasks()
 
         with zipfile.ZipFile(tagzip_path, mode='w') as tagzip:
             # loop over all the tags and add them to the zipfile
@@ -1210,8 +1248,6 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
                     if self.stop_zipping:
                         print('Recursive zip operation cancelled.\n')
                         return
-                        self.app_root.update()
-                        self.app_root.update_idletasks()
 
                     if rel_tag_path in seen_tags:
                         continue
@@ -1219,30 +1255,21 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
 
                     try:
                         print("Adding '%s' to zipfile" % rel_tag_path)
-                        self.app_root.update()
-                        self.app_root.update_idletasks()
+                        app.update_idletasks()
                         tag = self.get_tag(tag_path)
                         new_tags_to_zip.extend(self.get_dependencies(tag))
-                        self.app_root.update()
-                        self.app_root.update_idletasks()
 
                         # try to conserve memory a bit
                         del tag
 
                         tagzip.write(tag_path, arcname=rel_tag_path)
-                        self.app_root.update()
-                        self.app_root.update_idletasks()
                     except Exception:
                         print("    Could not add '%s' to zipfile." %
                               rel_tag_path)
-                self.app_root.update()
-                self.app_root.update_idletasks()
 
                 # replace the tags to zip with the newly collected ones
                 tags_to_zip[:] = new_tags_to_zip
                 del new_tags_to_zip[:]
-                self.app_root.update()
-                self.app_root.update_idletasks()
 
         print("\nRecursive zip completed.\n")
 
@@ -1252,7 +1279,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
     app_root = None
     handler = None
 
-    scanning = False
+    _scanning = False
     stop_scanning = False
     print_interval = 5
 
@@ -1398,9 +1425,8 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             pass
 
     def dir_browse(self):
-        dirpath = askdirectory(
-            initialdir=self.directory_path.get(),
-            title="Select directory to scan")
+        dirpath = askdirectory(initialdir=self.directory_path.get(),
+                               parent=self, title="Select directory to scan")
 
         if not dirpath:
             return
@@ -1419,7 +1445,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
     def log_browse(self):
         filepath = asksaveasfilename(
             initialdir=dirname(self.logfile_entry.get()),
-            title="Save scan log to...",
+            title="Save scan log to...", parent=self,
             filetypes=(("tag scanner log", "*.log"), ('All', '*')))
 
         if not filepath:
@@ -1431,10 +1457,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         self.logfile_path.set(filepath)
 
     def destroy(self):
-        try:
-            self.app_root.tag_scanner_window = None
-        except AttributeError:
-            pass
+        self.app_root.tool_windows.pop("tag_scanner_window", None)
         self.stop_scanning = True
         tk.Toplevel.destroy(self)
 
@@ -1442,22 +1465,21 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         self.stop_scanning = True
 
     def scan_directory(self):
-        if self.scanning:
+        if self._scanning:
             return
         try: self.scan_thread.join()
         except Exception: pass
         self.scan_thread = Thread(target=self._scan_directory)
         self.scan_thread.daemon = True
         self.scan_thread.start()
-        self.update()
 
     def _scan_directory(self):
-        self.scanning = True
+        self._scanning = True
         try:
             self.scan()
         except Exception:
             print(format_exc())
-        self.scanning = False
+        self._scanning = False
 
     def scan(self):
         app = self.app_root
@@ -1494,8 +1516,6 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         id_ext_map = handler.id_ext_map
 
         print("Locating tags...")
-        try: app.io_text.update()
-        except Exception: pass
 
         for root, directories, files in os.walk(dirpath):
             if not root.endswith(PATHDIV):
@@ -1509,8 +1529,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                 if time() - c_time > p_int:
                     c_time = time()
                     print(' '*4 + filepath)
-                self.app_root.update()
-                self.app_root.update_idletasks()
+                    app.update_idletasks()
 
                 if self.stop_scanning:
                     print('Tag scanning operation cancelled.\n')
@@ -1526,9 +1545,8 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         for def_id in sorted(all_tag_paths.keys()):
             tag_ref_paths = handler.tag_ref_cache[def_id]
 
+            app.update_idletasks()
             print("Scanning '%s' tags..." % id_ext_map[def_id][1:])
-            self.app_root.update()
-            self.app_root.update_idletasks()
             tags_coll = all_tag_paths[def_id]
 
             # always display the first tag's filepath
@@ -1542,9 +1560,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                 if time() - c_time > p_int:
                     c_time = time()
                     print(' '*4 + filepath)
-
-                self.app_root.update()
-                self.app_root.update_idletasks()
+                    app.update_idletasks()
 
                 tag = self.get_tag(tagsdir + filepath)
                 if tag is None:
@@ -1553,8 +1569,6 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                 try:
                     missed = get_nodes(tag_ref_paths, tag.data,
                                        get_tagref_invalid)
-                    self.app_root.update()
-                    self.app_root.update_idletasks()
 
                     if not missed:
                         continue
@@ -1571,13 +1585,9 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                         except Exception:
                             ext = ''
                         debuglog += '%s%s\n' % (' '*8, block.STEPTREE + ext)
-                        self.app_root.update()
-                        self.app_root.update_idletasks()
 
                 except Exception:
                     print("    Could not scan '%s'" % tag.filepath)
-                    try: app.io_text.update()
-                    except Exception: pass
                     continue
 
             if self.stop_scanning:
@@ -1585,8 +1595,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
         print("\nScanning took %s seconds." % int(time() - s_time))
         print("Writing logfile to %s..." % logpath)
-        self.app_root.update()
-        self.app_root.update_idletasks()
+        app.update_idletasks()
 
         # make and write to the logfile
         try:
@@ -1597,15 +1606,11 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             pass
 
         print("Could not create log. Printing log to console instead.\n\n")
-        self.app_root.update()
-        self.app_root.update_idletasks()
         for line in debuglog.split('\n'):
             try:
                 print(line)
             except Exception:
                 print("<COULD NOT PRINT THIS LINE>")
-            self.app_root.update()
-            self.app_root.update_idletasks()
 
         print("Scan completed.\n")
 
@@ -2068,10 +2073,7 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
                 selectforeground=self.text_highlighted_color)
 
     def destroy(self):
-        try:
-            self.app_root.s_and_r_window = None
-        except AttributeError:
-            pass
+        self.app_root.tool_windows.pop("s_and_r_window", None)
         tk.Toplevel.destroy(self)
 
     def search(self, e=None):
@@ -2180,6 +2182,7 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
 
 
 class TagExtractorWindow(BinillaWidget, tk.Toplevel):
+    app_root = None
     map_path = None
     out_dir = None
 
@@ -2333,6 +2336,10 @@ class TagExtractorWindow(BinillaWidget, tk.Toplevel):
         self.apply_style()
         self.transient(app_root)
 
+    def destroy(self):
+        self.app_root.tool_windows.pop("tag_extractor_window", None)
+        tk.Toplevel.destroy(self)
+
     def queue_add(self, e=None):
         if not self._map_loaded:
             return
@@ -2480,7 +2487,8 @@ class TagExtractorWindow(BinillaWidget, tk.Toplevel):
 
     def map_path_browse(self):
         fp = askopenfilename(
-            initialdir=self.app_root.last_load_dir, title="Select map to load",
+            initialdir=self.app_root.last_load_dir,
+            title="Select map to load", parent=self,
             filetypes=(("Halo mapfile", "*.map"),
                        ("Halo mapfile(extra sauce)", "*.yelo"), ("All", "*")) )
 
@@ -2493,7 +2501,7 @@ class TagExtractorWindow(BinillaWidget, tk.Toplevel):
         self.load_map()
 
     def out_dir_browse(self):
-        dirpath = askdirectory(initialdir=self.out_dir.get(),
+        dirpath = askdirectory(initialdir=self.out_dir.get(), parent=self,
                                title="Select the extraction directory")
 
         if not dirpath:
@@ -2504,3 +2512,151 @@ class TagExtractorWindow(BinillaWidget, tk.Toplevel):
             dirpath += PATHDIV
 
         self.out_dir.set(dirpath)
+
+
+class HashcacherWindow(tk.Toplevel, BinillaWidget):
+    app_root = None
+    tags_dir = None
+    hash_name = None
+
+    _hashing = False
+
+    def __init__(self, app_root, *args, **kwargs):
+        self.app_root = app_root
+        kwargs.update(width=400, height=300, bd=0, highlightthickness=0)
+        tk.Toplevel.__init__(self, app_root, *args, **kwargs)
+
+        self.title("Hashcacher")
+        self.minsize(width=400, height=300)
+
+        self.tags_dir = tk.StringVar(self)
+        self.hash_name = tk.StringVar(self)
+        try:
+            tags_dir = app_root.tags_dir
+            if tags_dir:
+                self.tags_dir.set(tags_dir)
+        except Exception:
+            pass
+
+        # add the tags folder path box
+        self.tags_dir_frame = tk.LabelFrame(
+            self, text="Select the tags directory to hash")
+        self.tags_dir_entry = tk.Entry(
+            self.tags_dir_frame, textvariable=self.tags_dir)
+        self.tags_dir_entry.config(width=47, state=DISABLED)
+
+        # add the hashcache name box
+        self.hash_name_frame = tk.LabelFrame(
+            self, text="Enter a valid hashcache name")
+        self.hash_name_entry = tk.Entry(
+            self.hash_name_frame, textvariable=self.hash_name)
+        self.hash_name_entry.config(width=47)
+
+        # add the hashcache description box
+        self.hash_desc_frame = tk.LabelFrame(
+            self, text="Enter a hashcache description")
+        self.hash_desc_text = tk.Text(self.hash_desc_frame)
+        self.hash_desc_text.config(height=50, wrap='word')
+
+        # add the buttons
+        self.btn_select_tags = tk.Button(
+            self.tags_dir_frame, text="Browse", width=15,
+            command=self.select_tags_folder)
+        self.btn_build_cache = tk.Button(
+            self.hash_name_frame, text="Build hashcache",
+            width=15, command=self.build_hashcache)
+
+        # pack everything
+        self.tags_dir_frame.pack(padx=4, pady=4, fill='x')
+        self.hash_name_frame.pack(padx=4, pady=4, fill='x')
+        self.hash_desc_frame.pack(padx=4, pady=4, fill='x')
+        self.hash_desc_text.pack(padx=4, pady=4, expand=True, fill='both')
+
+        for entry in (self.tags_dir_entry, self.hash_name_entry):
+            entry.pack(side='left', padx=4, pady=2, expand=True, fill='x')
+
+        for button in (self.btn_select_tags, self.btn_build_cache):
+            button.pack(side='right', padx=4, pady=2)
+
+        # REMOVE THESE LINES WHEN READY FOR PUBLIC USAGE
+        self.hash_name.set('Halo_1_Default')
+        self.hash_desc_text.insert(
+            'end', 'All the tags that are used in the original Halo 1 ' +
+            'singleplayer, multiplayer, and ui maps.\n' +
+            'This should always be used, and as the base cache.')
+        # REMOVE THESE LINES WHEN READY FOR PUBLIC USAGE
+
+        self.apply_style()
+
+    def destroy(self):
+        self.app_root.tool_windows.pop("hashcacher_window", None)
+        tk.Toplevel.destroy(self)
+        self.app_root.hashcacher.stop_hashing = True
+
+    def select_tags_folder(self):
+        tags_dir = askdirectory(initialdir=self.tags_dir.get(), parent=self,
+                                title="Select tags folder...")
+        if tags_dir:
+            tags_dir = tags_dir.replace('/','\\') + '\\'
+            self.tags_dir.set(tags_dir)
+
+    def build_hashcache(self):
+        if self._hashing:
+            return
+        try: self.build_thread.join()
+        except Exception: pass
+        self.build_thread = Thread(target=self._build_hashcache)
+        self.build_thread.daemon = True
+        self.build_thread.start()
+
+    def _build_hashcache(self):
+        self._hashing = True
+        try:
+            try:
+                hash_name = sanitize_filename(self.hash_name.get())
+            except Exception:
+                hash_name = ''
+
+            hash_desc = self.hash_desc_text.get(1.0, 'end')
+            hasher, tag_lib = self.app_root.hashcacher, self.app_root.handler
+            hasher.stop_hashing = False
+
+            if not hash_name:
+                print('enter a valid hashcache name.')
+            elif not hash_desc:
+                print('enter a hashcache description.')
+            elif not hasattr(tag_lib, 'tag_ref_cache'):
+                print("Change the current tag set.")
+            else:
+                # set the hashcacher's tag_lib to the currently selected handler
+                tag_lib.tagsdir = self.tags_dir.get()
+                hasher.tag_lib = tag_lib
+                hasher.build_hashcache(hash_name, hash_desc)
+        except Exception:
+            print(format_exc())
+        self._hashing = False
+
+    def apply_style(self):
+        self.config(bg=self.default_bg_color)
+        self.hash_desc_text.config(fg=self.text_normal_color,
+                                   bg=self.entry_normal_color)
+
+        # label frame styles
+        for w in (self.tags_dir_frame, self.hash_name_frame,
+                  self.hash_desc_frame):
+            w.config(fg=self.text_normal_color, bg=self.default_bg_color)
+
+        # button styles
+        for w in (self.btn_select_tags, self.btn_build_cache):
+            w.config(bg=self.button_color, activebackground=self.button_color,
+                     fg=self.text_normal_color, bd=self.button_depth,
+                     disabledforeground=self.text_disabled_color)
+
+        # entry styles
+        for w in (self.tags_dir_entry, self.hash_name_entry):
+            w.config(bd=self.entry_depth,
+                bg=self.entry_normal_color, fg=self.text_normal_color,
+                disabledbackground=self.entry_disabled_color,
+                disabledforeground=self.text_disabled_color,
+                selectbackground=self.entry_highlighted_color,
+                selectforeground=self.text_highlighted_color)
