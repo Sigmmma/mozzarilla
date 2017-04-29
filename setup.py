@@ -8,8 +8,8 @@ except ImportError:
 curr_dir = dirname(__file__)
 
 #               YYYY.MM.DD
-release_date = "2017.04.26"
-version = (0, 9, 18)  # DONT FORGET TO UPDATE THE VERSION IN app_window.py
+release_date = "2017.04.29"
+version = (0, 9, 20)  # DONT FORGET TO UPDATE THE VERSION IN app_window.py
 
 try:
     try:
@@ -31,11 +31,16 @@ games built with the Blam engine.',
     license='MIT',
     packages=[
         'mozzarilla',
+        'mozzarilla.ripper',
+        'mozzarilla.ripper.defs',
+        'mozzarilla.tools',
         ],
     package_data={
         '': ['*.txt', '*.md', '*.rst', '*.pyw'],
         'mozzarilla': [
             'styles/*.*',
+            'ripper/hash_caches/*.hashcache',
+            'ripper/resources/*.txt',
             ]
         },
     platforms=["POSIX", "Windows"],
