@@ -44,7 +44,7 @@ class DependencyFrame(ContainerFrame):
             if not filepath:
                 return
 
-            filepath = filepath.replace('/', '\\').replace('\\', PATHDIV)
+            filepath = sanitize_path(filepath)
             tag_path, ext = splitext(filepath.lower().split(tags_dir.lower())[-1])
             orig_tag_class = self.node.tag_class.__copy__()
             try:
@@ -98,11 +98,10 @@ class DependencyFrame(ContainerFrame):
 
             app.set_handler(new_handler)
             app.load_tags(filepaths=filepath + ext)
-            app.set_handler(cur_handler)
         except Exception:
             print(format_exc())
-            try: app.set_handler(cur_handler)
-            except Exception: pass
+        finally:
+            app.set_handler(cur_handler)
 
     def populate(self):
         '''Destroys and rebuilds this widgets children.'''
@@ -246,8 +245,7 @@ class DependencyFrame(ContainerFrame):
             pass
 
         filepath = filepath + ext
-
-        filepath = filepath.replace('/', '\\').replace('\\', PATHDIV)
+        filepath = sanitize_path(filepath)
         if exists(filepath):
             widget.data_entry.config(fg=self.text_normal_color)
         else:
