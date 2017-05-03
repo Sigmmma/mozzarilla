@@ -1,7 +1,7 @@
 import os
 import tkinter as tk
 
-from os.path import exists, isdir
+from os.path import exists, join, isdir
 from traceback import format_exc
 
 from binilla.widgets import BinillaWidget
@@ -227,6 +227,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
             print(format_exc())
 
         if isdir(tag_path):
+            app.last_load_dir = tag_path
             return
 
         try:
@@ -337,7 +338,7 @@ class DependencyFrame(HierarchyFrame):
                 ext = '.' + tag_ref_block.tag_class.enum_name
                 if (self.handler.treat_mode_as_mod2 and (
                     ext == '.model' and not exists(
-                        tags_dir + tag_ref_block.filepath + ext))):
+                        join(tags_dir, tag_ref_block.filepath + ext)))):
                     ext = '.gbxmodel'
             except Exception:
                 ext = ''
