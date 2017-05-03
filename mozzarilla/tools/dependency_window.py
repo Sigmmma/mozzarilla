@@ -169,9 +169,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
 
         filepath = sani(filepath)
         rel_filepath = relpath(filepath, tags_dir)
-        print(filepath)
-        print(tags_dir + "|" + rel_filepath)
-        print(is_in_dir(filepath, tags_dir, 0))
+
         if not is_in_dir(filepath, tags_dir, 0):
             print("Specified tag is not located within the tags directory")
             return
