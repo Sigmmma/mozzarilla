@@ -4,17 +4,12 @@ from string import digits, ascii_letters
 from traceback import format_exc
 
 from reclaimer.hek.handler import HaloHandler,\
-     BAD_DEPENDENCY_HASH, CANT_PARSE_TAG_HASH, CIR_DEPENDENCY_HASH
+     bytes_to_hex, BAD_DEPENDENCY_HASH, CANT_PARSE_TAG_HASH
 from binilla.handler import Handler
 from supyr_struct.tag import Tag
 
 
 valid_path_chars = " ()-_%s%s" % (digits, ascii_letters)
-
-
-def bytes_to_hex(taghash):
-    hsh = hex(int.from_bytes(taghash, 'big'))[2:]
-    return '0x' + '0'*(len(taghash)*2-len(hsh)) + hsh
 
 
 def clear_meta_only_fields(tagdata, def_id):
@@ -44,13 +39,13 @@ def sort_tags_for_hashing(all_tag_paths):
         'lens', 'ligh', 'mgs2', 'elec',
 
         # then all the tags that COULD be self referential
-        'snd!', 'pctl', 'lsnd', 'jpt!', 'unhi', 'wphi', 'grhi', 'udlg',
-        'mod2', 'mode', 'antr', 'coll', 'devi', 'item', 'unit', 'obje',
-        'part', 'effe', 'foot',
-        'garb', 'plac', 'scen', 'ssce', 'eqip', 'lifi', 'mach', 'ctrl',
-        'Soul', 'DeLa', 'itmc', 'sky ', 'glw!', 'fog ', 
+        'snd!', 'pctl', 'lsnd', 'jpt!', 'unhi', 'wphi', 'grhi',
+        'udlg', 'mod2', 'mode', 'antr', 'coll', 'devi', 'item',
+        'unit', 'obje', 'part', 'effe', 'foot',
+        'garb', 'plac', 'scen', 'ssce', 'lifi', 'mach', 'ctrl',
+        'Soul', 'DeLa', 'eqip', 'itmc', 'sky ', 'glw!', 'fog ', 
         'proj', 'vehi', 'weap', 'bipd', 'actr', 'actv',
-        'tagc', 'sbsp', 'scnr', 'hudg', 'matg'):
+        'tagc', 'hudg', ):  # 'sbsp', 'scnr', 'matg'):
         if def_id in all_tag_paths:
             sorted_def_ids.append(def_id)
 
@@ -123,12 +118,14 @@ class HashCacher(Handler):
             print('\nFound %s tags of these %s types' % (
                 tag_lib.tags_indexed, len(sorted_def_ids)))
             print(sorted_def_ids)
+            print("\nIf a tag already exists in the hashmap " +
+                  "then its name wont be printed below.\n")
 
             init_cache_names = set(hashmap.values())
             init_cache_hashes = set(hashmap.keys())
             get_nodes = self.tag_lib.get_nodes_by_paths
 
-            calculated_hashes = {}
+            hashes = {}
 
             for def_id in sorted_def_ids:
                 tag_paths = all_tag_paths[def_id]
@@ -149,8 +146,14 @@ class HashCacher(Handler):
                         self.stop_hashing = False
                         return
 
-                    if (filepath in init_cache_names or
-                        filepath in calculated_hashes):
+                    if filepath in init_cache_names or filepath in hashes:
+                        taghash = hashes[filepath]
+                        if taghash is BAD_DEPENDENCY_HASH:
+                            print("        ERROR: Could not hash the above " +
+                                  "tag due to a bad dependency.")
+                        elif taghash is CANT_PARSE_TAG_HASH:
+                            print("        ERROR: Could not hash the above " +
+                                  "tag as an error occurred while parsing.")
                         continue
                     try:
                         print("    %s" % filepath)
@@ -163,17 +166,13 @@ class HashCacher(Handler):
                             return
 
                         tag_lib.get_tag_hash(tag.data[1], def_id, filepath,
-                                             calculated_hashes)
+                                             hashes)
 
                         # if the taghash isn't none, it's a tuple containing
                         # the md5 digest of the hash as bytes and a string
-                        taghash = calculated_hashes.get(filepath)
+                        taghash = hashes.get(filepath)
 
-                        if taghash is CIR_DEPENDENCY_HASH:
-                            print("        ERROR: Could not hash the above " +
-                                  "tag due to a circular dependency.")
-                            continue
-                        elif taghash is BAD_DEPENDENCY_HASH:
+                        if taghash is BAD_DEPENDENCY_HASH:
                             print("        ERROR: Could not hash the above " +
                                   "tag due to a bad dependency.")
                             continue
@@ -194,6 +193,7 @@ class HashCacher(Handler):
 
                     except Exception:
                         print(format_exc())
+                        print("Could not calculate the above tag's hash.")
 
             if self.stop_hashing:
                 print('Hashing cancelled.')

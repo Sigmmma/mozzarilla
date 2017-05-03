@@ -3,6 +3,7 @@ import gc
 import tkinter as tk
 
 from os.path import dirname, exists, isdir, join, splitext, relpath
+from tkinter import messagebox
 from traceback import format_exc
 
 from reclaimer.constants import *
@@ -49,7 +50,7 @@ curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '0.9.20'
+    version = '0.9.21'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -194,7 +195,7 @@ class Mozzarilla(Binilla):
     @tags_dir.setter
     def tags_dir(self, new_val):
         handler = self.handlers[self._curr_handler_index]
-        new_val = sanitize_path(new_val)
+        new_val = join(sanitize_path(new_val), '')  # ensure it ends with a \
         self.tags_dirs[self._curr_tags_dir_index] = handler.tagsdir = new_val
 
     def add_tags_dir(self, e=None, tags_dir=None, manual=True):
@@ -205,10 +206,7 @@ class Mozzarilla(Binilla):
         if not tags_dir:
             return
 
-        tags_dir = sanitize_path(tags_dir)
-        if tags_dir and not tags_dir.endswith(PATHDIV):
-            tags_dir += PATHDIV
-
+        tags_dir = join(sanitize_path(tags_dir), '')
         if tags_dir in self.tags_dirs:
             if manual:
                 print("That tags directory already exists.")
@@ -256,10 +254,7 @@ class Mozzarilla(Binilla):
         if not tags_dir:
             return
 
-        tags_dir = sanitize_path(tags_dir)
-        if tags_dir and not tags_dir.endswith(PATHDIV):
-            tags_dir += PATHDIV
-
+        tags_dir = join(sanitize_path(tags_dir), '')
         if tags_dir in self.tags_dirs:
             print("That tags directory already exists.")
             return
@@ -291,38 +286,6 @@ class Mozzarilla(Binilla):
         if manual:
             self.last_load_dir = self.tags_dir
             print("Tags directory is currently:\n    %s\n" % self.tags_dir)
-
-    def delete_tag(self, tag, destroy_window=True):
-        try:
-            tid = id(tag)
-            def_id = tag.def_id
-            path = tag.filepath
-            tid_to_wid = self.tag_id_to_window_id
-
-            if tag is not self.config_file:
-                # remove the tag from the handlers tag library.
-                # We need to delete it by the relative filepath
-                # rather than having it detect it using the tag
-                # because the handlers tagsdir may have changed
-                # from what it was when the tag was created, so
-                # it wont be able to determine the rel_filepath
-                tag.handler.delete_tag(filepath=tag.rel_filepath)
-
-            if tid in tid_to_wid:
-                wid = tid_to_wid[tid]
-                t_window = self.tag_windows[wid]
-                del tid_to_wid[tid]
-                del self.tag_windows[wid]
-
-                if destroy_window:
-                    t_window.destroy()
-
-            if self.selected_tag is tag:
-                self.selected_tag = None
-
-            gc.collect()
-        except Exception:
-            print(format_exc())
 
     def apply_config(self, e=None):
         Binilla.apply_config(self)
@@ -415,7 +378,7 @@ class Mozzarilla(Binilla):
                                          filetypes=filetypes, parent=self,
                                          title="Select the tag to load")
             if not filepaths:
-                return
+                return ()
 
         if isinstance(filepaths, str):
             # account for a stupid bug with certain versions of windows
@@ -443,7 +406,7 @@ class Mozzarilla(Binilla):
                     continue
 
                 print("Specified tag(s) are not located in the tags directory")
-                return
+                return ()
 
         windows = Binilla.load_tags(self, sanitized_paths, def_id)
 
@@ -595,17 +558,37 @@ class Mozzarilla(Binilla):
         if not filepath:
             return
 
+        # make sure to flush any changes made using widgets to the tag
+        w = self.get_tag_window_by_tag(tag)
+
         # make sure the filepath is sanitized
         filepath = sanitize_path(filepath)
-        if not is_in_dir(filepath, tag.tags_dir, 0):
-            print("Cannot save outside the tags directory")
-            return
 
-        tag.rel_filepath = relpath(filepath, tag.tags_dir)
+        handler = tag.handler
+        tags_dir = self.tags_dir
+        tagsdir_rel = handler.tagsdir_relative
 
-        Binilla.save_tag_as(self, tag, filepath)
+        try:
+            self.last_load_dir = dirname(filepath)
+            if tagsdir_rel:
+                filepath = relpath(filepath, tag.tags_dir)
 
-        self.update_tag_window_title(self.get_tag_window_by_tag(tag))
+                if tag.tags_dir != tags_dir:
+                    # trying to save outside tags directory
+                    messagebox.showerror(
+                        "Saving outside tags directory", ("Cannot save:\n\n" +
+                         "    %s\n\noutside the tags directory:\n\n    %s\n\n" +
+                         "Change the tags directory back to save this tag.") %
+                        (filepath, tag.tags_dir), parent=self.focus_get())
+                    return
+
+            self.add_tag(tag, filepath)
+            w.save(temp=False)
+        except Exception:
+            print(format_exc())
+            raise IOError("Could not save tag.")
+
+        self.update_tag_window_title(w)
         return tag
 
     def select_defs(self, menu_index=None, manual=True):
@@ -758,6 +741,7 @@ class Mozzarilla(Binilla):
         tag = window.tag
         if tag is self.config_file:
             window.update_title('%s %s config' % (self.app_name, self.version))
+
         if not hasattr(tag, 'tags_dir'):
             return
 
@@ -768,6 +752,7 @@ class Mozzarilla(Binilla):
                 return
             handler_name = self.handler_names[self._curr_handler_index]
             if handler_name not in self.tags_dir_relative:
+                window.update_title()
                 return
             handler_i = self.handlers.index(window.handler)
             title = "[%s][%s] %s" % (
