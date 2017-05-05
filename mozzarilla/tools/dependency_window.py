@@ -131,8 +131,8 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         if not dependency_cache:
             return ()
 
-        nodes = handler.get_nodes_by_paths(handler.tag_ref_cache[def_id],
-                                           tag.data)
+        nodes = handler.get_nodes_by_paths(
+            handler.tag_ref_cache[def_id], tag.data)
 
         dependencies = []
 

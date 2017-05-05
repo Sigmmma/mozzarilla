@@ -59,12 +59,14 @@ class HashcacherWindow(tk.Toplevel, BinillaWidget):
                 defs = os_v4_handler.defs
                 caches = [os_v4_handler.tag_ref_cache,
                           os_v4_handler.reflexive_cache,
-                          os_v4_handler.raw_data_cache]
+                          os_v4_handler.raw_data_cache,
+                          os_v4_handler.fps_dependent_cache]
         except Exception:
             pass
 
-        self.handler = OsV4HaloHandler(id_ext_map=id_ext_map, defs=defs,
-                                       reload_defs=not defs, field_caches=caches)
+        self.handler = OsV4HaloHandler(
+            id_ext_map=id_ext_map, defs=defs, reload_defs=not defs,
+            field_caches=caches)
 
         self.title("Hashcacher")
         self.minsize(width=400, height=300)
