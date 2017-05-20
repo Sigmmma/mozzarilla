@@ -48,7 +48,6 @@ dhwp.copy_widget(RawdataRef, Struct)
 dhwp.copy_widget(Reflexive, Struct)
 
 dhwp.copy_widget(TagIndex, Array)
-dhwp.copy_widget(Rawdata, BytearrayRaw)
 dhwp.copy_widget(StrLatin1Enum, SEnum32)
 
 

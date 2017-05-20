@@ -51,48 +51,51 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         kwargs.update(bg=self.default_bg_color, bd=self.listbox_depth,
             relief='sunken', highlightthickness=0)
         kwargs.setdefault('app_root', master)
+
+        select_mode = kwargs.pop('select_mode', 'browse')
         self.app_root = kwargs.pop('app_root')
         tk.Frame.__init__(self, master, *args, **kwargs)
 
         self.tags_dir = self.app_root.tags_dir
-        self.tag_dirs_frame = tk.Frame(self, highlightthickness=0)
+        self.tags_tree_frame = tk.Frame(self, highlightthickness=0)
 
-        self.tag_dirs_tree = tk.ttk.Treeview(
-            self.tag_dirs_frame, selectmode='browse', padding=(0, 0))
+        self.tags_tree = tk.ttk.Treeview(
+            self.tags_tree_frame, selectmode=select_mode, padding=(0, 0))
         self.scrollbar_y = tk.Scrollbar(
-            self.tag_dirs_frame, orient='vertical',
-            command=self.tag_dirs_tree.yview)
-        self.tag_dirs_tree.config(yscrollcommand=self.scrollbar_y.set)
+            self.tags_tree_frame, orient='vertical',
+            command=self.tags_tree.yview)
+        self.tags_tree.config(yscrollcommand=self.scrollbar_y.set)
 
-        self.tag_dirs_tree.bind('<<TreeviewOpen>>', self.open_selected)
-        self.tag_dirs_tree.bind('<<TreeviewClose>>', self.close_selected)
-        self.tag_dirs_tree.bind('<Double-Button-1>', self.activate_item)
-        self.tag_dirs_tree.bind('<Return>', self.activate_item)
+        self.tags_tree.bind('<<TreeviewOpen>>', self.open_selected)
+        self.tags_tree.bind('<<TreeviewClose>>', self.close_selected)
+        self.tags_tree.bind('<Double-Button-1>', self.activate_item)
+        self.tags_tree.bind('<Return>', self.activate_item)
 
-        self.tag_dirs_frame.pack(fill='both', side='left', expand=True)
+        self.tags_tree_frame.pack(fill='both', side='left', expand=True)
 
-        self.tag_dirs_tree.pack(side='left', fill='both', expand=True)
-        self.scrollbar_y.pack(side='right', fill='y')
+        self.tags_tree.pack(side='left', fill='both', expand=True)
+        self.scrollbar_y.pack(side='left', fill='y')
 
         self.reload()
         self.apply_style()
 
     def apply_style(self):
-        self.tag_dirs_frame.config(bg=self.default_bg_color)
+        self.tags_tree_frame.config(bg=self.default_bg_color)
 
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
         dir_tree.tag_configure(
             'item', background=self.entry_normal_color,
             foreground=self.text_normal_color)
         self.highlight_tags_dir()
 
     def reload(self):
-        dir_tree = self.tag_dirs_tree
-        dir_tree['columns'] = ('size', )
-        dir_tree.heading("#0", text='path')
-        dir_tree.heading("size", text='filesize')
-        dir_tree.column("#0", minwidth=100, width=100)
-        dir_tree.column("size", minwidth=100, width=100, stretch=False)
+        dir_tree = self.tags_tree
+        if not dir_tree['columns']:
+            dir_tree['columns'] = ('size', )
+            dir_tree.heading("#0", text='path')
+            dir_tree.heading("size", text='filesize')
+            dir_tree.column("#0", minwidth=100, width=100)
+            dir_tree.column("size", minwidth=100, width=100, stretch=False)
 
         for tags_dir in self.tags_dir_items:
             dir_tree.delete(tags_dir)
@@ -103,7 +106,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
             self.add_root_dir(tags_dir)
 
     def set_root_dir(self, root_dir):
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
         curr_root_dir = self.app_root.tags_dir
 
         tags_dir_index = dir_tree.index(curr_root_dir)
@@ -114,21 +117,21 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         self.insert_root_dir(root_dir)
 
     def insert_root_dir(self, root_dir, index='end'):
-        iid = self.tag_dirs_tree.insert(
+        iid = self.tags_tree.insert(
             '', index, iid=root_dir, text=root_dir[:-1],
             tags=(root_dir, 'tagdir'))
         self.tags_dir_items.append(iid)
         self.destroy_subitems(iid)
 
     def del_root_dir(self, root_dir):
-        self.tag_dirs_tree.delete(root_dir)
+        self.tags_tree.delete(root_dir)
 
     def destroy_subitems(self, directory):
         '''
         Destroys all the given items subitems and creates an empty
         subitem so as to give the item the appearance of being expandable.
         '''
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
 
         for child in dir_tree.get_children(directory):
             dir_tree.delete(child)
@@ -137,7 +140,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         dir_tree.insert(directory, 'end')
 
     def generate_subitems(self, directory):
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
 
         for root, subdirs, files in os.walk(directory):
             for subdir in sorted(subdirs):
@@ -162,14 +165,14 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                     filesize = 'COULDNT CALCULATE'
                 dir_tree.insert(directory, 'end', text=file,
                                 iid=directory + file, tags=('item',),
-                values=(filesize, ))
+                                values=(filesize, ))
 
             # just do the toplevel of the hierarchy
             break
 
     def get_item_tags_dir(self, iid):
         '''Returns the tags directory of the given item'''
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
         prev_parent = iid
         parent = dir_tree.parent(prev_parent)
         
@@ -180,7 +183,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         return prev_parent
 
     def open_selected(self, e=None):
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
         tag_path = dir_tree.focus()
         for child in dir_tree.get_children(tag_path):
             dir_tree.delete(child)
@@ -189,7 +192,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
             self.generate_subitems(tag_path)
 
     def close_selected(self, e=None):
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
         tag_path = dir_tree.focus()
         if tag_path is None:
             return
@@ -199,7 +202,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
     def highlight_tags_dir(self, tags_dir=None):
         app = self.app_root
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
         if tags_dir is None:
               tags_dir = self.app_root.tags_dir
         for td in app.tags_dirs:
@@ -213,7 +216,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                     foreground=self.text_normal_color)
 
     def activate_item(self, e=None):
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
         tag_path = dir_tree.focus()
         if tag_path is None:
             return
@@ -249,7 +252,7 @@ class DependencyFrame(HierarchyFrame):
 
     def apply_style(self):
         HierarchyFrame.apply_style(self)
-        self.tag_dirs_tree.tag_configure(
+        self.tags_tree.tag_configure(
             'badref', foreground=self.invalid_path_color,
             background=self.entry_normal_color)
 
@@ -258,10 +261,11 @@ class DependencyFrame(HierarchyFrame):
     def highlight_tags_dir(*args, **kwargs): pass
 
     def reload(self):
-        dir_tree = self.tag_dirs_tree
-        dir_tree["columns"]=("dependency")
-        dir_tree.heading("#0", text='Filepath')
-        dir_tree.heading("dependency", text='Dependency path')
+        dir_tree = self.tags_tree
+        if not dir_tree['columns']:
+            dir_tree["columns"]=("dependency")
+            dir_tree.heading("#0", text='Filepath')
+            dir_tree.heading("dependency", text='Dependency path')
 
         if not self._initialized:
             return
@@ -275,7 +279,7 @@ class DependencyFrame(HierarchyFrame):
         if text is None:
             text = root
 
-        iid = self.tag_dirs_tree.insert(
+        iid = self.tags_tree.insert(
             '', 'end', iid=self.root_tag_path, text=text,
             tags=(root, 'item'), values=('', root))
         self.destroy_subitems(iid)
@@ -307,7 +311,7 @@ class DependencyFrame(HierarchyFrame):
         Destroys all the given items subitems and creates an empty
         subitem so as to give the item the appearance of being expandable.
         '''
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
 
         for child in dir_tree.get_children(iid):
             dir_tree.delete(child)
@@ -320,14 +324,14 @@ class DependencyFrame(HierarchyFrame):
             dir_tree.insert(iid, 'end')
 
     def close_selected(self, e=None):
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
         iid = dir_tree.focus()
         if iid:
             self.destroy_subitems(iid)
 
     def generate_subitems(self, parent_iid):
         tags_dir = self.tags_dir
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
         parent_tag_path = dir_tree.item(parent_iid)['values'][-1]
 
         if not exists(parent_tag_path):
@@ -370,7 +374,7 @@ class DependencyFrame(HierarchyFrame):
             self.destroy_subitems(iid)
 
     def activate_item(self, e=None):
-        dir_tree = self.tag_dirs_tree
+        dir_tree = self.tags_tree
         active = dir_tree.focus()
         if active is None:
             return

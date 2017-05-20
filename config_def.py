@@ -29,6 +29,7 @@ new_method_enums = (
     {GUI_NAME:"open tag scanner", NAME:"show_tag_scanner"},
     {GUI_NAME:"open search and replace", NAME:"show_search_and_replace"},
     {GUI_NAME:"make bitmap from dds", NAME:"bitmap_from_dds"},
+    {GUI_NAME:"make bitmap from bitmap source", NAME:"bitmap_from_bitmap_source"},
     )
 
 method_enums += new_method_enums

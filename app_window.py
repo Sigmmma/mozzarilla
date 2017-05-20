@@ -40,7 +40,7 @@ default_hotkeys.update({
     #'<F8>': "???",
 
     '<F9>': "bitmap_from_dds",
-    '<F9>': "bitmap_from_bitmap_source",
+    '<F10>': "bitmap_from_bitmap_source",
     #'<F11>': "???",
     #'<F12>': "???",
     })
@@ -50,7 +50,7 @@ curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '0.9.22'
+    version = '0.9.23'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -106,7 +106,7 @@ class Mozzarilla(Binilla):
         # the config requires using methods in the handler.
         kwargs['handler'] = MiscHaloLoader(debug=self.debug)
         self.tags_dir_relative = set(self.tags_dir_relative)
-        self.tags_dirs = ["%stags%s" % (curr_dir,  PATHDIV)]
+        self.tags_dirs = ["%s%stags%s" % (curr_dir, PATHDIV, PATHDIV)]
 
         Binilla.__init__(self, *args, **kwargs)
 
