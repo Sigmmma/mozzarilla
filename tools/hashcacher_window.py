@@ -18,8 +18,7 @@ for name in ('CON', 'PRN', 'AUX', 'NUL'):
 for i in range(1, 9):
     RESERVED_WINDOWS_FILENAME_MAP['COM%s' % i] = '_COM%s' % i
     RESERVED_WINDOWS_FILENAME_MAP['LPT%s' % i] = '_LPT%s' % i
-INVALID_PATH_CHARS.add(('<', '>', ':', '"', '/', '\\', '|', '?', '*'))
-
+INVALID_PATH_CHARS.update('<>:"|?*')
 
 def sanitize_filename(name):
     # make sure to rename reserved windows filenames to a valid one
@@ -51,22 +50,16 @@ class HashcacherWindow(tk.Toplevel, BinillaWidget):
         # ensure it doesn't muck with mozzarilla's handlers
         id_ext_map = {}
         defs = {}
-        caches = None
         try:
             os_v4_handler = app_root.handlers[2]
             if not isinstance(os_v4_handler, type):
                 id_ext_map = os_v4_handler.id_ext_map
                 defs = os_v4_handler.defs
-                caches = [os_v4_handler.tag_ref_cache,
-                          os_v4_handler.reflexive_cache,
-                          os_v4_handler.raw_data_cache,
-                          os_v4_handler.fps_dependent_cache]
         except Exception:
             pass
 
         self.handler = OsV4HaloHandler(
-            id_ext_map=id_ext_map, defs=defs, reload_defs=not defs,
-            field_caches=caches)
+            id_ext_map=id_ext_map, defs=defs, reload_defs=not defs)
 
         self.title("Hashcacher")
         self.minsize(width=400, height=300)

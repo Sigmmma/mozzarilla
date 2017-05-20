@@ -17,7 +17,6 @@ class TagRipper(MapLoader):
     rebuild_paths = False
     rebuild_classes = False
 
-    cached_tag_paths = None
     hashcaches_loaded = False
 
     def __init__(self, **kwargs):
@@ -34,23 +33,6 @@ class TagRipper(MapLoader):
         #make a cache of all the different headers for
         #each type of tag to speed up writing tags
         self.tag_headers = {}
-
-        #make a collection of all the tag paths in the cache files
-        self.cached_tag_paths = cached = {}
-
-        cached['bitm'] = []
-        cached['snd!'] = []
-        cached['font'] = cached['hmt '] = cached['str#'] = cached['ustr'] = []
-
-        # load the shared resource tag paths
-        for typ, name in (('bitm','bitmaps'),('snd!','sounds'),('font','loc')):
-            try:
-                paths = cached[typ]
-                with open(curr_dir + '\\resources\\%s.txt' % name) as f:
-                    for line in f:
-                        paths.append(line[:-1])
-            except Exception:
-                print(format_exc())
 
         # create a bunch of tag headers for each type of tag
         for def_id in sorted(self.tag_lib.defs):
@@ -186,15 +168,7 @@ class TagRipper(MapLoader):
         tag_meta = meta_header.tag_data.tag_meta
 
         if meta_header.indexed or isinstance(tag_meta, VoidBlock):
-            '''The tag meta data doesnt actually exist, so
-            try to get it from the list of tag cache paths.'''
-            if rebuild_paths and meta_header.indexed:
-                if def_id != 'snd!':
-                    tag_path = self.cached_tag_paths.get(def_id, {})\
-                               [meta_header.meta_offset]
-
-                    if tag_path is not None:
-                        print('CACHE HIT: [%s] %s' % (def_id, tag_path))
+            '''The tag meta data doesnt actually exist'''
             return None, tag_path
 
         get_nodes = self.tag_lib.get_nodes_by_paths

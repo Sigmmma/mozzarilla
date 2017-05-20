@@ -17,9 +17,14 @@ def clear_meta_only_fields(tagdata, def_id):
         # mask away the meta-only flags
         tagdata.flags.data &= 3
     elif def_id == 'pphy':
+        # set the meta-only values to 0
         tagdata.wind_coefficient = 0
         tagdata.wind_sine_modifier = 0
         tagdata.z_translation_rate = 0
+    elif def_id == 'scnr':
+        # remove the sbsp references from the meta
+        for b in tagdata.structure_bsps.STEPTREE:
+            b.bsp_meta_pointer = b.bsp_meta_size = b.unknown = 0
 
 
 def sort_tags_for_hashing(all_tag_paths):
@@ -211,7 +216,8 @@ class HashCacher(Handler):
                 return
 
             print('Writing hashcache...')
-            cache.serialize(temp=False, backup=False, int_test=False)
+            cache.serialize(temp=False, backup=False,
+                            int_test=False, calc_pointers=False)
         except:
             print(format_exc())
         print('Hashing completed. Took %s seconds' % (time() - start))
