@@ -19,12 +19,11 @@ from reclaimer.os_v4_hek.handler import OsV4HaloHandler
 from reclaimer.misc.handler import MiscHaloLoader
 from reclaimer.stubbs.handler import StubbsHandler
 
-from .ripper.hash_cacher import HashCacher
 from .config_def import config_def, guerilla_workspace_def
 from .widget_picker import *
 from .tag_window import HaloTagWindow
-from .tools import SearchAndReplaceWindow, TagExtractorWindow,\
-     DependencyWindow, HashcacherWindow, TagScannerWindow,\
+from .tools import SearchAndReplaceWindow,\
+     DependencyWindow, TagScannerWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
      bitmap_from_dds, bitmap_from_bitmap_source
 
@@ -50,7 +49,7 @@ curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '0.9.23'
+    version = '0.9.24'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -150,11 +149,6 @@ class Mozzarilla(Binilla):
             label="Search and replace", command=self.show_search_and_replace)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
-            label="Tag extractor", command=self.show_tag_extractor_window)
-        self.tools_menu.add_command(
-            label="Tag hashcacher", command=self.show_hashcacher_window)
-        self.tools_menu.add_separator()
-        self.tools_menu.add_command(
             label="Bitmap from dds texture",
             command=lambda app=self: bitmap_from_dds(app))
         self.tools_menu.add_command(
@@ -168,7 +162,6 @@ class Mozzarilla(Binilla):
 
         self.select_defs(manual=False)
         self.tool_windows = {}
-        self.hashcacher = HashCacher()
         self._mozzarilla_initialized = True
 
         self.make_window_panes()
@@ -668,34 +661,6 @@ class Mozzarilla(Binilla):
             return
 
         self.tool_windows["tag_scanner_window"] = w = TagScannerWindow(self)
-        self.place_window_relative(w, 30, 50); w.focus_set()
-
-    def show_hashcacher_window(self, e=None):
-        if not self.debug_mode:
-            print("Still working on this")
-            return
-        w = self.tool_windows.get("hashcacher_window")
-        if w is not None:
-            try: w.destroy()
-            except Exception: pass
-            del self.tool_windows["hashcacher_window"]
-            return
-
-        self.tool_windows["hashcacher_window"] = w = HashcacherWindow(self)
-        self.place_window_relative(w, 30, 50); w.focus_set()
-
-    def show_tag_extractor_window(self, e=None):
-        if not self.debug_mode:
-            print("Still working on this")
-            return
-        w = self.tool_windows.get("tag_extractor_window")
-        if w is not None:
-            try: w.destroy()
-            except Exception: pass
-            del self.tool_windows["tag_extractor_window"]
-            return
-
-        self.tool_windows["tag_extractor_window"] = w = TagExtractorWindow(self)
         self.place_window_relative(w, 30, 50); w.focus_set()
 
     def show_search_and_replace(self, e=None):
