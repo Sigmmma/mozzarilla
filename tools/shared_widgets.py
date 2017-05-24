@@ -56,7 +56,6 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         self.app_root = kwargs.pop('app_root')
         tk.Frame.__init__(self, master, *args, **kwargs)
 
-        self.tags_dir = self.app_root.tags_dir
         self.tags_tree_frame = tk.Frame(self, highlightthickness=0)
 
         self.tags_tree = tk.ttk.Treeview(
@@ -90,6 +89,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
     def reload(self):
         dir_tree = self.tags_tree
+        self.tags_dir = self.app_root.tags_dir
         if not dir_tree['columns']:
             dir_tree['columns'] = ('size', )
             dir_tree.heading("#0", text='path')
