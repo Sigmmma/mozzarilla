@@ -31,16 +31,12 @@ games built with the Blam engine.',
     license='MIT',
     packages=[
         'mozzarilla',
-        'mozzarilla.ripper',
-        'mozzarilla.ripper.defs',
         'mozzarilla.tools',
         ],
     package_data={
         '': ['*.txt', '*.md', '*.rst', '*.pyw'],
         'mozzarilla': [
             'styles/*.*',
-            'ripper/hash_caches/*.hashcache',
-            'ripper/resources/*.txt',
             ]
         },
     platforms=["POSIX", "Windows"],
