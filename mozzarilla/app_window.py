@@ -49,7 +49,7 @@ curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '0.9.24'
+    version = '0.9.25'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -471,11 +471,13 @@ class Mozzarilla(Binilla):
 
                 hotkeys[-1].method.set_to(method)
 
-    def make_tag_window(self, tag, focus=True, window_cls=None):
+    def make_tag_window(self, tag, *, focus=True, window_cls=None,
+                        is_new_tag=False):
         if window_cls is None:
             window_cls = HaloTagWindow
         w = Binilla.make_tag_window(self, tag, focus=focus,
-                                    window_cls=window_cls)
+                                    window_cls=window_cls,
+                                    is_new_tag=is_new_tag)
         self.update_tag_window_title(w)
         return w
 
@@ -719,9 +721,27 @@ class Mozzarilla(Binilla):
             if handler_name not in self.tags_dir_relative:
                 window.update_title()
                 return
+
+            try:
+                show_full = self.config_file.data.mozzarilla.\
+                            flags.show_full_tags_directory
+            except Exception:
+                show_full = False
+
+            tags_dir_str = tags_dir[:-1]
+            if not show_full:
+                tags_dir_str = tags_dir_str.split(PATHDIV)
+                if tags_dir_str[-1].lower() != "tags":
+                    tags_dir_str = tags_dir_str[-1]
+                else:
+                    tags_dir_str = tags_dir_str[-2]
+
             handler_i = self.handlers.index(window.handler)
-            title = "[%s][%s] %s" % (
-                self.handler_names[handler_i], tags_dir[:-1], tag.rel_filepath)
+
+            title = "[%s][%s][%s]" % (
+                self.handler_names[handler_i], tags_dir_str, tag.rel_filepath)
+            if window.save_as_60:
+                title = "[60fps]" + title
         except Exception:
             pass
         window.update_title(title)
