@@ -4,6 +4,8 @@ from os.path import dirname, exists, splitext
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
 
+from supyr_struct.field_types import UInt8
+from supyr_struct.defs.frozen_dict import FrozenDict
 from supyr_struct.buffer import get_rawdata
 from supyr_struct.defs.audio.wav import wav_def
 from binilla import editor_constants
@@ -11,6 +13,282 @@ from binilla.field_widgets import *
 from binilla.widgets import *
 
 from reclaimer.constants import *
+
+
+channel_name_map   = FrozenDict(a='alpha', r='red', g='green', b='blue')
+channel_offset_map = FrozenDict(a=24,      r=16,    g=8,       b=0)
+
+
+def extract_color(chan_char, node):
+    return (node >> channel_offset_map[chan_char]) & 0xFF
+
+
+def inject_color(chan_char, new_val, parent, attr_index):
+    off = channel_offset_map[chan_char]
+    node = parent[attr_index]
+    node = (node & (0xFFFFFFFF - (0xFF << off))) + ((new_val & 0xFF) << off)
+    parent[attr_index] = node
+
+
+class HaloColorEntry(NumberEntryFrame):
+
+    def flush(self, *args):
+        if self._flushing or not self.needs_flushing:
+            return
+
+        try:
+            self._flushing = True
+            node = self.node
+            unit_scale = self.unit_scale
+            curr_val = self.entry_string.get()
+            try:
+                new_node = self.sanitize_input()
+            except Exception:
+                # Couldnt cast the string to the node class. This is fine this
+                # kind of thing happens when entering data. Just dont flush it
+                try: self.entry_string.set(curr_val)
+                except Exception: pass
+                self._flushing = False
+                self.set_needs_flushing(False)
+                return
+
+            str_node = str(new_node)
+
+            # dont need to flush anything if the nodes are the same
+            if node != new_node:
+                # make an edit state
+                self.edit_create(undo_node=node, redo_node=new_node)
+
+                self.last_flushed_val = str_node
+                self.node = new_node
+                f_parent = self.f_widget_parent
+                inject_color(self.attr_index, new_node,
+                             f_parent.parent, f_parent.attr_index)
+                self.f_widget_parent.reload()
+
+            # value may have been clipped, so set the entry string anyway
+            self.entry_string.set(str_node)
+
+            self._flushing = False
+            self.set_needs_flushing(False)
+        except Exception:
+            # an error occurred so replace the entry with the last valid string
+            self._flushing = False
+            self.set_needs_flushing(False)
+            raise
+
+    def edit_create(self, **kwargs):
+        kwargs['attr_index'] = self.f_widget_parent.attr_index
+        kwargs['parent']     = self.f_widget_parent.parent
+        kwargs['channel']    = self.attr_index
+        FieldWidget.edit_create(self, **kwargs)
+
+    def edit_apply(self=None, *, edit_state, undo=True):
+        attr_index = edit_state.attr_index
+
+        w_parent, parent = FieldWidget.get_widget_and_node(
+            nodepath=edit_state.nodepath, tag_window=edit_state.tag_window)
+
+        node = edit_state.redo_node
+        if undo:
+            node = edit_state.undo_node
+        inject_color(edit_state.edit_info['channel'],
+                     node, parent, edit_state.attr_index)
+
+        if w_parent is not None:
+            try:
+                w = w_parent.f_widgets[
+                    w_parent.f_widget_ids_map[attr_index]]
+
+                w.needs_flushing = False
+                w.reload()
+                w.set_edited()
+            except Exception:
+                print(format_exc())
+
+
+class HaloUInt32ColorPickerFrame(ColorPickerFrame):
+    color_descs = dict(
+        a=UInt8("a"),
+        r=UInt8("r"),
+        g=UInt8("g"),
+        b=UInt8("b")
+        )
+
+    def __init__(self, *args, **kwargs):
+        FieldWidget.__init__(self, *args, **kwargs)
+        kwargs.update(relief='flat', bd=0, highlightthickness=0,
+                      bg=self.default_bg_color)
+        if self.f_widget_parent is None:
+            self.pack_padx = self.pack_pady = 0
+
+        tk.Frame.__init__(self, *args, **fix_kwargs(**kwargs))
+
+        self._initialized = True
+        self.populate()
+
+    @property
+    def visible_field_count(self):
+        try:
+            return len(self.desc["COLOR_CHANNELS"])
+        except (IndexError, KeyError, AttributeError):
+            return 0
+
+    def edit_create(self, **kwargs):
+        kwargs['attr_index'] = self.attr_index
+        FieldWidget.edit_create(self, **kwargs)
+
+    def edit_apply(self=None, *, edit_state, undo=True):
+        state = edit_state
+        attr_index = state.attr_index
+        w, parent = FieldWidget.get_widget_and_node(nodepath=state.nodepath,
+                                                    tag_window=state.tag_window)
+        try:
+            w = w.f_widgets[w.f_widget_ids_map[attr_index]]
+        except Exception:
+            pass
+
+        nodes = state.redo_node
+        if undo:
+            nodes = state.undo_node
+
+        inject_color('a', nodes['a'], parent, attr_index)
+        inject_color('r', nodes['r'], parent, attr_index)
+        inject_color('g', nodes['g'], parent, attr_index)
+        inject_color('b', nodes['b'], parent, attr_index)
+
+        if w is not None:
+            try:
+                if w.desc is not state.desc:
+                    return
+
+                w.node = parent[attr_index]
+                w.needs_flushing = False
+                w.reload()
+                w.set_edited()
+            except Exception:
+                print(format_exc())
+
+    def reload(self):
+        self.node = self.parent[self.attr_index]
+        if hasattr(self, 'color_btn'):
+            if self.disabled:
+                self.color_btn.config(state=tk.DISABLED)
+            else:
+                self.color_btn.config(state=tk.NORMAL)
+
+            self.color_btn.config(bg=self.get_color()[1])
+
+        f_widgets = self.f_widgets
+        f_widget_ids_map = self.f_widget_ids_map
+        for chan_char in self.desc['COLOR_CHANNELS']:
+            chan = channel_name_map[chan_char]
+            w = f_widgets[f_widget_ids_map[chan]]
+            w.node = getattr(self, chan)
+            w.reload()
+
+    def populate(self):
+        content = self
+        if hasattr(self, 'content'):
+            content = self.content
+        if content in (None, self):
+            content = tk.Frame(self, relief="sunken", bd=0,
+                               highlightthickness=0, bg=self.default_bg_color)
+
+        self.content = content
+        # clear the f_widget_ids list
+        del self.f_widget_ids[:]
+        del self.f_widget_ids_map
+        del self.f_widget_ids_map_inv
+
+        f_widget_ids = self.f_widget_ids
+        f_widget_ids_map = self.f_widget_ids_map = {}
+        f_widget_ids_map_inv = self.f_widget_ids_map_inv = {}
+
+        # destroy all the child widgets of the content
+        if isinstance(self.f_widgets, dict):
+            for c in list(self.f_widgets.values()):
+                c.destroy()
+
+        self.display_comment(self)
+
+        self.title_label = tk.Label(
+            self, anchor='w', justify='left',
+            width=self.title_size, text=self.gui_name,
+            bg=self.default_bg_color, fg=self.text_normal_color)
+        self.title_label.pack(fill="x", side="left")
+
+        node = self.node
+        desc = self.desc
+        tooltip_string = self.tooltip_string = desc.get('TOOLTIP')
+
+        for chan_char in desc['COLOR_CHANNELS']:
+            chan = channel_name_map[chan_char]
+            # make an entry widget for each color channel
+            w = HaloColorEntry(self.content, f_widget_parent=self,
+                               desc=self.color_descs[chan_char],
+                               node=getattr(self, chan), vert_oriented=False,
+                               tag_window=self.tag_window, attr_index=chan_char)
+
+            wid = id(w)
+            f_widget_ids.append(wid)
+            f_widget_ids_map[chan] = wid
+            f_widget_ids_map_inv[wid] = chan
+            if tooltip_string:
+                w.tooltip_string = tooltip_string
+
+        self.color_btn = tk.Button(
+            self.content, width=4, command=self.select_color,
+            bd=self.button_depth, bg=self.get_color()[1])
+
+        if self.disabled:
+            self.color_btn.config(state=tk.DISABLED)
+        else:
+            self.color_btn.config(state=tk.NORMAL)
+
+        self.build_f_widget_cache()
+        self.pose_fields()
+
+    def pose_fields(self):
+        ContainerFrame.pose_fields(self)
+        self.color_btn.pack(side='left')
+
+    @property
+    def alpha(self):
+        return extract_color('a', self.node)
+
+    @alpha.setter
+    def alpha(self, new_val):
+        inject_color('a', new_val, self.parent, self.attr_index)
+        self.node = self.parent[self.attr_index]
+
+    @property
+    def red(self):
+        return extract_color('r', self.node)
+
+    @red.setter
+    def red(self, new_val):
+        inject_color('r', new_val, self.parent, self.attr_index)
+        self.node = self.parent[self.attr_index]
+
+    @property
+    def green(self):
+        return extract_color('g', self.node)
+
+    @green.setter
+    def green(self, new_val):
+        inject_color('g', new_val, self.parent, self.attr_index)
+        self.node = self.parent[self.attr_index]
+
+    @property
+    def blue(self):
+        return extract_color('b', self.node)
+
+    @blue.setter
+    def blue(self, new_val):
+        inject_color('b', new_val, self.parent, self.attr_index)
+        self.node = self.parent[self.attr_index]
+
 
 class DependencyFrame(ContainerFrame):
 
