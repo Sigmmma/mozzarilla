@@ -535,8 +535,13 @@ class DependencyFrame(ContainerFrame):
         if self.desc.get('ORIENT', 'v') in 'hH':
             side = 'left'
 
+        if not hasattr(self.tag_window.tag, "tags_dir"):
+            # cant do anything if the tags_dir doesnt exist
+            return
+
         self.browse_btn.pack(
             fill='x', side=side, anchor='nw', padx=padx, pady=pady)
+
         self.open_btn.pack(fill='x', side=side, anchor='nw', padx=padx)
 
     def reload(self):
