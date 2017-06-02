@@ -46,6 +46,7 @@ dhwp.copy_widget(FlFloat, Float)
 
 dhwp.copy_widget(RawdataRef, Struct)
 dhwp.copy_widget(Reflexive, Struct)
+dhwp.copy_widget(RawReflexive, Struct)
 
 dhwp.copy_widget(TagIndex, Array)
 dhwp.copy_widget(StrLatin1Enum, SEnum32)
