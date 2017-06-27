@@ -49,7 +49,7 @@ curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '0.9.26'
+    version = '0.9.28'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -149,11 +149,10 @@ class Mozzarilla(Binilla):
             label="Search and replace", command=self.show_search_and_replace)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
-            label="Bitmap from dds texture",
-            command=lambda app=self: bitmap_from_dds(app))
+            label="Bitmap from dds texture", command=self.bitmap_from_dds)
         self.tools_menu.add_command(
             label="Bitmap from uncompressed bitmap source",
-            command=lambda app=self: bitmap_from_bitmap_source(app))
+            command=self.bitmap_from_bitmap_source)
         self.tools_menu.add_separator()
 
         self.defs_menu.add_separator()
@@ -788,3 +787,9 @@ class Mozzarilla(Binilla):
                 print(format_exc())
         except AttributeError: print(format_exc())
         except Exception: print(format_exc())
+
+    def bitmap_from_dds(self, e=None):
+        bitmap_from_dds(self)
+
+    def bitmap_from_bitmap_source(self, e=None):
+        bitmap_from_bitmap_source(self)
