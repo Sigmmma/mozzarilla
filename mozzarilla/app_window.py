@@ -49,7 +49,7 @@ curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '0.9.28'
+    version = '1.0.0'
     log_filename = 'mozzarilla.log'
     debug = 0
 
