@@ -6,7 +6,7 @@ from binilla.widgets import BinillaWidget
 from .field_widgets import *
 from reclaimer.field_types import *
 try:
-    from reclaimer.h2v.field_types import *
+    from reclaimer.h2.field_types import *
 except Exception:
     print(format_exc())
 
