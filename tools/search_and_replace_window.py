@@ -2,6 +2,7 @@ import tkinter as tk
 
 from binilla.widgets import BinillaWidget
 from supyr_struct.defs.constants import *
+from supyr_struct.defs.util import *
 
 
 class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
