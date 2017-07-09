@@ -59,6 +59,9 @@ try:
     dhwp.copy_widget(H2TagIndexRef, TagIndexRef)
     dhwp.copy_widget(H2RawdataRef, RawdataRef)
     dhwp.copy_widget(H2Reflexive, Reflexive)
-    dhwp.copy_widget(TBFDContainer, Container)
+
+    #dhwp.copy_widget(H2MetaTagIndexRef, H2TagIndexRef)
+    dhwp.copy_widget(H2MetaReflexive, H2RawdataRef)
+    dhwp.copy_widget(H2MetaRawdataRef, H2Reflexive)
 except Exception:
     print(format_exc())

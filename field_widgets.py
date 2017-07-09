@@ -8,6 +8,7 @@ from supyr_struct.field_types import UInt8
 from supyr_struct.defs.frozen_dict import FrozenDict
 from supyr_struct.buffer import get_rawdata
 from supyr_struct.defs.audio.wav import wav_def
+from supyr_struct.defs.util import *
 from binilla import editor_constants
 from binilla.field_widgets import *
 from binilla.widgets import *
