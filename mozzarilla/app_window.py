@@ -27,6 +27,7 @@ from .tools import SearchAndReplaceWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
      bitmap_from_dds, bitmap_from_bitmap_source
 
+
 default_hotkeys.update({
     '<F1>': "show_dependency_viewer",
     '<F2>': "show_tag_scanner",
@@ -49,7 +50,7 @@ curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.0.0'
+    version = '1.0.1'
     log_filename = 'mozzarilla.log'
     debug = 0
 

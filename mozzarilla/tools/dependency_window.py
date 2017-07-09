@@ -8,6 +8,7 @@ from traceback import format_exc
 
 from binilla.widgets import BinillaWidget
 from supyr_struct.defs.constants import *
+from supyr_struct.defs.util import *
 from .shared_widgets import DirectoryFrame, HierarchyFrame, DependencyFrame
 
 
