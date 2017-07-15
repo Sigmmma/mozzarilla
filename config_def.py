@@ -44,7 +44,7 @@ hotkey = Struct("hotkey",
     )
 
 config_header = Struct("header",
-    LUEnum32("id", ('Mozz', 'zzoM'), VISIBLE=False, DEFAULT='ezoM'),
+    LUEnum32("id", ('Mozz', 'zzoM'), VISIBLE=False, DEFAULT='zzoM'),
     INCLUDE=config_header
     )
 
