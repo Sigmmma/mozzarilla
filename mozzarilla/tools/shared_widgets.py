@@ -263,6 +263,7 @@ class DependencyFrame(HierarchyFrame):
 
     def reload(self):
         dir_tree = self.tags_tree
+        self.tags_dir = self.app_root.tags_dir
         if not dir_tree['columns']:
             dir_tree["columns"]=("dependency")
             dir_tree.heading("#0", text='Filepath')
