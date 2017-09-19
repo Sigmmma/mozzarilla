@@ -8,8 +8,8 @@ except ImportError:
 curr_dir = dirname(__file__)
 
 #               YYYY.MM.DD
-release_date = "2017.07.18"
-version = (1, 0, 2)  # DONT FORGET TO UPDATE THE VERSION IN app_window.py
+release_date = "2017.09.19"
+version = (1, 0, 3)  # DONT FORGET TO UPDATE THE VERSION IN app_window.py
 
 try:
     try:
@@ -46,7 +46,7 @@ games built with the Blam engine.',
     provides=['mozzarilla'],
     classifiers=[
         "Development Status :: 4 - Beta",
-        "Intended Audience :: Developers",
+        "Intended Audience :: End Users/Desktop",
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
