@@ -671,6 +671,8 @@ class SoundSampleFrame(HaloRawdataFrame):
         if not filepath:
             return
 
+        ext = splitext(filepath)[1].lower()
+
         curr_size = None
         index = self.attr_index
 

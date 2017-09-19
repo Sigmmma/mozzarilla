@@ -50,7 +50,7 @@ curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.0.2'
+    version = '1.0.3'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -740,8 +740,6 @@ class Mozzarilla(Binilla):
 
             title = "[%s][%s][%s]" % (
                 self.handler_names[handler_i], tags_dir_str, tag.rel_filepath)
-            if window.save_as_60:
-                title = "[60fps]" + title
         except Exception:
             pass
         window.update_title(title)

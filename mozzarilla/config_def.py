@@ -9,10 +9,7 @@ mozz_flag_tooltips = (
     ("Whether to recalculate certain hidden values when saving.\n" +
      "For all intents and purposes, this should stay on unless\n" +
      "you are doing some form of experimenting or debugging."),
-    ("Whether or not to make new tags that mozz creates be set to 60fps.\n" +
-     "Tags flagged as 60fps will have certain fields displayed differently.\n" +
-     "For example, the rounds_per_second in a weapon must be multiplied\n" +
-     "by 1/2 if used for 60fps, but you will want it to LOOK like it isn't."),
+    "",
     "Whether or not to show the full tags directory in the tag window title."
     )
 
@@ -61,7 +58,7 @@ mozzarilla = Container("mozzarilla",
         {NAME: "show_hierarchy_window", TOOLTIP: mozz_flag_tooltips[0]},
         {NAME: "show_console_window", TOOLTIP: mozz_flag_tooltips[1]},
         {NAME: "calc_internal_data", TOOLTIP: mozz_flag_tooltips[2]},
-        {NAME: "fps_60", GUI_NAME: "make new tags be 60fps", TOOLTIP: mozz_flag_tooltips[3]},
+        {NAME: "unused", VISIBLE: False},
         {NAME: "show full tags directory", TOOLTIP: mozz_flag_tooltips[4]},
         DEFAULT=sum([1<<i for i in (0, 1, 2)])
         ),
