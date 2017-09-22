@@ -742,15 +742,19 @@ class SoundSampleFrame(HaloRawdataFrame):
         except AttributeError:
             initialdir = None
 
-        ext = self.field_ext
+        def_ext = self.field_ext
 
         filepath = asksaveasfilename(
-            initialdir=initialdir, defaultextension=ext,
-            filetypes=[(self.name, "*" + ext), ('All', '*')],
-            title="Export sound data to...", parent=self)
+            initialdir=initialdir, title="Export sound data to...",
+            parent=self, filetypes=[(self.name, '*' + def_ext),
+                                    ('All', '*')])
 
         if not filepath:
             return
+
+        filepath, ext = splitext(filepath)
+        if not ext: ext = def_ext
+        filepath += ext
 
         if ext == '.wav':
             # if the file is wav, we need to give it a header
