@@ -56,6 +56,8 @@ dhwp.copy_widget(StrLatin1Enum, SEnum32)
 #           Halo 2
 #############################
 try:
+    dhwp.copy_widget(StringID, QStruct)
+
     dhwp.copy_widget(H2TagIndexRef, TagIndexRef)
     dhwp.copy_widget(H2RawdataRef, RawdataRef)
     dhwp.copy_widget(H2Reflexive, Reflexive)
