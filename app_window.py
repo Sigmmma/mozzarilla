@@ -50,15 +50,15 @@ curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.0.5'
+    version = '1.0.6'
     log_filename = 'mozzarilla.log'
     debug = 0
 
     _mozzarilla_initialized = False
 
-    styles_dir = dirname(__file__) + PATHDIV + "styles"
+    styles_dir  = dirname(__file__) + PATHDIV + "styles"
     config_path = dirname(__file__) + '%smozzarilla.cfg' % PATHDIV
-    config_def = config_def
+    config_def  = config_def
     config_version = 2
 
     handlers = (
@@ -87,7 +87,7 @@ class Mozzarilla(Binilla):
 
     tags_dirs = ()
 
-    _curr_handler_index = 0
+    _curr_handler_index  = 0
     _curr_tags_dir_index = 0
 
     widget_picker = def_halo_widget_picker
@@ -97,6 +97,7 @@ class Mozzarilla(Binilla):
     window_panes = None
     directory_frame = None
     directory_frame_width = 200
+    bitmap_load_dir = ""
 
     def __init__(self, *args, **kwargs):
         self.debug = kwargs.pop('debug', self.debug)
