@@ -62,7 +62,7 @@ try:
     dhwp.copy_widget(H2RawdataRef, RawdataRef)
     dhwp.copy_widget(H2Reflexive, Reflexive)
 
-    #dhwp.copy_widget(H2MetaTagIndexRef, H2TagIndexRef)
+    dhwp.copy_widget(H2MetaTagIndexRef, Struct)
     dhwp.copy_widget(H2MetaReflexive, H2RawdataRef)
     dhwp.copy_widget(H2MetaRawdataRef, H2Reflexive)
 except Exception:
