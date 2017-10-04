@@ -43,7 +43,7 @@ class HaloColorEntry(NumberEntryFrame):
             unit_scale = self.unit_scale
             curr_val = self.entry_string.get()
             try:
-                new_node = self.sanitize_input()
+                new_node = self.parse_input()
             except Exception:
                 # Couldnt cast the string to the node class. This is fine this
                 # kind of thing happens when entering data. Just dont flush it
