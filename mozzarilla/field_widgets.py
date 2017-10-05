@@ -1,4 +1,5 @@
 import tkinter as tk
+import reclaimer
 
 from os.path import dirname, exists, splitext
 from tkinter.filedialog import askopenfilename, asksaveasfilename
@@ -641,6 +642,47 @@ class HaloScriptSourceFrame(HaloRawdataFrame):
     def field_ext(self): return '.hsc'
 
 
+class HaloScriptTextFrame(TextFrame):
+    syntax  = None
+    strings = None
+
+    def __init__(self, *args, **kwargs):
+        TextFrame.__init__(self, *args, **kwargs)
+        tag_data = self.parent.parent.parent.parent
+        self.syntax  = reclaimer.hsc.get_hsc_data_block(
+            tag_data.script_syntax_data.data)
+        self.strings = tag_data.script_string_data.data.decode("latin-1")
+        self.reload()
+
+    def export_node(self): pass
+    def import_node(self): pass
+    def build_replace_map(self): pass
+    def flush(self, *a, **kw): pass
+    def set_edited(self, *a, **kw): pass
+    def set_needs_flushing(self, *a, **kw): pass
+
+    def reload(self):
+        try:
+            if None in (self.strings, self.syntax):
+                return
+
+            typ = "script"
+            if "global" in self.f_widget_parent.node.NAME:
+                typ = "global"
+
+            tag_data = self.parent.parent.parent.parent
+            new_text = reclaimer.hsc.hsc_bytecode_to_string(
+                    self.syntax, self.strings, self.f_widget_parent.attr_index,
+                    tag_data.scripts.STEPTREE, tag_data.globals.STEPTREE, typ)
+
+            self.data_text.delete(1.0, tk.END)
+            self.data_text.insert(1.0, new_text)
+        except Exception:
+            print(format_exc())
+
+    populate = reload
+
+
 class SoundSampleFrame(HaloRawdataFrame):
 
     @property
@@ -688,10 +730,11 @@ class SoundSampleFrame(HaloRawdataFrame):
                 sample_rate = 22050 * (sound_data.sample_rate.data + 1)
                 wav_fmt = wav_file.data.format
 
-                if wav_fmt.fmt.enum_name not in ('ima_adpcm', 'xbox_adpcm'):
+                if wav_fmt.fmt.enum_name not in ('ima_adpcm', 'xbox_adpcm',
+                                                 'pcm'):
                     raise TypeError(
                         "Wav file audio format must be either ImaADPCM " +
-                        "or XboxADPCM, not %s" % wav_fmt.fmt.enum_name)
+                        "XboxADPCM, or PCM, not %s" % wav_fmt.fmt.enum_name)
 
                 if sound_data.encoding.data + 1 != wav_fmt.channels:
                     raise TypeError(
@@ -764,7 +807,7 @@ class SoundSampleFrame(HaloRawdataFrame):
                 sound_data = self.parent.get_root().data.tagdata
 
                 wav_fmt = wav_file.data.format
-                wav_fmt.fmt.set_to('ima_adpcm')
+                wav_fmt.bits_per_sample = 16
                 wav_fmt.channels = sound_data.encoding.data + 1
                 wav_fmt.sample_rate = 22050 * (sound_data.sample_rate.data + 1)
 
@@ -772,7 +815,16 @@ class SoundSampleFrame(HaloRawdataFrame):
                                       wav_fmt.bits_per_sample *
                                       wav_fmt.channels) // 8)
 
-                wav_fmt.block_align = 36 * wav_fmt.channels
+                typ = "ima_adpcm"
+                if self.parent.parent.compression.enum_name == 'none':
+                    typ = "pcm"
+
+                if typ == "pcm":
+                    wav_fmt.fmt.set_to('pcm')
+                    wav_fmt.block_align = 2 * wav_fmt.channels
+                else:
+                    wav_fmt.fmt.set_to('ima_adpcm')
+                    wav_fmt.block_align = 36 * wav_fmt.channels
 
                 wav_file.data.wav_data.audio_data = self.node
                 wav_file.data.wav_header.filesize = wav_file.data.binsize - 12
