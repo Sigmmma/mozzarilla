@@ -31,8 +31,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
         ext_id_map = handler.ext_id_map
         self.listbox_index_to_def_id = [
-            ext_id_map[ext] for ext in sorted(ext_id_map.keys())
-            if ext_id_map[ext] in handler.tag_ref_cache]
+            ext_id_map[ext] for ext in sorted(ext_id_map.keys())]
 
         tagset = app_root.handler_names[app_root._curr_handler_index]
 
@@ -77,7 +76,8 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         self.def_ids_scrollbar = tk.Scrollbar(
             self.def_ids_frame, orient="vertical")
         self.def_ids_listbox = tk.Listbox(
-            self.def_ids_frame, selectmode='multiple', highlightthickness=0)
+            self.def_ids_frame, selectmode='multiple', highlightthickness=0,
+            yscrollcommand=self.def_ids_scrollbar.set)
         self.def_ids_scrollbar.config(command=self.def_ids_listbox.yview)
 
         for def_id in self.listbox_index_to_def_id:
@@ -254,7 +254,8 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             "-"*30, log_name, "-" * (50-len(log_name)))
         debuglog += "tags directory = %s\nscan directory = %s\n\n" % (
             tags_dir, dirpath)
-        debuglog += "broken dependencies are listed below\n"
+        debuglog += "Broken dependencies are listed below.\n"
+        tag_specific_errors = {}
 
         get_nodes = handler.get_nodes_by_paths
         get_tagref_invalid = handler.get_tagref_invalid
@@ -296,7 +297,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
         # make the debug string by scanning the tags directory
         for def_id in sorted(all_tag_paths.keys()):
-            tag_ref_paths = handler.tag_ref_cache[def_id]
+            tag_ref_paths = handler.tag_ref_cache.get(def_id)
 
             app.update_idletasks()
             print("Scanning '%s' tags..." % id_ext_map[def_id][1:])
@@ -320,7 +321,14 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                     print("    Could not load '%s'" % filepath)
                     continue
 
+                # find tag specific errors
+                self.tag_specific_scan(tag, tag_specific_errors)
+
                 try:
+                    if tag_ref_paths is None:
+                        # no dependencies for this tag. continue on
+                        continue
+
                     missed = get_nodes(tag_ref_paths, tag.data,
                                        get_tagref_invalid)
 
@@ -347,6 +355,13 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             if self.stop_scanning:
                 break
 
+        if tag_specific_errors:
+            debuglog += "\nTag specific errors are listed below.\n"
+
+        for def_id in sorted(tag_specific_errors.keys()):
+            debuglog += "\n\n%s specific errors:\n%s" % (
+                def_id, tag_specific_errors[def_id])
+
         print("\nScanning took %s seconds." % int(time() - s_time))
         print("Writing logfile to %s..." % logpath)
         app.update_idletasks()
@@ -367,3 +382,77 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                 print("<COULD NOT PRINT THIS LINE>")
 
         print("Scan completed.\n")
+
+
+    def tag_specific_scan(self, tag, errors):
+        assert isinstance(errors, dict)
+        cls = tag.def_id
+        err = ""
+
+        if cls == "snd!":
+            bad_ogg = []
+            for pr in tag.data.tagdata.pitch_ranges.STEPTREE:
+                for perm in pr.permutations.STEPTREE:
+                    if perm.compression.enum_name != "ogg":
+                        continue
+                    elif perm.ogg_sample_count == 0 and perm.samples.data:
+                        bad_ogg.append((pr.name, perm.name))
+
+            if bad_ogg:
+                err += ("    Bad OGG sample count. " +
+                        "Fix by recompiling this sound.")
+        elif cls == "coll":
+            bad_nodes = {}
+            tagdata = tag.data.tagdata
+            nodes = tagdata.nodes.STEPTREE
+            mat_ct = len(tagdata.materials.STEPTREE)
+            highest_mat_num = lowest_mat_num = 0
+
+            for i in range(len(nodes)):
+                node = nodes[i]
+                bad_bsps = {}
+                for j in range(len(node.bsps.STEPTREE)):
+                    bsp = node.bsps.STEPTREE[j]
+                    bad_surfaces = []
+                    for k in range(len(bsp.surfaces.STEPTREE)):
+                        mat = bsp.surfaces.STEPTREE[k].material
+                        if mat > -1 and mat < mat_ct:
+                            continue
+
+                        highest_mat_num = max(highest_mat_num, mat)
+                        lowest_mat_num  = min(lowest_mat_num, mat)
+                        bad_surfaces.append(k)
+
+                    if bad_surfaces:
+                        bad_bsps[j] = bad_surfaces
+
+                if bad_bsps:
+                    bad_nodes[i] = bad_bsps
+
+            if bad_nodes:
+                err += "    Bad collision material numbers.\n"
+                if lowest_mat_num > -1:
+                    # none of the material numbers are below zero, so
+                    # it's possible to fix this by adding more materials.
+                    err += (("    Change the material numbers of these " +
+                             "surfaces to be <= %s or add %s materials.\n")
+                            % (mat_ct - 1, (highest_mat_num + 1) - mat_ct))
+                else:
+                    err += (("    Change the material numbers of these " +
+                             "surfaces to be >= 0 and <= %s\n") % (mat_ct - 1))
+
+                for i in sorted(bad_nodes.keys()):
+                    bad_bsps = bad_nodes[i]
+                    err += "    %s(node #%s)\n" % (nodes[i].name, i)
+                    for j in sorted(bad_bsps.keys()):
+                        bad_surfaces = bad_bsps[j]
+                        err += "        bsp #%s\n" % j
+                        err += "            surfaces = %s\n" % bad_surfaces
+                    err += "\n"
+                err = err[:-1]
+
+        if err:
+            errors[cls] = "%s\n%s:\n%s\n" % (
+                errors.get(cls, ""),
+                tag.filepath.split(self.tags_dir, 1)[-1],
+                err)
