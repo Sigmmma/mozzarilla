@@ -73,8 +73,9 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
         self.tags_tree_frame.pack(fill='both', side='left', expand=True)
 
-        self.tags_tree.pack(side='left', fill='both', expand=True)
-        self.scrollbar_y.pack(side='left', fill='y')
+        # pack in this order so scrollbars aren't shrunk
+        self.scrollbar_y.pack(side='right', fill='y')
+        self.tags_tree.pack(side='right', fill='both', expand=True)
 
         self.reload()
         self.apply_style()
