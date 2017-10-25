@@ -104,7 +104,7 @@ def bitmap_from_dds(app, *args, **kwargs):
         elif fcc in ("DXT4", "DXT5"):
             bitm_data.format.data = 2
             bitm_block.format.set_to("dxt5")
-        elif pf_flags.RGB:
+        elif pf_flags.rgb_space:
             bitcount = pixelformat.rgb_bitcount
             bitm_data.format.data = 4
             bpp = 32
@@ -199,7 +199,7 @@ def bitmap_from_dds(app, *args, **kwargs):
                     i = mip*6 + face
                     image_size = (bpp*w*h*d)//8
                     images[i] = dds_pixels[pos: pos + image_size]
-                    
+
                     w, h, d = (max(w//2, min_w),
                                max(h//2, min_h),
                                max(d//2, min_d))
@@ -220,102 +220,108 @@ def bitmap_from_dds(app, *args, **kwargs):
         app.save_tag_as()
 
 
-
 def bitmap_from_bitmap_source(app, e=None):
-    fp = askopenfilename(initialdir=app.last_load_dir, parent=app,
-                         filetypes=(("bitmap", "*.bitmap"), ("All", "*")),
-                         title="Select a bitmap tag to get the source tiff")
+    load_dir = app.bitmap_load_dir
+    if not load_dir:
+        load_dir = app.last_load_dir
+    
+    fps = askopenfilenames(initialdir=load_dir, parent=app,
+                           filetypes=(("bitmap", "*.bitmap"), ("All", "*")),
+                           title="Select a bitmap tag to get the source tiff")
 
-    if not fp:
-        return
-    app.last_load_dir = dirname(fp)
-    print("Creating bitmap from uncompressed source image of this bitmap:")
-    print("    %s" % fp)
-
-    try:
-        with open(fp, 'rb') as f:
-            tag_data = f.read()
-
-        tag_id = tag_data[36:40]
-        engine_id = tag_data[60:64]
-        
-        # make sure this is a bitmap tag
-        if tag_id == b'bitm' and engine_id == b'blam':
-            # halo 1
-            dims_off = 64+24
-            size_off = 64+28
-            data_off = 64+108
-            end = ">"
-        elif tag_id == b'mtib' and engine_id == b'!MLB':
-            # halo 2
-            dims_off = 64+16+24
-            size_off = 64+16+28
-            data_off = 64+16
-            # get the size of the bitmap body from the tbfd structure
-            data_off += unpack("<i", tag_data[data_off-4: data_off])[0]
-            end = "<"
-        else:
-            print("    This file doesnt appear to be a bitmap tag.")
-            return
-
-        width, height = unpack(end + "HH", tag_data[dims_off: dims_off+4])
-        comp_size = unpack(end + "i", tag_data[size_off: size_off+4])[0]
-    except Exception:
-        print("    Could not load bitmap tag.")
+    if not fps:
         return
 
-    comp_data = tag_data[data_off: data_off + comp_size]
+    app.bitmap_load_dir = dirname(fps[0])
 
-    if not comp_data:
-        print("    No source image to extract.")
-        return
+    print('Creating bitmap from uncompressed source image of these bitmaps:')
+    for fp in fps:
+        fp = sanitize_path(fp)
+        print("  %s" % fp)
 
-    try:
-        data_size = unpack(end + "I", comp_data[:4])[0]
-        if not data_size:
-            print('    Source data is blank.')
-            return
+        try:
+            with open(fp, 'rb') as f:
+                tag_data = f.read()
 
-        pixels = bytearray(zlib.decompress(comp_data[4:]))
-    except Exception:
-        print('    Could not decompress data.')
-        return
+            tag_id = tag_data[36:40]
+            engine_id = tag_data[60:64]
+            
+            # make sure this is a bitmap tag
+            if tag_id == b'bitm' and engine_id == b'blam':
+                # halo 1
+                dims_off = 64+24
+                size_off = 64+28
+                data_off = 64+108
+                end = ">"
+            elif tag_id == b'mtib' and engine_id == b'!MLB':
+                # halo 2
+                dims_off = 64+16+24
+                size_off = 64+16+28
+                data_off = 64+16
+                # get the size of the bitmap body from the tbfd structure
+                data_off += unpack("<i", tag_data[data_off-4: data_off])[0]
+                end = "<"
+            else:
+                print('    This file doesnt appear to be a bitmap tag.')
+                continue
 
-    # make the tag window
-    try:
-        window = app.load_tags(filepaths='', def_id='bitm')
-    except LookupError:
-        print('    Could not make a new bitmap. Change the tag set.')
-    if not window:
-        return
-    window = window[0]
+            width, height = unpack(end + "HH", tag_data[dims_off: dims_off+4])
+            comp_size = unpack(end + "i", tag_data[size_off: size_off+4])[0]
+        except Exception:
+            print('    Could not load bitmap tag.')
+            continue
 
-    # get the bitmap tag and make a new bitmap block
-    new_bitm_tag = window.tag
-    new_bitm_data = new_bitm_tag.data.tagdata
-    new_bitm_data.bitmaps.STEPTREE.append()
-    bitm_block = new_bitm_data.bitmaps.STEPTREE[-1]
+        comp_data = tag_data[data_off: data_off + comp_size]
 
-    # set up the id, dimensions, format, flags, mipmaps, and reg_points
-    bitm_block.bitm_id.set_to("bitm")
-    bitm_block.width = width
-    bitm_block.height = height
-    bitm_block.depth = 1
-    bitm_block.format.set_to("a8r8g8b8")
-    bitm_block.flags.power_of_2_dim = True
-    bitm_block.registration_point_x = width // 2
-    bitm_block.registration_point_y = height // 2
+        if not comp_data:
+            print('    No source image to extract.')
+            continue
 
-    # place the pixels into the bitmap tag
-    new_bitm_data.processed_pixel_data.data = pixels
-    new_bitm_tag.tags_dir = app.tags_dir
-    new_bitm_tag.rel_filepath = "untitled%s.bitmap" % app.untitled_num
-    new_bitm_tag.filepath = join(app.tags_dir + new_bitm_tag.rel_filepath)
-    app.untitled_num += 1
+        try:
+            data_size = unpack(end + "I", comp_data[:4])[0]
+            if not data_size:
+                print('    Source data is blank.')
+                continue
 
-    app.update_tag_window_title(window)
+            pixels = bytearray(zlib.decompress(comp_data[4:]))
+        except Exception:
+            print('    Could not decompress data.')
+            continue
 
-    # reload the window to display the newly entered info
-    window.reload()
-    # prompt the user to save the tag somewhere
-    app.save_tag_as()
+        # make the tag window
+        try:
+            window = app.load_tags(filepaths='', def_id='bitm')
+        except LookupError:
+            print('    Could not make a new bitmap. Change the tag set.')
+        if not window:
+            continue
+        window = window[0]
+
+        # get the bitmap tag and make a new bitmap block
+        new_bitm_tag = window.tag
+        new_bitm_data = new_bitm_tag.data.tagdata
+        new_bitm_data.bitmaps.STEPTREE.append()
+        bitm_block = new_bitm_data.bitmaps.STEPTREE[-1]
+
+        # set up the id, dimensions, format, flags, mipmaps, and reg_points
+        bitm_block.bitm_id.set_to("bitm")
+        bitm_block.width = width
+        bitm_block.height = height
+        bitm_block.depth = 1
+        bitm_block.format.set_to("a8r8g8b8")
+        bitm_block.flags.power_of_2_dim = True
+        bitm_block.registration_point_x = width // 2
+        bitm_block.registration_point_y = height // 2
+
+        # place the pixels into the bitmap tag
+        new_bitm_data.processed_pixel_data.data = pixels
+        new_bitm_tag.tags_dir = app.tags_dir
+        new_bitm_tag.rel_filepath = "untitled%s.bitmap" % app.untitled_num
+        new_bitm_tag.filepath = join(app.tags_dir + new_bitm_tag.rel_filepath)
+
+        app.update_tag_window_title(window)
+
+        # reload the window to display the newly entered info
+        window.reload()
+        # prompt the user to save the tag somewhere
+        app.save_tag_as()
