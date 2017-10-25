@@ -19,10 +19,10 @@ from reclaimer.os_v4_hek.handler import OsV4HaloHandler
 from reclaimer.misc.handler import MiscHaloLoader
 from reclaimer.stubbs.handler import StubbsHandler
 
-from .config_def import config_def, guerilla_workspace_def
-from .widget_picker import *
-from .tag_window import HaloTagWindow
-from .tools import SearchAndReplaceWindow,\
+from mozzarilla.config_def import config_def, guerilla_workspace_def
+from mozzarilla.widget_picker import *
+from mozzarilla.tag_window import HaloTagWindow
+from mozzarilla.tools import SearchAndReplaceWindow,\
      DependencyWindow, TagScannerWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
      bitmap_from_dds, bitmap_from_bitmap_source
@@ -50,7 +50,7 @@ curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.0.9'
+    version = '1.1.0'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -396,6 +396,7 @@ class Mozzarilla(Binilla):
                     continue
                 elif is_in_dir(path, tags_dir, 0):
                     # make the path relative to the tags_dir
+                    last_load_dir = dirname(path)
                     sanitized_paths[i] = relpath(path, tags_dir)
                     continue
 
@@ -403,6 +404,7 @@ class Mozzarilla(Binilla):
                 return ()
 
         windows = Binilla.load_tags(self, sanitized_paths, def_id)
+        self.last_load_dir = last_load_dir
 
         if not windows:
             print("You might need to change the tag set to load these tag(s).")

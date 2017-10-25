@@ -1,6 +1,7 @@
 import tkinter as tk
 import reclaimer
 
+from array import array
 from os.path import dirname, exists, splitext
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
@@ -16,6 +17,14 @@ from binilla.widgets import *
 
 from reclaimer.constants import *
 
+try:
+    import arbytmap
+    from reclaimer.hek.defs.objs.bitm import TYPE_NAME_MAP, FORMAT_NAME_MAP,\
+         CUBEMAP_PADDING, P8_PALETTE
+
+except ImportError:
+    pass
+
 
 channel_name_map   = FrozenDict(a='alpha', r='red', g='green', b='blue')
 channel_offset_map = FrozenDict(a=24,      r=16,    g=8,       b=0)
@@ -30,6 +39,272 @@ def inject_color(chan_char, new_val, parent, attr_index):
     node = parent[attr_index]
     node = (node & (0xFFFFFFFF - (0xFF << off))) + ((new_val & 0xFF) << off)
     parent[attr_index] = node
+
+
+class BitmapTagFrame(ContainerFrame):
+
+    def bitmap_preview(self, e=None):
+        f = self.preview_btn.display_frame
+        if f is not None and f() is not None:
+            return
+
+        try:
+            tag = self.tag_window.tag
+        except AttributeError:
+            return
+        self.preview_btn.change_bitmap(tag)
+        self.preview_btn.show_window(None, self.tag_window.app_root)
+
+    def pose_fields(self):
+        try:
+            tags_dir = self.tag_window.tag.tags_dir
+        except AttributeError:
+            tags_dir = ""
+        self.preview_btn = HaloBitmapDisplayButton(
+            self, width=15, text="Preview", bd=self.button_depth,
+            tags_dir=tags_dir, command=self.bitmap_preview,
+            bg=self.button_color, fg=self.text_normal_color,
+            activebackground=self.button_color,
+            disabledforeground=self.text_disabled_color)
+
+        self.preview_btn.pack(anchor='center', pady=10)
+        ContainerFrame.pose_fields(self)
+
+
+class HaloBitmapDisplayFrame(BitmapDisplayFrame):
+    # these mappings have the 2nd and 3rd faces swapped on pc for some reason
+    cubemap_cross_mapping = (
+        (-1,  1),
+        ( 2,  4,  0,  5),
+        (-1,  3),
+        )
+
+    def __init__(self, master, bitmap_tag=None, *args, **kwargs):
+        self.bitmap_tag = bitmap_tag
+        textures = kwargs.get('textures', ())
+        BitmapDisplayFrame.__init__(self, master, *args, **kwargs)
+        self.sequence_index = tk.IntVar(self)
+        self.sprite_index   = tk.IntVar(self)
+
+        labels = []
+        labels.append(tk.Label(self.controls_frame0, text="Sequence index"))
+        labels.append(tk.Label(self.controls_frame1, text="Sprite index"))
+        for lbl in labels:
+            lbl.config(width=15, anchor='w',
+                       bg=self.default_bg_color, fg=self.text_normal_color,
+                       disabledforeground=self.text_disabled_color)
+
+        self.sequence_menu = ScrollMenu(self.controls_frame0, menu_width=7,
+                                        variable=self.sequence_index)
+        self.sprite_menu = ScrollMenu(self.controls_frame1, menu_width=7,
+                                      variable=self.sprite_index)
+
+        padx = self.horizontal_padx
+        pady = self.horizontal_pady
+        for lbl in labels:
+            lbl.pack(side='left', padx=(15, 0), pady=pady)
+        self.sequence_menu.pack(side='left', padx=padx, pady=pady)
+        self.sprite_menu.pack(side='left', padx=padx, pady=pady)
+        self.write_trace(self.sequence_index, self.sequence_changed)
+        self.write_trace(self.sprite_index,   self.sprite_changed)
+
+        self.change_textures(textures)
+
+    def sequence_changed(self, *args):
+        tag = self.bitmap_tag
+        #if tag is None or tag() is None:
+        if tag is None:
+            self.sprite_menu.set_options(())
+            self.sequence_menu.set_options(("None", ))
+            self.sprite_menu.sel_index = -1
+            self.sequence_menu.sel_index = 0
+            return
+        #tag = tag()
+
+        sequence_i = self.sequence_index.get() - 1
+        options = ()
+        sequences = tag.data.tagdata.sequences.STEPTREE
+        if sequence_i in range(len(sequences)):
+            sequence = sequences[sequence_i]
+            options = range(len(sequence.sprites.STEPTREE))
+
+        self.sprite_menu.set_options(options)
+        self.sprite_menu.sel_index = (self.sprite_menu.max_index >= 0) - 1
+
+    def sprite_changed(self, *args):
+        self.image_canvas.delete("SPRITE_RECTANGLE")
+        tag = self.bitmap_tag
+        #if tag is None or tag() is None:
+        if tag is None:
+            self.sprite_menu.set_options(())
+            self.sequence_menu.set_options(("None", ))
+            self.sprite_menu.sel_index = -1
+            self.sequence_menu.sel_index = 0
+            return
+        #tag = tag()
+
+        data = tag.data.tagdata
+        sequence_i = self.sequence_index.get() - 1
+        sequences = data.sequences.STEPTREE
+        if sequence_i not in range(len(sequences)):
+            return
+
+        sprite_i = self.sprite_index.get()
+        sprites = sequences[sequence_i].sprites.STEPTREE
+        if sprite_i not in range(len(sprites)):
+            return
+
+        sprite = sprites[sprite_i]
+        bitmaps = data.bitmaps.STEPTREE
+        if sprite.bitmap_index not in range(len(bitmaps)):
+            return
+        elif sprite.bitmap_index != self.bitmap_index.get():
+            self.bitmap_menu.sel_index = sprite.bitmap_index
+
+        bitmap = bitmaps[sprite.bitmap_index]
+        mip = self.mipmap_index.get()
+        w, h = max(bitmap.width>>mip, 1), max(bitmap.height>>mip, 1)
+        x0 = int(round(sprite.left_side   * w))
+        y0 = int(round(sprite.top_side    * h))
+        x1 = int(round(sprite.right_side  * w))
+        y1 = int(round(sprite.bottom_side * h))
+        if x1 < x0: x0, x1 = x1, x0
+        if y1 < y0: y0, y1 = y1, y0
+        x0 -= 1; y0 -= 1
+
+        self.image_canvas.create_rectangle(
+            (x0, y0, x1, y1), fill=None, dash=(2, 1), tags="SPRITE_RECTANGLE",
+            outline=self.bitmap_canvas_outline_color)
+
+    def change_textures(self, textures):
+        if not (hasattr(self, "sprite_menu") and
+                hasattr(self, "sequence_menu")):
+            return
+
+        BitmapDisplayFrame.change_textures(self, textures)
+        tag = self.bitmap_tag
+        #if tag is None or tag() is None:
+        if tag is None: return
+        #tag = tag()
+
+        data = tag.data.tagdata
+        options = {i+1: str(i) for i in range(len(data.sequences.STEPTREE))}
+        options[0] = "None"
+        self.sequence_menu.set_options(options)
+        self.sequence_menu.sel_index = (self.sequence_menu.max_index >= 0) - 1
+
+
+class HaloBitmapDisplayButton(BitmapDisplayButton):
+    tags_dir = ""
+    display_frame_class = HaloBitmapDisplayFrame
+
+    def __init__(self, *args, **kwargs):
+        self.tags_dir = kwargs.pop("tags_dir", self.tags_dir)
+        BitmapDisplayButton.__init__(self, *args, **kwargs)
+
+    def is_xbox_bitmap(self, bitmap):
+        return bitmap.base_address == 1073751810
+
+    def get_textures(self):
+        tag = self.bitmap_tag
+        #if tag is None or tag() is None: return ()
+        if tag is None: return ()
+        #tag = tag()
+
+        is_meta_tag = not hasattr(tag, "tags_dir")
+
+        textures = []
+
+        get_mip_dims = arbytmap.get_mipmap_dimensions
+        pixel_data = tag.data.tagdata.processed_pixel_data.data
+        bitmaps    = tag.data.tagdata.bitmaps.STEPTREE
+
+        if is_meta_tag:
+            pixels_base = 0
+            for b in bitmaps:
+                if b.pixels_offset:
+                    pixels_base = b.pixels_offset
+                    break
+
+        for i in range(len(bitmaps)):
+            b = bitmaps[i]
+            is_xbox = self.is_xbox_bitmap(b)
+            tex_block = []
+            w, h, d = b.width, b.height, b.depth
+            typ = TYPE_NAME_MAP[b.type.data]
+            fmt = FORMAT_NAME_MAP[b.format.data]
+            tex_info = dict(
+                width=w, height=h, depth=d, format=fmt, texture_type=typ,
+                swizzled=b.flags.swizzled, mipmap_count=b.mipmaps,
+                reswizzler="MORTON", deswizzler="MORTON")
+
+            mipmap_count = b.mipmaps + 1
+            bitmap_count = 6 if typ == "CUBE" else 1
+            if fmt == arbytmap.FORMAT_P8:
+                tex_info.update(
+                    palette=[P8_PALETTE.p8_palette_32bit_packed]*mipmap_count,
+                    palette_packed=True, indexing_size=8)
+
+            # xbox bitmaps are stored all mip level faces first, then
+            # the next mip level, whereas pc is the other way. Xbox
+            # bitmaps also have padding between each mipmap and bitmap.
+            j_max = bitmap_count if is_xbox else mipmap_count
+            k_max = mipmap_count if is_xbox else bitmap_count
+            off   = b.pixels_offset
+            if is_meta_tag:
+                off -= pixels_base
+
+            for j in range(j_max):
+                start_off = 0
+                if not is_xbox: mw, mh, md = get_mip_dims(w, h, d, j, fmt)
+
+                for k in range(k_max):
+                    if is_xbox: mw, mh, md = get_mip_dims(w, h, d, k, fmt)
+
+                    if fmt == arbytmap.FORMAT_P8:
+                        tex_block.append(
+                            array('B', pixel_data[off: off + mw*mh]))
+                        off += len(tex_block[-1])
+                    else:
+                        off = arbytmap.bitmap_io.bitmap_bytes_to_array(
+                            pixel_data, off, tex_block, fmt, mw, mh, md)
+
+                # skip the xbox alignment padding to get to the next texture
+                if is_xbox:
+                    size, mod = off - start_off, CUBEMAP_PADDING
+                    off += (mod - (size % mod))%mod
+
+            if is_xbox and b.type.enum_name == "cubemap":
+                template = tuple(tex_block)
+                j = 0
+                for f in (0, 2, 1, 3, 4, 5):
+                    for m in range(0, (b.mipmaps + 1)*6, 6):
+                        tex_block[m + f] = template[j]
+                        j += 1
+
+            tex_info['sub_bitmap_count'] = bitmap_count
+            textures.append((tex_block, tex_info))
+
+        return textures
+
+    def show_window(self, e=None, parent=None):
+        w = tk.Toplevel()
+        tag = self.bitmap_tag
+        self.display_frame = weakref.ref(self.display_frame_class(w, tag))
+        self.display_frame().change_textures(self.get_textures())
+        self.display_frame().pack(expand=True, fill="both")
+
+        try:
+            tag_name = "untitled"
+            #tag_name = tag().filepath.lower()
+            tag_name = tag.filepath.lower()
+            tag_name = tag_name.split(self.tags_dir.lower(), 1)[-1]
+        except Exception:
+            pass
+        w.title("Preview: %s" % tag_name)
+        w.transient(parent)
+        w.focus_force()
+        return w
 
 
 class HaloColorEntry(NumberEntryFrame):
@@ -370,7 +645,7 @@ class DependencyFrame(ContainerFrame):
             ext = '.' + self.node.tag_class.enum_name
             filepath = tags_dir + self.node.filepath
             try:
-                if (self.tag_window.handler.treat_mode_as_mod2 and
+                if (new_handler.treat_mode_as_mod2 and
                     ext == '.model' and not exists(filepath + ext)):
                     ext = '.gbxmodel'
             except AttributeError:
@@ -383,122 +658,52 @@ class DependencyFrame(ContainerFrame):
         finally:
             app.set_handler(cur_handler)
 
-    def populate(self):
-        '''Destroys and rebuilds this widgets children.'''
-        orient = self.desc.get('ORIENT', 'v')[:1].lower()  # get the orientation
-        vertical = True
-        assert orient in 'vh'
+    def get_dependency_tag(self):
+        t_w = self.tag_window
+        try:
+            tags_dir, app, handler = t_w.tag.tags_dir,\
+                                     t_w.app_root, t_w.handler
+        except AttributeError:
+            return
 
-        content = self
-        if hasattr(self, 'content'):
-            content = self.content
-        if self.show_title and content in (None, self):
-            content = tk.Frame(self, relief="sunken", bd=self.frame_depth,
-                               bg=self.default_bg_color)
+        try:
+            if not tags_dir.endswith(PATHDIV):
+                tags_dir += PATHDIV
 
-        self.content = content
-        # clear the f_widget_ids list
-        del self.f_widget_ids[:]
-        del self.f_widget_ids_map
-        del self.f_widget_ids_map_inv
+            self.flush()
 
-        f_widget_ids = self.f_widget_ids
-        f_widget_ids_map = self.f_widget_ids_map = {}
-        f_widget_ids_map_inv = self.f_widget_ids_map_inv = {}
-
-        # destroy all the child widgets of the content
-        if isinstance(self.f_widgets, dict):
-            for c in list(self.f_widgets.values()):
-                c.destroy()
-
-        # if the orientation is horizontal, remake its label
-        if orient == 'h':
-            vertical = False
-            self.title_label = tk.Label(
-                self, anchor='w', justify='left',
-                width=self.title_size, text=self.gui_name,
-                bg=self.default_bg_color, fg=self.text_normal_color)
-            if self.gui_name != '':
-                self.title_label.pack(fill="x", side="left")
-
-        btn_kwargs = dict(
-            bg=self.button_color, activebackground=self.button_color,
-            fg=self.text_normal_color, bd=self.button_depth,
-            disabledforeground=self.text_disabled_color,
-            )
-        self.browse_btn = tk.Button(
-            self, width=3, text='...', command=self.browse_tag, **btn_kwargs)
-        self.open_btn = tk.Button(
-            self, width=6, text='Open', command=self.open_tag, **btn_kwargs)
-
-        node = self.node
-        desc = node.desc
-        picker = self.widget_picker
-        tag_window = self.tag_window
-
-        field_indices = range(len(node))
-        # if the node has a steptree node, include its index in the indices
-        if hasattr(node, 'STEPTREE'):
-            field_indices = tuple(field_indices) + ('STEPTREE',)
-
-        kwargs = dict(parent=node, tag_window=tag_window,
-                      disabled=self.disabled, f_widget_parent=self,
-                      vert_oriented=vertical)
-
-        all_visible = self.all_visible
-        visible_count = self.visible_field_count
-
-        # if only one sub-widget being displayed, dont
-        # display the title of the widget being displayed
-        if all_visible:
-            pass
-        elif hasattr(node, 'STEPTREE'):
-            s_node = node['STEPTREE']
-            s_desc = desc['STEPTREE']
-            if hasattr(s_node, 'desc'):
-                s_desc = s_node.desc
-            if not s_desc.get('VISIBLE', 1) and visible_count <= 1:
-                kwargs['show_title'] = False
-        elif visible_count <= 1:
-            kwargs['show_title'] = False
-
-        # loop over each field and make its widget
-        for i in field_indices:
-            sub_node = node[i]
-            sub_desc = desc[i]
-            if hasattr(sub_node, 'desc'):
-                sub_desc = sub_node.desc
-
-            # only display the enumerator if there are more than 2 options
-            if i == 0 and sub_desc['ENTRIES'] <= 2:
-                continue
-
-            # if the field shouldnt be visible, dont make its widget
-            if not(sub_desc.get('VISIBLE', True) or all_visible):
-                continue
-
-            widget_cls = picker.get_widget(sub_desc)
+            ext = '.' + self.node.tag_class.enum_name
+            filepath = tags_dir + self.node.filepath
             try:
-                widget = widget_cls(content, node=sub_node,
-                                    attr_index=i, **kwargs)
+                if (handler.treat_mode_as_mod2 and
+                    ext == '.model' and not exists(filepath + ext)):
+                    ext = '.gbxmodel'
+            except AttributeError:
+                pass
+        except Exception:
+            print(format_exc())
+
+        try:
+            tag = handler.get_tag(filepath + ext)
+        except Exception:
+            try:
+                tag = handler.build_tag(filepath=filepath + ext)
             except Exception:
-                print(format_exc())
-                widget = NullFrame(content, node=sub_node,
-                                   attr_index=i, **kwargs)
+                return None
 
-            wid = id(widget)
-            f_widget_ids.append(wid)
-            f_widget_ids_map[i] = wid
-            f_widget_ids_map_inv[wid] = i
-            self.build_f_widget_cache()
+        tag.tags_dir = tags_dir  # for use by bitmap preview window
+        return tag
 
-            if sub_desc.get('NAME') == 'filepath':
-                widget.entry_string.trace('w', self.validate_filepath)
-                self.validate_filepath()
-
-        # now that the field widgets are created, position them
-        if self.show.get():
-            self.pose_fields()
+    def bitmap_preview(self, e=None):
+        f = self.preview_btn.display_frame
+        if f is not None and f() is not None:
+            return
+        try:
+            tag = self.get_dependency_tag()
+        except Exception:
+            return
+        self.preview_btn.change_bitmap(tag)
+        self.preview_btn.show_window(None, self.tag_window.app_root)
 
     def validate_filepath(self, *args):
         desc = self.desc
@@ -533,18 +738,59 @@ class DependencyFrame(ContainerFrame):
 
     def pose_fields(self):
         ContainerFrame.pose_fields(self)
+
+        node = self.node
+        desc = node.desc
+        picker = self.widget_picker
+        tag_window = self.tag_window
+
+        btn_kwargs = dict(
+            bg=self.button_color, activebackground=self.button_color,
+            fg=self.text_normal_color, bd=self.button_depth,
+            disabledforeground=self.text_disabled_color,
+            )
+        self.browse_btn = tk.Button(
+            self, width=3, text='...', command=self.browse_tag, **btn_kwargs)
+        self.open_btn = tk.Button(
+            self, width=5, text='Open', command=self.open_tag, **btn_kwargs)
+        self.preview_btn = None
+        try:
+            names = node.tag_class.NAME_MAP.keys()
+            is_bitmap_dependency = len(names) == 2 and "bitmap" in names
+        except Exception:
+            is_bitmap_dependency = False
+
+        if is_bitmap_dependency:
+            try:
+                tags_dir = tag_window.tag.tags_dir
+                app_root = tag_window.app_root
+            except AttributeError:
+                tags_dir = ""
+                app_root = None
+            self.preview_btn = HaloBitmapDisplayButton(
+                self, width=7, text="Preview", command=self.bitmap_preview,
+                tags_dir=tags_dir, **btn_kwargs)
+
         padx, pady, side= self.horizontal_padx, self.horizontal_pady, 'top'
         if self.desc.get('ORIENT', 'v') in 'hH':
             side = 'left'
+
+        for wid in self.f_widget_ids:
+            w = self.f_widgets[wid]
+            sub_desc = w.desc
+            if w.attr_index == 0 and sub_desc['ENTRIES'] <= 2:
+                w.pack_forget()
+            elif sub_desc.get('NAME') == 'filepath':
+                self.write_trace(w.entry_string, self.validate_filepath)
+                self.validate_filepath()
 
         if not hasattr(self.tag_window.tag, "tags_dir"):
             # cant do anything if the tags_dir doesnt exist
             return
 
-        self.browse_btn.pack(
-            fill='x', side=side, anchor='nw', padx=padx, pady=pady)
-
-        self.open_btn.pack(fill='x', side=side, anchor='nw', padx=padx)
+        for btn in (self.browse_btn, self.open_btn, self.preview_btn):
+            if btn is None: continue
+            btn.pack(fill='x', side=side, anchor='nw', padx=padx)
 
     def reload(self):
         '''Resupplies the nodes to the widgets which display them.'''
