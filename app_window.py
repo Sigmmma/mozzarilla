@@ -388,6 +388,7 @@ class Mozzarilla(Binilla):
 
         # make sure all the chosen tag paths are relative
         # to the current tags directory if they must be
+        last_load_dir = self.last_load_dir
         if handler_name in self.tags_dir_relative:
             for i in range(len(sanitized_paths)):
                 path = sanitized_paths[i]
