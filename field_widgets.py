@@ -112,14 +112,12 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
 
     def sequence_changed(self, *args):
         tag = self.bitmap_tag
-        #if tag is None or tag() is None:
         if tag is None:
             self.sprite_menu.set_options(())
             self.sequence_menu.set_options(("None", ))
             self.sprite_menu.sel_index = -1
             self.sequence_menu.sel_index = 0
             return
-        #tag = tag()
 
         sequence_i = self.sequence_index.get() - 1
         options = ()
@@ -127,6 +125,8 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
         if sequence_i in range(len(sequences)):
             sequence = sequences[sequence_i]
             options = range(len(sequence.sprites.STEPTREE))
+            if not options:
+                options = range(sequence.bitmap_count)
 
         self.sprite_menu.set_options(options)
         self.sprite_menu.sel_index = (self.sprite_menu.max_index >= 0) - 1
@@ -134,40 +134,45 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
     def sprite_changed(self, *args):
         self.image_canvas.delete("SPRITE_RECTANGLE")
         tag = self.bitmap_tag
-        #if tag is None or tag() is None:
         if tag is None:
             self.sprite_menu.set_options(())
             self.sequence_menu.set_options(("None", ))
             self.sprite_menu.sel_index = -1
             self.sequence_menu.sel_index = 0
             return
-        #tag = tag()
 
         data = tag.data.tagdata
-        sequence_i = self.sequence_index.get() - 1
         sequences = data.sequences.STEPTREE
+        bitmaps   = data.bitmaps.STEPTREE
+
+        sequence_i = self.sequence_index.get() - 1
         if sequence_i not in range(len(sequences)):
             return
 
+        sequence = sequences[sequence_i]
         sprite_i = self.sprite_index.get()
-        sprites = sequences[sequence_i].sprites.STEPTREE
-        if sprite_i not in range(len(sprites)):
+        sprites = sequence.sprites.STEPTREE
+        bitmap_index = sequence.first_bitmap_index + sprite_i
+        x0, y0, x1, y1 = 0, 0, 1, 1
+        if sprite_i in range(len(sprites)):
+            sprite = sprites[sprite_i]
+            if sprite.bitmap_index not in range(len(bitmaps)):
+                return
+
+            bitmap_index = sprite.bitmap_index
+            x0, y0, x1, y1 = sprite.left_side,  sprite.top_side,\
+                             sprite.right_side, sprite.bottom_side
+        elif bitmap_index not in range(len(bitmaps)):
             return
 
-        sprite = sprites[sprite_i]
-        bitmaps = data.bitmaps.STEPTREE
-        if sprite.bitmap_index not in range(len(bitmaps)):
-            return
-        elif sprite.bitmap_index != self.bitmap_index.get():
-            self.bitmap_menu.sel_index = sprite.bitmap_index
+        if bitmap_index != self.bitmap_index.get():
+            self.bitmap_menu.sel_index = bitmap_index
 
-        bitmap = bitmaps[sprite.bitmap_index]
+        bitmap = bitmaps[bitmap_index]
         mip = self.mipmap_index.get()
         w, h = max(bitmap.width>>mip, 1), max(bitmap.height>>mip, 1)
-        x0 = int(round(sprite.left_side   * w))
-        y0 = int(round(sprite.top_side    * h))
-        x1 = int(round(sprite.right_side  * w))
-        y1 = int(round(sprite.bottom_side * h))
+        x0, y0 = int(round(x0 * w)), int(round(y0 * h))
+        x1, y1 = int(round(x1 * w)), int(round(y1 * h))
         if x1 < x0: x0, x1 = x1, x0
         if y1 < y0: y0, y1 = y1, y0
         x0 -= 1; y0 -= 1
@@ -183,9 +188,7 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
 
         BitmapDisplayFrame.change_textures(self, textures)
         tag = self.bitmap_tag
-        #if tag is None or tag() is None:
         if tag is None: return
-        #tag = tag()
 
         data = tag.data.tagdata
         options = {i+1: str(i) for i in range(len(data.sequences.STEPTREE))}
@@ -207,9 +210,7 @@ class HaloBitmapDisplayButton(BitmapDisplayButton):
 
     def get_textures(self):
         tag = self.bitmap_tag
-        #if tag is None or tag() is None: return ()
         if tag is None: return ()
-        #tag = tag()
 
         is_meta_tag = not hasattr(tag, "tags_dir")
 
@@ -296,7 +297,6 @@ class HaloBitmapDisplayButton(BitmapDisplayButton):
 
         try:
             tag_name = "untitled"
-            #tag_name = tag().filepath.lower()
             tag_name = tag.filepath.lower()
             tag_name = tag_name.split(self.tags_dir.lower(), 1)[-1]
         except Exception:
