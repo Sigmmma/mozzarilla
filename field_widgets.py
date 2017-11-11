@@ -41,36 +41,6 @@ def inject_color(chan_char, new_val, parent, attr_index):
     parent[attr_index] = node
 
 
-class BitmapTagFrame(ContainerFrame):
-
-    def bitmap_preview(self, e=None):
-        f = self.preview_btn.display_frame
-        if f is not None and f() is not None:
-            return
-
-        try:
-            tag = self.tag_window.tag
-        except AttributeError:
-            return
-        self.preview_btn.change_bitmap(tag)
-        self.preview_btn.show_window(None, self.tag_window.app_root)
-
-    def pose_fields(self):
-        try:
-            tags_dir = self.tag_window.tag.tags_dir
-        except AttributeError:
-            tags_dir = ""
-        self.preview_btn = HaloBitmapDisplayButton(
-            self, width=15, text="Preview", bd=self.button_depth,
-            tags_dir=tags_dir, command=self.bitmap_preview,
-            bg=self.button_color, fg=self.text_normal_color,
-            activebackground=self.button_color,
-            disabledforeground=self.text_disabled_color)
-
-        self.preview_btn.pack(anchor='center', pady=10)
-        ContainerFrame.pose_fields(self)
-
-
 class HaloBitmapDisplayFrame(BitmapDisplayFrame):
     # these mappings have the 2nd and 3rd faces swapped on pc for some reason
     cubemap_cross_mapping = (
@@ -205,27 +175,33 @@ class HaloBitmapDisplayButton(BitmapDisplayButton):
         self.tags_dir = kwargs.pop("tags_dir", self.tags_dir)
         BitmapDisplayButton.__init__(self, *args, **kwargs)
 
+    def get_base_address(self):
+        tag = self.bitmap_tag
+        if tag is None: return ()
+        bitmaps = tag.data.tagdata.bitmaps.STEPTREE
+
+        for b in bitmaps:
+            if b.pixels_offset:
+                return b.pixels_offset
+        return 0
+
     def is_xbox_bitmap(self, bitmap):
-        return bitmap.base_address == 1073751810
+        try:
+            return bitmap.base_address == 1073751810
+        except AttributeError:
+            return False
 
     def get_textures(self):
         tag = self.bitmap_tag
         if tag is None: return ()
 
+        textures = []
         is_meta_tag = not hasattr(tag, "tags_dir")
 
-        textures = []
-
         get_mip_dims = arbytmap.get_mipmap_dimensions
+        pixels_base  = self.get_base_address()
         pixel_data = tag.data.tagdata.processed_pixel_data.data
         bitmaps    = tag.data.tagdata.bitmaps.STEPTREE
-
-        if is_meta_tag:
-            pixels_base = 0
-            for b in bitmaps:
-                if b.pixels_offset:
-                    pixels_base = b.pixels_offset
-                    break
 
         for i in range(len(bitmaps)):
             b = bitmaps[i]
@@ -305,6 +281,47 @@ class HaloBitmapDisplayButton(BitmapDisplayButton):
         w.transient(parent)
         w.focus_force()
         return w
+
+
+class Halo2BitmapDisplayButton(HaloBitmapDisplayButton):
+
+    def get_base_address(self):
+        return 0
+
+
+class HaloBitmapTagFrame(ContainerFrame):
+    bitmap_display_button_class = HaloBitmapDisplayButton
+
+    def bitmap_preview(self, e=None):
+        f = self.preview_btn.display_frame
+        if f is not None and f() is not None:
+            return
+
+        try:
+            tag = self.tag_window.tag
+        except AttributeError:
+            return
+        self.preview_btn.change_bitmap(tag)
+        self.preview_btn.show_window(None, self.tag_window.app_root)
+
+    def pose_fields(self):
+        try:
+            tags_dir = self.tag_window.tag.tags_dir
+        except AttributeError:
+            tags_dir = ""
+        self.preview_btn = self.bitmap_display_button_class(
+            self, width=15, text="Preview", bd=self.button_depth,
+            tags_dir=tags_dir, command=self.bitmap_preview,
+            bg=self.button_color, fg=self.text_normal_color,
+            activebackground=self.button_color,
+            disabledforeground=self.text_disabled_color)
+
+        self.preview_btn.pack(anchor='center', pady=10)
+        ContainerFrame.pose_fields(self)
+
+
+class Halo2BitmapTagFrame(HaloBitmapTagFrame):
+    bitmap_display_button_class = Halo2BitmapDisplayButton
 
 
 class HaloColorEntry(NumberEntryFrame):
