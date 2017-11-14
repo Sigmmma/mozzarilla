@@ -15,13 +15,11 @@ from binilla import editor_constants
 from binilla.field_widgets import *
 from binilla.widgets import *
 
-from reclaimer.constants import *
+from reclaimer.h2.constants import *
 
 try:
     import arbytmap
-    from reclaimer.hek.defs.objs.bitm import TYPE_NAME_MAP, FORMAT_NAME_MAP,\
-         CUBEMAP_PADDING, P8_PALETTE
-
+    from reclaimer.hek.defs.objs.bitm import P8_PALETTE
 except ImportError:
     pass
 
