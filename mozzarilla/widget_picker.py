@@ -25,10 +25,10 @@ class MozzarillaWidgetPicker(WidgetPicker):
 
 def_halo_widget_picker = dhwp = MozzarillaWidgetPicker()
 
-dhwp.add_widget(HaloRefStr, EntryFrame)
-dhwp.add_widget(TagIndexRef, DependencyFrame)
+dhwp.add_widget(StrTagRef, EntryFrame)
+dhwp.add_widget(TagRef, DependencyFrame)
 
-dhwp.copy_widget(FlUTF16StrData, StrUtf16)
+dhwp.copy_widget(FlStrUTF16Data, StrUtf16)
 dhwp.copy_widget(FlStrUTF16, StrUtf16)
 
 dhwp.copy_widget(FlUInt16, UInt16)
@@ -58,11 +58,11 @@ dhwp.copy_widget(StrLatin1Enum, SEnum32)
 try:
     dhwp.copy_widget(StringID, QStruct)
 
-    dhwp.copy_widget(H2TagIndexRef, TagIndexRef)
+    dhwp.copy_widget(H2TagRef, TagRef)
     dhwp.copy_widget(H2RawdataRef, RawdataRef)
     dhwp.copy_widget(H2Reflexive, Reflexive)
 
-    dhwp.copy_widget(H2MetaTagIndexRef, Struct)
+    dhwp.copy_widget(H2MetaTagRef, Struct)
     dhwp.copy_widget(H2MetaReflexive, H2RawdataRef)
     dhwp.copy_widget(H2MetaRawdataRef, H2Reflexive)
 except Exception:
