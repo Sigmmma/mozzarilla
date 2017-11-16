@@ -33,8 +33,8 @@ method_enums += new_method_enums
 
 hotkey = Struct("hotkey",
     BitStruct("combo",
-        BitUEnum("modifier", GUI_NAME="", *modifier_enums, SIZE=4),
-        BitUEnum("key", GUI_NAME="and", *hotkey_enums, SIZE=28),
+        UBitEnum("modifier", GUI_NAME="", *modifier_enums, SIZE=4),
+        UBitEnum("key", GUI_NAME="and", *hotkey_enums, SIZE=28),
         SIZE=4, ORIENT='h',
         ),
     UEnum32("method", *method_enums)
