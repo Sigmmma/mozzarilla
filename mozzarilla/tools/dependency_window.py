@@ -13,6 +13,7 @@ from .shared_widgets import DirectoryFrame, HierarchyFrame, DependencyFrame
 
 
 class DependencyWindow(tk.Toplevel, BinillaWidget):
+    window_name = "dependency_window"
     app_root = None
     handler = None
 
@@ -104,7 +105,10 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         self.tag_filepath.set(fp)
 
     def destroy(self):
-        self.app_root.tool_windows.pop("dependency_window", None)
+        try:
+            self.app_root.tool_windows.pop(self.window_name, None)
+        except AttributeError:
+            pass
         self.stop_zipping = True
         tk.Toplevel.destroy(self)
 
