@@ -23,7 +23,7 @@ from mozzarilla.config_def import config_def, guerilla_workspace_def
 from mozzarilla.widget_picker import *
 from mozzarilla.tag_window import HaloTagWindow
 from mozzarilla.tools import SearchAndReplaceWindow,\
-     DependencyWindow, TagScannerWindow,\
+     DependencyWindow, TagScannerWindow, HekToolWrapperWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
      bitmap_from_dds, bitmap_from_bitmap_source
 
@@ -32,7 +32,7 @@ default_hotkeys.update({
     '<F1>': "show_dependency_viewer",
     '<F2>': "show_tag_scanner",
     '<F3>': "show_search_and_replace",
-    #'<F4>': "???",
+    '<F4>': "create_hek_tool_window",
 
     '<F5>': "switch_tags_dir",
     '<F6>': "set_tags_dir",
@@ -45,15 +45,16 @@ default_hotkeys.update({
     #'<F12>': "???",
     })
 
-curr_dir = dirname(__file__)
+this_curr_dir = dirname(__file__)
 
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.1.5'
+    version = '1.1.6'
     log_filename = 'mozzarilla.log'
     debug = 0
 
+    curr_dir = this_curr_dir
     _mozzarilla_initialized = False
 
     styles_dir  = dirname(__file__) + PATHDIV + "styles"
@@ -107,7 +108,7 @@ class Mozzarilla(Binilla):
         # the config requires using methods in the handler.
         kwargs['handler'] = MiscHaloLoader(debug=self.debug)
         self.tags_dir_relative = set(self.tags_dir_relative)
-        self.tags_dirs = ["%s%stags%s" % (curr_dir, PATHDIV, PATHDIV)]
+        self.tags_dirs = ["%s%stags%s" % (this_curr_dir, PATHDIV, PATHDIV)]
 
         Binilla.__init__(self, *args, **kwargs)
 
@@ -155,6 +156,9 @@ class Mozzarilla(Binilla):
         self.tools_menu.add_command(
             label="Bitmap from uncompressed bitmap source",
             command=self.bitmap_from_bitmap_source)
+        #self.tools_menu.add_separator()
+        #self.tools_menu.add_command(
+        #    label="HEK Tool wrapper", command=self.create_hek_tool_window)
         self.tools_menu.add_separator()
 
         self.defs_menu.add_separator()
@@ -639,45 +643,34 @@ class Mozzarilla(Binilla):
             self._curr_handler_index = handler_index
             self.handler = self.handlers[handler_index]
 
-    def show_dependency_viewer(self, e=None):
-        w = self.tool_windows.get("dependency_window")
+    def show_tool_window(self, window_name, window_class,
+                         needs_tag_refs=False):
+        w = self.tool_windows.get(window_name)
         if w is not None:
             try: w.destroy()
             except Exception: pass
-            del self.tool_windows["dependency_window"]
+            del self.tool_windows[window_name]
             return
 
-        if not hasattr(self.handler, 'tag_ref_cache'):
+        if needs_tag_refs and not hasattr(self.handler, 'tag_ref_cache'):
             print("Change the current tag set.")
             return
 
-        self.tool_windows["dependency_window"] = w = DependencyWindow(self)
+        self.tool_windows[window_name] = w = window_class(self)
+        w.window_name = window_name
         self.place_window_relative(w, 30, 50); w.focus_set()
+
+    def show_dependency_viewer(self, e=None):
+        self.show_tool_window("dependency_window", DependencyWindow, True)
 
     def show_tag_scanner(self, e=None):
-        w = self.tool_windows.get("tag_scanner_window")
-        if w is not None:
-            try: w.destroy()
-            except Exception: pass
-            del self.tool_windows["tag_scanner_window"]
-            return
-
-        if not hasattr(self.handler, 'tag_ref_cache'):
-            print("Change the current tag set.")
-            return
-
-        self.tool_windows["tag_scanner_window"] = w = TagScannerWindow(self)
-        self.place_window_relative(w, 30, 50); w.focus_set()
+        self.show_tool_window("tag_scanner_window", TagScannerWindow, True)
 
     def show_search_and_replace(self, e=None):
-        w = self.tool_windows.get("s_and_r_window")
-        if w is not None:
-            try: w.destroy()
-            except Exception: pass
-            del self.tool_windows["s_and_r_window"]
-            return
+        self.show_tool_window("s_and_r_window", SearchAndReplaceWindow)
 
-        self.tool_windows["s_and_r_window"] = w = SearchAndReplaceWindow(self)
+    def create_hek_tool_window(self, e=None):
+        w = HekToolWrapperWindow(self)
         self.place_window_relative(w, 30, 50); w.focus_set()
 
     def update_config(self, config_file=None):

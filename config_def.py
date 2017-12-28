@@ -27,6 +27,7 @@ new_method_enums = (
     {GUI_NAME:"open search and replace", NAME:"show_search_and_replace"},
     {GUI_NAME:"make bitmap from dds", NAME:"bitmap_from_dds"},
     {GUI_NAME:"make bitmap from bitmap source", NAME:"bitmap_from_bitmap_source"},
+    {GUI_NAME:"open hek tool", NAME:"create_hek_tool_window"},
     )
 
 method_enums += new_method_enums
@@ -43,6 +44,13 @@ hotkey = Struct("hotkey",
 config_header = Struct("header",
     LUEnum32("id", ('Mozz', 'zzoM'), VISIBLE=False, DEFAULT='zzoM'),
     INCLUDE=config_header
+    )
+
+tool_command = Container("tool_command",
+    UInt32("namelen", VISIBLE=False),
+    UInt32("cmdlen", VISIBLE=False),
+    StrUtf8("name", SIZE=".namelen"),
+    StrUtf8("command", SIZE=".cmdlen")
     )
 
 hotkeys = Array(
@@ -74,11 +82,14 @@ mozzarilla = Container("mozzarilla",
     UInt16("sash_position", VISIBLE=False, EDITABLE=False),
     Pad(64 - 2*4),
 
-    UInt16("tags_dirs_count", VISIBLE=False, EDITABLE=False, MIN=1),
-    Pad(64 - 2*1),
+    UInt16("tags_dirs_count",  VISIBLE=False, EDITABLE=False, MIN=1),
+    UInt16("tool_paths_count", VISIBLE=False, EDITABLE=False),
+    UInt32("tool_cmd_count", VISIBLE=False, EDITABLE=False),
+    Pad(64 - 2*2 - 4*1),
 
-    Array("tags_dirs", SUB_STRUCT=filepath,
-        SIZE=".tags_dirs_count", MIN=1),
+    Array("tags_dirs",  SUB_STRUCT=filepath, SIZE=".tags_dirs_count", MIN=1),
+    Array("tool_paths", SUB_STRUCT=filepath, SIZE=".tool_paths_count"),
+    Array("tool_commands", SUB_STRUCT=tool_command, SIZE=".tool_cmd_count"),
     COMMENT="\nThese are settings specific to Mozzarilla.\n"
     )
 
@@ -145,7 +156,7 @@ window_header = Struct("window_header",
     # These raw bytes seem to be some sort of window coordinates, but idc
     #BytesRaw("unknown3", DEFAULT=b'\xff'*16, SIZE=16),
 
-    QStruct("t_l_corner",     SInt32("x"), SInt32("y"), ORIENT="h"),
+    QStruct("t_l_corner", SInt32("x"), SInt32("y"), ORIENT="h"),
     QStruct("b_r_corner", SInt32("x"), SInt32("y"), ORIENT="h"),
     SIZE=44
     )
