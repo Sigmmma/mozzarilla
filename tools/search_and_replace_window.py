@@ -6,6 +6,8 @@ from supyr_struct.defs.util import *
 
 
 class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
+    app_root = None
+    window_name = "s_and_r_window"
 
     def __init__(self, app_root, *args, **kwargs):
         self.app_root = app_root
@@ -80,7 +82,10 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
                 selectforeground=self.text_highlighted_color)
 
     def destroy(self):
-        self.app_root.tool_windows.pop("s_and_r_window", None)
+        try:
+            self.app_root.tool_windows.pop(self.window_name, None)
+        except AttributeError:
+            pass
         tk.Toplevel.destroy(self)
 
     def search(self, e=None):

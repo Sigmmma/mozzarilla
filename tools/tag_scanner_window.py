@@ -16,6 +16,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
     app_root = None
     tags_dir = ''
     handler = None
+    window_name = "tag_scanner_window"
 
     _scanning = False
     stop_scanning = False
@@ -209,7 +210,10 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         self.logfile_path.set(filepath)
 
     def destroy(self):
-        self.app_root.tool_windows.pop("tag_scanner_window", None)
+        try:
+            self.app_root.tool_windows.pop(self.window_name, None)
+        except AttributeError:
+            pass
         self.stop_scanning = True
         tk.Toplevel.destroy(self)
 
