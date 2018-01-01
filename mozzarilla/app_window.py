@@ -3,6 +3,7 @@ import gc
 import tkinter as tk
 
 from os.path import dirname, exists, isdir, join, splitext, relpath
+from threading import Thread
 from tkinter import messagebox
 from traceback import format_exc
 
@@ -13,6 +14,7 @@ from reclaimer.constants import *
 inject_halo_constants()
 
 from binilla.app_window import *
+from binilla.util import do_subprocess
 from reclaimer.hek.handler import HaloHandler
 from reclaimer.os_v3_hek.handler import OsV3HaloHandler
 from reclaimer.os_v4_hek.handler import OsV4HaloHandler
@@ -23,7 +25,7 @@ from mozzarilla.config_def import config_def, guerilla_workspace_def
 from mozzarilla.widget_picker import *
 from mozzarilla.tag_window import HaloTagWindow
 from mozzarilla.tools import SearchAndReplaceWindow,\
-     DependencyWindow, TagScannerWindow, HekToolWrapperWindow,\
+     DependencyWindow, TagScannerWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
      bitmap_from_dds, bitmap_from_bitmap_source
 
@@ -32,7 +34,7 @@ default_hotkeys.update({
     '<F1>': "show_dependency_viewer",
     '<F2>': "show_tag_scanner",
     '<F3>': "show_search_and_replace",
-    '<F4>': "create_hek_tool_window",
+    '<F4>': "create_hek_pool_window",
 
     '<F5>': "switch_tags_dir",
     '<F6>': "set_tags_dir",
@@ -50,7 +52,7 @@ this_curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.1.6'
+    version = '1.1.8'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -139,6 +141,8 @@ class Mozzarilla(Binilla):
 
         self.main_menu.add_cascade(label="Tag set", menu=self.defs_menu)
         self.main_menu.add_cascade(label="Tools", menu=self.tools_menu)
+        self.main_menu.add_command(label="Launch Pool",
+                                   command=self.create_hek_pool_window)
 
         for i in range(len(self.handler_names)):
             self.defs_menu.add_command(command=lambda i=i:
@@ -156,9 +160,6 @@ class Mozzarilla(Binilla):
         self.tools_menu.add_command(
             label="Bitmap from uncompressed bitmap source",
             command=self.bitmap_from_bitmap_source)
-        #self.tools_menu.add_separator()
-        #self.tools_menu.add_command(
-        #    label="HEK Tool wrapper", command=self.create_hek_tool_window)
         self.tools_menu.add_separator()
 
         self.defs_menu.add_separator()
@@ -669,9 +670,15 @@ class Mozzarilla(Binilla):
     def show_search_and_replace(self, e=None):
         self.show_tool_window("s_and_r_window", SearchAndReplaceWindow)
 
-    def create_hek_tool_window(self, e=None):
-        w = HekToolWrapperWindow(self)
-        self.place_window_relative(w, 30, 50); w.focus_set()
+    def create_hek_pool_window(self, e=None):
+        try:
+            launcher = Thread(
+                target=do_subprocess, daemon=True, args=("pythonw",),
+                kwargs=dict(exec_args=("-m", "hek_pool.run"),
+                            proc_controller=ProcController(abandon=True)))
+            launcher.start()
+        except Exception:
+            print("Could not open HEK Pool")
 
     def update_config(self, config_file=None):
         if config_file is None:
