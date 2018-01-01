@@ -7,9 +7,9 @@ from threading import Thread
 from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
+from binilla.util import *
 from binilla.widgets import BinillaWidget
 from supyr_struct.defs.constants import *
-from supyr_struct.defs.util import *
 
 
 class TagScannerWindow(tk.Toplevel, BinillaWidget):
@@ -37,16 +37,17 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         tagset = app_root.handler_names[app_root._curr_handler_index]
 
         self.title("[%s] Tag directory scanner" % tagset)
-        self.minsize(width=400, height=250)
-        self.resizable(0, 0)
+        self.minsize(width=400, height=300)
 
         # make the tkinter variables
+        self.open_logfile = tk.BooleanVar(self, True)
         self.directory_path = tk.StringVar(self)
         self.logfile_path = tk.StringVar(self)
 
         # make the frames
         self.directory_frame = tk.LabelFrame(self, text="Directory to scan")
-        self.logfile_frame = tk.LabelFrame(self, text="Output log filepath")
+        self.logfile_frame   = tk.LabelFrame(self, text="Output log filepath")
+        self.logfile_dir_frame = tk.Frame(self.logfile_frame)
         self.def_ids_frame = tk.LabelFrame(
             self, text="Select which tag types to scan")
         self.button_frame = tk.Frame(self.def_ids_frame)
@@ -70,9 +71,12 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             self.directory_frame, text="Browse", command=self.dir_browse)
 
         self.logfile_entry = tk.Entry(
-            self.logfile_frame, textvariable=self.logfile_path,)
+            self.logfile_dir_frame, textvariable=self.logfile_path,)
         self.log_browse_button = tk.Button(
-            self.logfile_frame, text="Browse", command=self.log_browse)
+            self.logfile_dir_frame, text="Browse", command=self.log_browse)
+        self.open_logfile_cbtn = tk.Checkbutton(
+            self.logfile_frame, text="Open log when done scanning",
+            variable=self.open_logfile)
 
         self.def_ids_scrollbar = tk.Scrollbar(
             self.def_ids_frame, orient="vertical")
@@ -109,7 +113,9 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
         self.directory_frame.pack(fill='x', padx=1)
         self.logfile_frame.pack(fill='x', padx=1)
-        self.def_ids_frame.pack(fill='x', padx=1, expand=True)
+        self.logfile_dir_frame.pack(fill='x')
+        self.open_logfile_cbtn.pack(fill='x', side=tk.LEFT)
+        self.def_ids_frame.pack(fill='both', padx=1, expand=True)
 
         self.transient(app_root)
 
@@ -118,11 +124,20 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         self.apply_style()
 
     def apply_style(self):
-        self.config(bg=self.default_bg_color)        
-        for w in(self.directory_frame, self.logfile_frame, self.def_ids_frame):
+        self.config(bg=self.default_bg_color)
+        for w in(self.logfile_dir_frame, ):
+            w.config(bg=self.default_bg_color)
+
+        for w in(self.directory_frame, self.def_ids_frame, self.logfile_frame):
             w.config(fg=self.text_normal_color, bg=self.default_bg_color)
 
         self.button_frame.config(bg=self.default_bg_color)
+
+        self.open_logfile_cbtn.config(
+                disabledforeground=self.text_disabled_color,
+                bg=self.default_bg_color, fg=self.text_normal_color,
+                activebackground=self.default_bg_color,
+                activeforeground=self.text_highlighted_color,)
 
         for w in (self.scan_button, self.cancel_button,
                   self.select_all_button, self.deselect_all_button,
@@ -225,8 +240,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             return
         try: self.scan_thread.join(1.0)
         except Exception: pass
-        self.scan_thread = Thread(target=self._scan_directory)
-        self.scan_thread.daemon = True
+        self.scan_thread = Thread(target=self._scan_directory, daemon=True)
         self.scan_thread.start()
 
     def _scan_directory(self):
@@ -373,20 +387,23 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         # make and write to the logfile
         try:
             handler.make_log_file(debuglog, logpath)
-            print("Scan completed.\n")
+            try:
+                print("Scan completed.\n")
+                if self.open_logfile.get():
+                    do_subprocess("notepad.exe", exec_args=(logpath,),
+                                  proc_controller=ProcController(abandon=True))
+            except Exception:
+                print("Could not open written log.")
             return
         except Exception:
-            pass
+            print("Could not create log. Printing log to console instead.\n\n")
+            for line in debuglog.split('\n'):
+                try:
+                    print(line)
+                except Exception:
+                    print("<COULD NOT PRINT THIS LINE>")
 
-        print("Could not create log. Printing log to console instead.\n\n")
-        for line in debuglog.split('\n'):
-            try:
-                print(line)
-            except Exception:
-                print("<COULD NOT PRINT THIS LINE>")
-
-        print("Scan completed.\n")
-
+            print("Scan completed.\n")
 
     def tag_specific_scan(self, tag, errors):
         assert isinstance(errors, dict)
