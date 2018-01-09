@@ -1136,7 +1136,7 @@ class ReflexiveFrame(DynamicArrayFrame):
                   self.duplicate_btn, self.insert_btn, self.add_btn):
             w.forget()
             
-        # pack and all the buttons
+        # pack all the buttons(and new ones)
         for w in (self.export_all_btn, self.import_all_btn,
                   self.shift_down_btn, self.shift_up_btn,
                   self.export_btn, self.import_btn,

@@ -52,7 +52,7 @@ this_curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.1.8'
+    version = '1.1.9'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -141,8 +141,12 @@ class Mozzarilla(Binilla):
 
         self.main_menu.add_cascade(label="Tag set", menu=self.defs_menu)
         self.main_menu.add_cascade(label="Tools", menu=self.tools_menu)
-        self.main_menu.add_command(label="Launch Pool",
-                                   command=self.create_hek_pool_window)
+        try:
+            import hek_pool
+            self.main_menu.add_command(label="Launch Pool",
+                                       command=self.create_hek_pool_window)
+        except ImportError:
+            pass
 
         for i in range(len(self.handler_names)):
             self.defs_menu.add_command(command=lambda i=i:
@@ -160,7 +164,6 @@ class Mozzarilla(Binilla):
         self.tools_menu.add_command(
             label="Bitmap from uncompressed bitmap source",
             command=self.bitmap_from_bitmap_source)
-        self.tools_menu.add_separator()
 
         self.defs_menu.add_separator()
         self.handlers = list(self.handlers)
