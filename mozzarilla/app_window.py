@@ -52,7 +52,7 @@ this_curr_dir = dirname(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.1.9'
+    version = '1.2.0'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -142,9 +142,10 @@ class Mozzarilla(Binilla):
         self.main_menu.add_cascade(label="Tag set", menu=self.defs_menu)
         self.main_menu.add_cascade(label="Tools", menu=self.tools_menu)
         try:
-            import hek_pool
-            self.main_menu.add_command(label="Launch Pool",
-                                       command=self.create_hek_pool_window)
+            if e_c.IS_WIN:
+                import hek_pool
+                self.main_menu.add_command(label="Launch Pool",
+                                           command=self.create_hek_pool_window)
         except ImportError:
             pass
 
@@ -676,7 +677,7 @@ class Mozzarilla(Binilla):
     def create_hek_pool_window(self, e=None):
         try:
             launcher = Thread(
-                target=do_subprocess, daemon=True, args=("pythonw",),
+                target=do_subprocess, daemon=True, args=("pythonw", ),
                 kwargs=dict(exec_args=("-m", "hek_pool.run"),
                             proc_controller=ProcController(abandon=True)))
             launcher.start()
