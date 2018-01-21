@@ -540,8 +540,7 @@ class Mozzarilla(Binilla):
         if hasattr(tag, "rel_filepath"):
             tag.filepath = join(tag.tags_dir, tag.rel_filepath)
 
-        Binilla.save_tag(self, tag)
-        return tag
+        return Binilla.save_tag(self, tag)
 
     def save_tag_as(self, tag=None, filepath=None):
         if isinstance(tag, tk.Event):
