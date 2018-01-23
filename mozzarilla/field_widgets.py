@@ -656,6 +656,8 @@ class DependencyFrame(ContainerFrame):
                 tags_dir += PATHDIV
 
             self.flush()
+            if not self.node.filepath:
+                return
 
             ext = '.' + self.node.tag_class.enum_name
             filepath = tags_dir + self.node.filepath
@@ -686,6 +688,8 @@ class DependencyFrame(ContainerFrame):
                 tags_dir += PATHDIV
 
             self.flush()
+            if not self.node.filepath:
+                return
 
             ext = '.' + self.node.tag_class.enum_name
             filepath = tags_dir + self.node.filepath
@@ -716,6 +720,9 @@ class DependencyFrame(ContainerFrame):
         try:
             tag = self.get_dependency_tag()
         except Exception:
+            tag = None
+
+        if tag is None:
             return
         self.preview_btn.change_bitmap(tag)
         self.preview_btn.show_window(None, self.tag_window.app_root)

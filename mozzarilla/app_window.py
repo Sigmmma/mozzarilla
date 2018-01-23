@@ -14,7 +14,7 @@ from reclaimer.constants import *
 inject_halo_constants()
 
 from binilla.app_window import *
-from binilla.util import do_subprocess
+from binilla.util import do_subprocess, is_main_frozen, get_cwd
 from reclaimer.hek.handler import HaloHandler
 from reclaimer.os_v3_hek.handler import OsV3HaloHandler
 from reclaimer.os_v4_hek.handler import OsV4HaloHandler
@@ -47,7 +47,7 @@ default_hotkeys.update({
     #'<F12>': "???",
     })
 
-this_curr_dir = dirname(__file__)
+this_curr_dir = get_cwd(__file__)
 
 
 class Mozzarilla(Binilla):
@@ -59,8 +59,8 @@ class Mozzarilla(Binilla):
     curr_dir = this_curr_dir
     _mozzarilla_initialized = False
 
-    styles_dir  = dirname(__file__) + PATHDIV + "styles"
-    config_path = dirname(__file__) + '%smozzarilla.cfg' % PATHDIV
+    styles_dir  = this_curr_dir + PATHDIV + "styles"
+    config_path = this_curr_dir + '%smozzarilla.cfg' % PATHDIV
     config_def  = config_def
     config_version = 2
 
@@ -142,7 +142,7 @@ class Mozzarilla(Binilla):
         self.main_menu.add_cascade(label="Tag set", menu=self.defs_menu)
         self.main_menu.add_cascade(label="Tools", menu=self.tools_menu)
         try:
-            if e_c.IS_WIN:
+            if e_c.IS_WIN and not is_main_frozen():
                 import hek_pool
                 self.main_menu.add_command(label="Launch Pool",
                                            command=self.create_hek_pool_window)
