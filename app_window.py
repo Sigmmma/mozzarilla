@@ -52,7 +52,7 @@ this_curr_dir = get_cwd(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.2.1'
+    version = '1.2.2'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -113,6 +113,13 @@ class Mozzarilla(Binilla):
         self.tags_dirs = ["%s%stags%s" % (this_curr_dir, PATHDIV, PATHDIV)]
 
         Binilla.__init__(self, *args, **kwargs)
+        try:
+            try:
+                self.iconbitmap(join(this_curr_dir, 'mozzarilla.ico'))
+            except Exception:
+                self.iconbitmap(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
+        except Exception:
+            print(format_exc())
 
         self.file_menu.insert_command("Exit", label="Load guerilla config",
                                       command=self.load_guerilla_config)
