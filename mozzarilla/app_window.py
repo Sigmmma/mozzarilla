@@ -598,9 +598,12 @@ class Mozzarilla(Binilla):
 
             self.add_tag(tag, filepath)
             w.save(temp=False)
+        except PermissionError:
+            print("This program does not have permission to save to this folder.\n"
+                  "Could not save: %s" % filepath)
         except Exception:
             print(format_exc())
-            raise IOError("Could not save tag.")
+            raise IOError("Could not save: %s" % filepath)
 
         self.update_tag_window_title(w)
         return tag
