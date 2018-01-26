@@ -119,7 +119,7 @@ class Mozzarilla(Binilla):
             except Exception:
                 self.iconbitmap(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
         except Exception:
-            print(format_exc())
+            print("Could not load window icon.")
 
         self.file_menu.insert_command("Exit", label="Load guerilla config",
                                       command=self.load_guerilla_config)
