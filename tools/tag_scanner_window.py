@@ -11,6 +11,7 @@ from binilla.util import *
 from binilla.widgets import BinillaWidget
 from supyr_struct.defs.constants import *
 
+curr_dir = get_cwd(__file__)
 
 class TagScannerWindow(tk.Toplevel, BinillaWidget):
     app_root = None
@@ -29,6 +30,13 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         self.app_root = app_root
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
+        try:
+            try:
+                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+            except Exception:
+                self.iconbitmap(join(curr_dir, '..', 'icons', 'mozzarilla.ico'))
+        except Exception:
+            print("Could not load window icon.")
 
         ext_id_map = handler.ext_id_map
         self.listbox_index_to_def_id = [
