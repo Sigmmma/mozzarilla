@@ -52,7 +52,7 @@ this_curr_dir = get_cwd(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.2.3'
+    version = '1.2.4'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -499,6 +499,14 @@ class Mozzarilla(Binilla):
                                     window_cls=window_cls,
                                     is_new_tag=is_new_tag)
         self.update_tag_window_title(w)
+        try:
+            try:
+                w.iconbitmap(join(this_curr_dir, 'mozzarilla.ico'))
+            except Exception:
+                w.iconbitmap(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
+        except Exception:
+            pass
+
         return w
 
     def make_window_panes(self):
