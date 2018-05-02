@@ -1,9 +1,12 @@
 import tkinter as tk
+from os.path import join
 
 from binilla.widgets import BinillaWidget
+from binilla.util import get_cwd
 from supyr_struct.defs.constants import *
 from supyr_struct.defs.util import *
 
+curr_dir = get_cwd(__file__)
 
 class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
     app_root = None
@@ -13,8 +16,15 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
         self.app_root = app_root
         kwargs.update(width=450, height=270, bd=0, highlightthickness=0)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
+        try:
+            try:
+                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+            except Exception:
+                self.iconbitmap(join(curr_dir, '..', 'icons', 'mozzarilla.ico'))
+        except Exception:
+            print("Could not load window icon.")
 
-        self.title("Search and Replace(beta)")
+        self.title("Search and Replace")
         self.minsize(width=450, height=270)
         self.resizable(1, 0)
 

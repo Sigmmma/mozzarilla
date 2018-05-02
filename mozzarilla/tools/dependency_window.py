@@ -7,10 +7,12 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
 
 from binilla.widgets import BinillaWidget
+from binilla.util import get_cwd
 from supyr_struct.defs.constants import *
 from supyr_struct.defs.util import *
 from .shared_widgets import DirectoryFrame, HierarchyFrame, DependencyFrame
 
+curr_dir = get_cwd(__file__)
 
 class DependencyWindow(tk.Toplevel, BinillaWidget):
     window_name = "dependency_window"
@@ -26,6 +28,13 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         kwargs.update(width=400, height=500, bd=0,
                       highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
+        try:
+            try:
+                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+            except Exception:
+                self.iconbitmap(join(curr_dir, '..', 'icons', 'mozzarilla.ico'))
+        except Exception:
+            print("Could not load window icon.")
 
         tagset = app_root.handler_names[app_root._curr_handler_index]
         self.title("[%s] Tag dependency viewer" % tagset)
