@@ -504,15 +504,17 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
 
         self.display_comment(self)
 
+        try: title_font = self.tag_window.app_root.default_font
+        except AttributeError: title_font = None
         self.title_label = tk.Label(
-            self, anchor='w', justify='left',
+            self, anchor='w', justify='left', font=title_font,
             width=self.title_size, text=self.gui_name,
             bg=self.default_bg_color, fg=self.text_normal_color)
         self.title_label.pack(fill="x", side="left")
 
         node = self.node
         desc = self.desc
-        tooltip_string = self.tooltip_string = desc.get('TOOLTIP')
+        self.title_label.tooltip_string = self.tooltip_string = desc.get('TOOLTIP')
 
         for chan_char in desc['COLOR_CHANNELS']:
             chan = channel_name_map[chan_char]
@@ -526,8 +528,8 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
             f_widget_ids.append(wid)
             f_widget_ids_map[chan] = wid
             f_widget_ids_map_inv[wid] = chan
-            if tooltip_string:
-                w.tooltip_string = tooltip_string
+            if self.tooltip_string:
+                w.tooltip_string = self.tooltip_string
 
         self.color_btn = tk.Button(
             self.content, width=4, command=self.select_color,
