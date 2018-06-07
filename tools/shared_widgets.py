@@ -226,6 +226,10 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         try:
             app = self.app_root
             tags_dir = self.get_item_tags_dir(tag_path)
+            if tags_dir not in app.tags_dirs:
+                print("'%s' is not a registered tags directory." % tags_dir)
+                return
+
             self.highlight_tags_dir(tags_dir)
             app.switch_tags_dir(index=app.tags_dirs.index(tags_dir))
         except Exception:
