@@ -105,13 +105,17 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
         self.search_and_replace(True)
 
     def search_and_replace(self, replace=False):
-        app_root = self.app_root
-        try:
-            window = app_root.get_tag_window_by_tag(app_root.selected_tag)
-        except Exception:
-            window = None
+        if not self.app_root:
+            print("app_root object is invalid.")
+            return
+        elif not self.app_root.selected_tag:
+            print("No tag selected for search and replace.")
+            return
+
+        window = self.app_root.get_tag_window_by_tag(self.app_root.selected_tag)
 
         if window is None:
+            print("Could not locate the window the selected tag is displayed by.")
             return
 
         find_str = self.find_var.get()
