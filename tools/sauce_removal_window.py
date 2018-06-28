@@ -14,7 +14,6 @@ curr_dir = get_cwd(__file__)
 class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
     app_root = None
     handler = None
-    window_name = "sauce_removal_window"
 
     print_interval = 5
 
