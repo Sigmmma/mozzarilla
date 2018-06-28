@@ -10,7 +10,6 @@ curr_dir = get_cwd(__file__)
 
 class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
     app_root = None
-    window_name = "s_and_r_window"
 
     def __init__(self, app_root, *args, **kwargs):
         self.app_root = app_root
