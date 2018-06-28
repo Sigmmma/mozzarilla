@@ -26,7 +26,7 @@ from mozzarilla.widget_picker import *
 from mozzarilla.tag_window import HaloTagWindow
 from mozzarilla.tools import \
      SearchAndReplaceWindow, SauceRemovalWindow,\
-     DependencyWindow, TagScannerWindow,\
+     DependencyWindow, TagScannerWindow, DataExtractionWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
      bitmap_from_dds, bitmap_from_bitmap_source
 
@@ -35,7 +35,7 @@ default_hotkeys.update({
     '<F1>': "show_dependency_viewer",
     '<F2>': "show_tag_scanner",
     '<F3>': "show_search_and_replace",
-    '<F4>': "create_hek_pool_window",
+    '<F4>': "show_data_extraction_window",
 
     '<F5>': "switch_tags_dir",
     '<F6>': "set_tags_dir",
@@ -44,7 +44,7 @@ default_hotkeys.update({
 
     '<F9>': "bitmap_from_dds",
     '<F10>': "bitmap_from_bitmap_source",
-    #'<F11>': "???",
+    '<F11>': "create_hek_pool_window",
     #'<F12>': "???",
     })
 
@@ -53,7 +53,7 @@ this_curr_dir = get_cwd(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.2.7'
+    version = '1.2.8'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -170,6 +170,10 @@ class Mozzarilla(Binilla):
             label="Search and replace", command=self.show_search_and_replace)
         self.tools_menu.add_command(
             label="Scenario sauce scrubber", command=self.show_sauce_removal_window)
+        self.tools_menu.add_separator()
+        self.tools_menu.add_command(
+            label="Tag data extraction",
+            command=self.show_data_extraction_window)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
             label="Bitmap from dds texture", command=self.bitmap_from_dds)
@@ -706,6 +710,9 @@ class Mozzarilla(Binilla):
 
     def show_tag_scanner(self, e=None):
         self.show_tool_window("tag_scanner_window", TagScannerWindow, True)
+
+    def show_data_extraction_window(self, e=None):
+        self.show_tool_window("data_extraction_window", DataExtractionWindow, True)
 
     def show_search_and_replace(self, e=None):
         self.show_tool_window("s_and_r_window", SearchAndReplaceWindow)

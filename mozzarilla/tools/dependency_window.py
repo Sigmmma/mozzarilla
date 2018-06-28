@@ -15,7 +15,6 @@ from .shared_widgets import DirectoryFrame, HierarchyFrame, DependencyFrame
 curr_dir = get_cwd(__file__)
 
 class DependencyWindow(tk.Toplevel, BinillaWidget):
-    window_name = "dependency_window"
     app_root = None
     handler = None
 
@@ -97,6 +96,9 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         self.dependency_window.apply_style()
 
     def browse(self):
+        if self._zipping:
+            return
+
         filetypes = [('All', '*')]
 
         defs = self.app_root.handler.defs

@@ -28,6 +28,7 @@ new_method_enums = (
     {GUI_NAME:"make bitmap from dds", NAME:"bitmap_from_dds"},
     {GUI_NAME:"make bitmap from bitmap source", NAME:"bitmap_from_bitmap_source"},
     {GUI_NAME:"launch pool", NAME:"create_hek_pool_window"},
+    {GUI_NAME:"open tag data extractor", NAME:"show_data_extraction_window"},
     )
 
 method_enums += new_method_enums

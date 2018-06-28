@@ -17,7 +17,6 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
     app_root = None
     tags_dir = ''
     handler = None
-    window_name = "tag_scanner_window"
 
     _scanning = False
     stop_scanning = False
@@ -260,7 +259,6 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         self._scanning = False
 
     def scan(self):
-        app = self.app_root
         handler = self.handler
         sani = sanitize_path
         self.stop_scanning = False
@@ -309,7 +307,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                 if time() - c_time > p_int:
                     c_time = time()
                     print(' '*4 + filepath)
-                    app.update_idletasks()
+                    self.app_root.update_idletasks()
 
                 if self.stop_scanning:
                     print('Tag scanning operation cancelled.\n')
@@ -325,7 +323,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         for def_id in sorted(all_tag_paths.keys()):
             tag_ref_paths = handler.tag_ref_cache.get(def_id)
 
-            app.update_idletasks()
+            self.app_root.update_idletasks()
             print("Scanning '%s' tags..." % id_ext_map[def_id][1:])
             tags_coll = all_tag_paths[def_id]
 
@@ -340,7 +338,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                 if time() - c_time > p_int:
                     c_time = time()
                     print(' '*4 + filepath)
-                    app.update_idletasks()
+                    self.app_root.update_idletasks()
 
                 tag = self.get_tag(filepath)
                 if tag is None:
@@ -390,7 +388,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
         print("\nScanning took %s seconds." % int(time() - s_time))
         print("Writing logfile to %s..." % logpath)
-        app.update_idletasks()
+        self.app_root.update_idletasks()
 
         # make and write to the logfile
         try:
