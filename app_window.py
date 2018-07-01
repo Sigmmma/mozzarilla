@@ -692,9 +692,10 @@ class Mozzarilla(Binilla):
                          needs_tag_refs=False):
         w = self.tool_windows.get(window_name)
         if w is not None:
+            try: del self.tool_windows[window_name]
+            except Exception: pass
             try: w.destroy()
             except Exception: pass
-            del self.tool_windows[window_name]
             return
 
         if needs_tag_refs and not hasattr(self.handler, 'tag_ref_cache'):
