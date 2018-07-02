@@ -28,7 +28,8 @@ from mozzarilla.tools import \
      SearchAndReplaceWindow, SauceRemovalWindow,\
      DependencyWindow, TagScannerWindow, DataExtractionWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
-     bitmap_from_dds, bitmap_from_bitmap_source, physics_from_jms
+     bitmap_from_dds, bitmap_from_bitmap_source, physics_from_jms,\
+     hud_message_text_from_hmt
 
 
 default_hotkeys.update({
@@ -185,6 +186,10 @@ class Mozzarilla(Binilla):
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
             label="Physics from jms", command=self.physics_from_jms)
+        self.compile_menu.add_separator()
+        self.compile_menu.add_command(
+            label="Hud_message_text from hmt", command=self.hud_message_text_from_hmt)
+
 
         self.defs_menu.add_separator()
         self.handlers = list(self.handlers)
@@ -866,3 +871,6 @@ class Mozzarilla(Binilla):
 
     def physics_from_jms(self, e=None):
         physics_from_jms(self)
+
+    def hud_message_text_from_hmt(self, e=None):
+        hud_message_text_from_hmt(self)
