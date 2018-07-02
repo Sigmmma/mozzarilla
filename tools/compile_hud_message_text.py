@@ -42,7 +42,7 @@ def hud_message_text_from_hmt(app, fp=None):
         print("Creating hud_message_text from this hmt file:")
         print("    %s" % fp)
         with open(fp, "r", encoding="utf-16-le") as f:
-            hmt_string_data = f.read().split("\n")
+            hmt_string_data = f.read().lstrip('\ufeff').split("\n")
 
         line_num = 0
         for line in hmt_string_data:
@@ -114,12 +114,82 @@ def hud_message_text_from_hmt(app, fp=None):
     tagdata = hmt__tag.data.tagdata
     elements = tagdata.message_elements.STEPTREE
     messages = tagdata.messages.STEPTREE
+    tagdata.string.data = ""
+    del elements[:]
+    del messages[:]
 
     error = False
     if len(elements) > 8192:
         print("    ERROR: Too many message elements. " +
               "Please simplify your messages.")
         error = True
+
+    text_blob = ""
+    for name in message_names:
+        message_string = message_strings[name]
+
+        messages.append()
+        message = messages[-1]
+        message.name = name
+        message.text_start = len(text_blob)
+        message.element_index = len(elements)
+
+        if len(message_string) == 0:
+            elements.append()
+            element = elements[-1]
+            element.data.set_active("text")
+            element.data.text.data = 1  # set length to 1
+            message.element_count = 1
+            text_blob += "\x00"
+            continue
+
+        i = 0
+        while i < len(message_string):
+            elements.append()
+            element = elements[-1]
+            message.element_count += 1
+
+            element_base = i
+            icon_name = ""
+            curr_text = ""
+            c = message_string[i]
+            if c == "%":
+                element.type.set_to("icon")
+                element.data.set_active("icon")
+            else:
+                element.type.set_to("text")
+                element.data.set_active("text")
+                curr_text += c
+
+            i += 1
+            element_type = element.type.enum_name
+            while (i < len(message_string) and
+                   len(curr_text) < 254 and
+                   len(icon_name) < MAX_ICON_NAME_LENGTH):
+                c = message_string[i]
+                if c == "%":
+                    break
+
+                i += 1
+                if element_type == "text":
+                    curr_text += c
+                else:
+                    icon_name += c
+                    if icon_name in icon_type_map:
+                        break
+
+            if element_type == "text":
+                # add the delimiter
+                element.data.text.data = len(curr_text) + 1
+                text_blob += curr_text + "\x00"
+            elif icon_name in icon_type_map:
+                element.data.icon.data = icon_type_map[icon_name]
+            else:
+                print("    WARNING: Unknown icon type specified in message '%s'" % name)
+                i = element_base + 1
+                del elements[-1]
+                message.element_count -= 1
+
 
     if len(text_blob) > 32768:
         print(("    ERROR: String data too large by %s characters. " +
@@ -128,32 +198,6 @@ def hud_message_text_from_hmt(app, fp=None):
         error = True
 
 
-    text_blob = ""
-    text_start = 0
-    for name in message_names:
-        message_string = message_strings[name]
-        curr_text = ""
-
-        messages.append()
-        message = messages[-1]
-        message.name = name
-        message.text_start = text_start
-        message.element_index = len(elements)
-        message.element_count = 1
-
-        i = 0
-        icon_name_len = 0
-        while i < len(message_string):
-            c = message_string[i]
-            if icon_name_len > 0:
-                if icon_name_len > MAX_ICON_NAME_LENGTH:
-                    icon_name_len = 0
-
-            curr_text += c
-            i += 1
-
-        curr_text += "\x00"
-
     # replace the string data
     tagdata.string.data = text_blob
 
@@ -161,7 +205,8 @@ def hud_message_text_from_hmt(app, fp=None):
     window.reload()
     app.update_tag_window_title(window)
     if not error:
+        app.save_tag()
+    else:
         print("    Errors occurred while compiling. " +
               "Tag will not be automatically saved.")
         window.is_new_tag = True
-        app.save_tag()
