@@ -28,7 +28,7 @@ from mozzarilla.tools import \
      SearchAndReplaceWindow, SauceRemovalWindow,\
      DependencyWindow, TagScannerWindow, DataExtractionWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
-     bitmap_from_dds, bitmap_from_bitmap_source
+     bitmap_from_dds, bitmap_from_bitmap_source, physics_from_jms
 
 
 default_hotkeys.update({
@@ -102,6 +102,7 @@ class Mozzarilla(Binilla):
     directory_frame = None
     directory_frame_width = 200
     bitmap_load_dir = ""
+    jms_load_dir = ""
 
     def __init__(self, *args, **kwargs):
         self.debug = kwargs.pop('debug', self.debug)
@@ -145,10 +146,12 @@ class Mozzarilla(Binilla):
 
         # make the tools and tag set menus
         self.tools_menu = tk.Menu(self.main_menu, tearoff=0)
+        self.compile_menu = tk.Menu(self.main_menu, tearoff=0)
         self.defs_menu = tk.Menu(self.main_menu, tearoff=0)
 
         self.main_menu.add_cascade(label="Tag set", menu=self.defs_menu)
         self.main_menu.add_cascade(label="Tools", menu=self.tools_menu)
+        self.main_menu.add_cascade(label="Compile Tag", menu=self.compile_menu)
         try:
             if e_c.IS_WIN and not is_main_frozen():
                 import hek_pool
@@ -174,12 +177,14 @@ class Mozzarilla(Binilla):
         self.tools_menu.add_command(
             label="Tag data extraction",
             command=self.show_data_extraction_window)
-        self.tools_menu.add_separator()
-        self.tools_menu.add_command(
+
+        self.compile_menu.add_command(
             label="Bitmap from dds texture", command=self.bitmap_from_dds)
-        self.tools_menu.add_command(
-            label="Bitmap from uncompressed bitmap source",
-            command=self.bitmap_from_bitmap_source)
+        self.compile_menu.add_command(
+            label="Bitmap from bitmap source", command=self.bitmap_from_bitmap_source)
+        self.compile_menu.add_separator()
+        self.compile_menu.add_command(
+            label="Physics from jms", command=self.physics_from_jms)
 
         self.defs_menu.add_separator()
         self.handlers = list(self.handlers)
@@ -207,6 +212,17 @@ class Mozzarilla(Binilla):
     def tags_dir(self):
         try:
             return self.tags_dirs[self._curr_tags_dir_index]
+        except IndexError:
+            return None
+
+    @property
+    def data_dir(self):
+        try:
+            tags_dir = self.tags_dir
+            if not tags_dir:
+                return ""
+
+            return join(dirname(tags_dir.rstrip(PATHDIV)), "data")
         except IndexError:
             return None
 
@@ -847,3 +863,6 @@ class Mozzarilla(Binilla):
 
     def bitmap_from_bitmap_source(self, e=None):
         bitmap_from_bitmap_source(self)
+
+    def physics_from_jms(self, e=None):
+        physics_from_jms(self)
