@@ -11,4 +11,5 @@ from .data_extraction_window import DataExtractionWindow
 from .search_and_replace_window import SearchAndReplaceWindow
 from .tag_scanner_window import TagScannerWindow
 
-from .create_bitmap import bitmap_from_dds, bitmap_from_bitmap_source
+from .compile_bitmap import bitmap_from_dds, bitmap_from_bitmap_source
+from .compile_physics import physics_from_jms
