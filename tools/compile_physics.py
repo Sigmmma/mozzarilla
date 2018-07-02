@@ -44,17 +44,17 @@ def physics_from_jms(app, fp=None):
         print("    Could not load jms file")
         return
 
-    tag_load_path = dirname(dirname(relpath(fp, data_dir)))
-    tag_name = basename(tag_load_path)
-    if not tag_load_path.startswith(".."):
-        tag_load_path = join(tags_dir, tag_load_path, "%s.physics" % tag_name)
+    tag_path = dirname(dirname(relpath(fp, data_dir)))
+    rel_tagpath = join(tag_path, "%s.physics" % basename(tag_path))
+    if not tag_path.startswith(".."):
+        tag_path = join(tags_dir, rel_tagpath)
     else:
-        tag_load_path = ""
+        tag_path = ""
 
     updating = False
-    if isfile(tag_load_path):
+    if isfile(tag_path):
         print("    Updating existing physics tag.")
-        tag_load_path = (tag_load_path, )
+        tag_load_path = (tag_path, )
         updating = True
     else:
         print("    Creating new physics tag.")
@@ -65,9 +65,12 @@ def physics_from_jms(app, fp=None):
     if not window:
         return
     window = window[0]
-
-    # get the physics tag
     phys_tag = window.tag
+
+    window.is_new_tag = False
+    phys_tag.filepath = tag_path
+    phys_tag.rel_filepath = rel_tagpath
+
     tagdata = phys_tag.data.tagdata
     mass_points = tagdata.mass_points.STEPTREE
 
@@ -130,8 +133,8 @@ def physics_from_jms(app, fp=None):
         mp.model_node = marker.parent
 
     phys_tag.calc_internal_data()
-    
+
     # reload the window to display the newly entered info
     window.reload()
-    # prompt the user to save the tag somewhere
-    app.save_tag_as()
+    app.update_tag_window_title(window)
+    app.save_tag()
