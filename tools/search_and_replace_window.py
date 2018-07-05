@@ -15,17 +15,18 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
         self.app_root = app_root
         kwargs.update(width=450, height=270, bd=0, highlightthickness=0)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
-        try:
-            try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
-            except Exception:
-                self.iconbitmap(join(curr_dir, '..', 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
 
         self.title("Search and Replace")
         self.minsize(width=450, height=270)
         self.resizable(1, 0)
+        self.update()
+        try:
+            try:
+                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+            except Exception:
+                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
+        except Exception:
+            print("Could not load window icon.")
 
         # make the tkinter variables
         self.find_var = tk.StringVar(self)
@@ -71,24 +72,6 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
 
         self.apply_style()
         self.transient(app_root)
-
-    def apply_style(self):
-        self.config(bg=self.default_bg_color)
-        for w in (self.find_frame, self.replace_frame):
-            w.config(fg=self.text_normal_color, bg=self.default_bg_color)
-
-        for w in (self.search_button, self.replace_button):
-            w.config(bg=self.button_color, activebackground=self.button_color,
-                     fg=self.text_normal_color, bd=self.button_depth,
-                     disabledforeground=self.text_disabled_color)
-
-        for w in (self.find_entry, self.replace_entry):
-            w.config(bd=self.entry_depth,
-                bg=self.entry_normal_color, fg=self.text_normal_color,
-                disabledbackground=self.entry_disabled_color,
-                disabledforeground=self.text_disabled_color,
-                selectbackground=self.entry_highlighted_color,
-                selectforeground=self.text_highlighted_color)
 
     def destroy(self):
         try:
