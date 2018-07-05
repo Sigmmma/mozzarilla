@@ -27,17 +27,17 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         kwargs.update(width=400, height=500, bd=0,
                       highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
+        self.title("[%s] Tag dependency viewer" %
+                   app_root.handler_names[app_root._curr_handler_index])
+        self.minsize(width=400, height=100)
+        self.update()
         try:
             try:
                 self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
             except Exception:
-                self.iconbitmap(join(curr_dir, '..', 'icons', 'mozzarilla.ico'))
+                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
         except Exception:
             print("Could not load window icon.")
-
-        tagset = app_root.handler_names[app_root._curr_handler_index]
-        self.title("[%s] Tag dependency viewer" % tagset)
-        self.minsize(width=400, height=100)
 
         # make the tkinter variables
         self.tag_filepath = tk.StringVar(self)
@@ -74,26 +74,6 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
 
         self.transient(app_root)
         self.apply_style()
- 
-    def apply_style(self):
-        self.config(bg=self.default_bg_color)
-        for w in (self.filepath_frame, self.button_frame):
-            w.config(fg=self.text_normal_color, bg=self.default_bg_color)
-
-        for w in (self.display_button, self.zip_button, self.browse_button):
-            w.config(bg=self.button_color, activebackground=self.button_color,
-                     fg=self.text_normal_color, bd=self.button_depth,
-                     disabledforeground=self.text_disabled_color)
-
-        self.filepath_entry.config(
-            bd=self.entry_depth,
-            bg=self.entry_normal_color, fg=self.text_normal_color,
-            disabledbackground=self.entry_disabled_color,
-            disabledforeground=self.text_disabled_color,
-            selectbackground=self.entry_highlighted_color,
-            selectforeground=self.text_highlighted_color)
-
-        self.dependency_window.apply_style()
 
     def browse(self):
         if self._zipping:
