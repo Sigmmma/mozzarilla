@@ -22,17 +22,18 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
         self.app_root = app_root
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
-        try:
-            try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
-            except Exception:
-                self.iconbitmap(join(curr_dir, '..', 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
 
         self.title("Scenario Open Sauce Scrubber Tool")
         self.geometry("400x80+0+0")
         self.resizable(0, 0)
+        self.update()
+        try:
+            try:
+                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+            except Exception:
+                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
+        except Exception:
+            print("Could not load window icon.")
 
         # make the tkinter variables
         self.scenario_path = tk.StringVar(self)
@@ -67,27 +68,6 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
 
         self.transient(app_root)
         self.apply_style()
-
-    def apply_style(self):
-        self.config(bg=self.default_bg_color)
-
-        for w in(self.scenario_frame, ):
-            w.config(fg=self.text_normal_color, bg=self.default_bg_color)
-
-        self.button_frame.config(bg=self.default_bg_color)
-
-        for w in (self.begin_button, self.scenario_browse_button):
-            w.config(bg=self.button_color, activebackground=self.button_color,
-                     fg=self.text_normal_color, bd=self.button_depth,
-                     disabledforeground=self.text_disabled_color)
-
-        for w in (self.scenario_entry, ):
-            w.config(bd=self.entry_depth,
-                bg=self.entry_normal_color, fg=self.text_normal_color,
-                disabledbackground=self.entry_disabled_color,
-                disabledforeground=self.text_disabled_color,
-                selectbackground=self.entry_highlighted_color,
-                selectforeground=self.text_highlighted_color)
 
     def scenario_browse(self):
         dirpath = askopenfilename(

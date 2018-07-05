@@ -33,19 +33,20 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         self.app_root = app_root
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
-        try:
-            try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
-            except Exception:
-                self.iconbitmap(join(curr_dir, '..', 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
-
-        self.listbox_index_to_def_id = list(sorted(h1_data_extractors.keys()))
 
         self.title("Tag Data Extractor")
         self.geometry("400x360+0+0")
         self.resizable(0, 0)
+        self.update()
+        try:
+            try:
+                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+            except Exception:
+                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
+        except Exception:
+            print("Could not load window icon.")
+
+        self.listbox_index_to_def_id = list(sorted(h1_data_extractors.keys()))
 
         # make the tkinter variables
         self.dir_path = tk.StringVar(self, self.handler.tagsdir)
@@ -130,42 +131,6 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
         self.transient(app_root)
         self.apply_style()
- 
-    def apply_style(self):
-        self.config(bg=self.default_bg_color)
-        for w in (self.dir_path_frame, ):
-            w.config(bg=self.default_bg_color)
-
-        for w in (self.decode_adpcm_cbtn, self.overwrite_cbtn):
-            w.config(disabledforeground=self.text_disabled_color,
-                     bg=self.default_bg_color, fg=self.text_normal_color,
-                     activebackground=self.default_bg_color,
-                     activeforeground=self.text_highlighted_color,)
-
-        for w in (self.dir_extract_frame, self.def_ids_frame,
-                  self.tag_path_frame, self.options_frame):
-            w.config(fg=self.text_normal_color, bg=self.default_bg_color)
-
-        for w in (self.dir_browse_button, self.tag_browse_button,
-                  self.dir_extract_button, self.tag_extract_button,
-                  self.cancel_extraction_button):
-            w.config(bg=self.button_color, activebackground=self.button_color,
-                     fg=self.text_normal_color, bd=self.button_depth,
-                     disabledforeground=self.text_disabled_color)
-
-        for w in (self.dir_path_entry, self.tag_path_entry, ):
-            w.config(
-                bd=self.entry_depth,
-                bg=self.entry_normal_color, fg=self.text_normal_color,
-                disabledbackground=self.entry_disabled_color,
-                disabledforeground=self.text_disabled_color,
-                selectbackground=self.entry_highlighted_color,
-                selectforeground=self.text_highlighted_color)
-
-        self.def_ids_listbox.config(
-            bg=self.enum_normal_color, fg=self.text_normal_color,
-            selectbackground=self.enum_highlighted_color,
-            selectforeground=self.text_highlighted_color)
 
     def dir_browse(self):
         if self._extracting:

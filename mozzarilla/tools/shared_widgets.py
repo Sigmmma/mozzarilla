@@ -38,9 +38,8 @@ class DirectoryFrame(BinillaWidget, tk.Frame):
     def highlight_tags_dir(self, root_dir):
         self.hierarchy_frame.highlight_tags_dir(root_dir)
 
-    def apply_style(self):
-        #self.controls_frame.config(bg=self.default_bg_color)
-        self.hierarchy_frame.apply_style()
+    def apply_style(self, seen=None):
+        self.hierarchy_frame.apply_style(seen)
 
 
 class HierarchyFrame(BinillaWidget, tk.Frame):
@@ -80,7 +79,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         self.reload()
         self.apply_style()
 
-    def apply_style(self):
+    def apply_style(self, seen=None):
         self.tags_tree_frame.config(bg=self.default_bg_color)
 
         dir_tree = self.tags_tree
@@ -256,8 +255,8 @@ class DependencyFrame(HierarchyFrame):
         self.handler = self.app_root.handler
         self._initialized = True
 
-    def apply_style(self):
-        HierarchyFrame.apply_style(self)
+    def apply_style(self, seen=None):
+        HierarchyFrame.apply_style(self, seen)
         self.tags_tree.tag_configure(
             'badref', foreground=self.invalid_path_color,
             background=self.entry_normal_color)

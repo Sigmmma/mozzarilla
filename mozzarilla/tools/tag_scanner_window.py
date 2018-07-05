@@ -29,22 +29,22 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         self.app_root = app_root
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
+
+        self.title("[%s] Tag directory scanner" %
+                   app_root.handler_names[app_root._curr_handler_index])
+        self.minsize(width=400, height=300)
+        self.update()
         try:
             try:
                 self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
             except Exception:
-                self.iconbitmap(join(curr_dir, '..', 'icons', 'mozzarilla.ico'))
+                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
         except Exception:
             print("Could not load window icon.")
 
         ext_id_map = handler.ext_id_map
         self.listbox_index_to_def_id = [
             ext_id_map[ext] for ext in sorted(ext_id_map.keys())]
-
-        tagset = app_root.handler_names[app_root._curr_handler_index]
-
-        self.title("[%s] Tag directory scanner" % tagset)
-        self.minsize(width=400, height=300)
 
         # make the tkinter variables
         self.open_logfile = tk.BooleanVar(self, True)
@@ -54,9 +54,9 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         # make the frames
         self.directory_frame = tk.LabelFrame(self, text="Directory to scan")
         self.logfile_frame   = tk.LabelFrame(self, text="Output log filepath")
-        self.logfile_dir_frame = tk.Frame(self.logfile_frame)
         self.def_ids_frame = tk.LabelFrame(
             self, text="Select which tag types to scan")
+        self.logfile_dir_frame = tk.Frame(self.logfile_frame)
         self.button_frame = tk.Frame(self.def_ids_frame)
 
         self.scan_button = tk.Button(
@@ -129,42 +129,6 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         self.directory_path.set(handler.tagsdir)
         self.logfile_path.set(join(handler.tagsdir, "tag_scanner.log"))
         self.apply_style()
-
-    def apply_style(self):
-        self.config(bg=self.default_bg_color)
-        for w in(self.logfile_dir_frame, ):
-            w.config(bg=self.default_bg_color)
-
-        for w in(self.directory_frame, self.def_ids_frame, self.logfile_frame):
-            w.config(fg=self.text_normal_color, bg=self.default_bg_color)
-
-        self.button_frame.config(bg=self.default_bg_color)
-
-        self.open_logfile_cbtn.config(
-                disabledforeground=self.text_disabled_color,
-                bg=self.default_bg_color, fg=self.text_normal_color,
-                activebackground=self.default_bg_color,
-                activeforeground=self.text_highlighted_color,)
-
-        for w in (self.scan_button, self.cancel_button,
-                  self.select_all_button, self.deselect_all_button,
-                  self.dir_browse_button, self.log_browse_button):
-            w.config(bg=self.button_color, activebackground=self.button_color,
-                     fg=self.text_normal_color, bd=self.button_depth,
-                     disabledforeground=self.text_disabled_color)
-
-        for w in (self.directory_entry, self.logfile_entry):
-            w.config(bd=self.entry_depth,
-                bg=self.entry_normal_color, fg=self.text_normal_color,
-                disabledbackground=self.entry_disabled_color,
-                disabledforeground=self.text_disabled_color,
-                selectbackground=self.entry_highlighted_color,
-                selectforeground=self.text_highlighted_color)
-
-        self.def_ids_listbox.config(
-            bg=self.enum_normal_color, fg=self.text_normal_color,
-            selectbackground=self.enum_highlighted_color,
-            selectforeground=self.text_highlighted_color)
 
     def deselect_all(self):
         if self._scanning:

@@ -10,6 +10,7 @@ from .sauce_removal_window import SauceRemovalWindow
 from .dependency_window import DependencyWindow
 from .data_extraction_window import DataExtractionWindow
 from .search_and_replace_window import SearchAndReplaceWindow
+from .bitmap_optimizer_and_converter import BitmapConverterWindow
 from .tag_scanner_window import TagScannerWindow
 
 from .compile_bitmap import bitmap_from_dds, bitmap_from_bitmap_source
