@@ -63,7 +63,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
     tag_list_window = None
     help_window = None
     tags_dir = ''
-    handler = HaloHandler(valid_def_ids=())
+    handler = None
 
     prune_tiff = None
     read_only = None
@@ -73,6 +73,8 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
     _processing = False
 
     def __init__(self, app_root, *args, **kwargs):
+        if self.handler is None:
+            BitmapConverterWindow.handler = HaloHandler(valid_def_ids=())
         self.handler.reset_tags()
         if "bitm" not in self.handler.defs:
             self.handler.add_def(bitm_def)
