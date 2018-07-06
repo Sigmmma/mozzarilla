@@ -176,7 +176,7 @@ class Mozzarilla(Binilla):
             label="Scenario sauce scrubber", command=self.show_sauce_removal_window)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
-            label="Bitmap optimizer and converter",
+            label="Bitmap converter",
             command=self.show_bitmap_converter_window)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
