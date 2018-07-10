@@ -141,7 +141,7 @@ class Mozzarilla(Binilla):
             label="Edit config", command=self.show_config_file)
         self.settings_menu.add_separator()
         self.settings_menu.add_command(
-            label="Load style", command=self.apply_style)
+            label="Load style", command=self.load_style)
         self.settings_menu.add_command(
             label="Save current style", command=self.make_style)
 
@@ -215,7 +215,7 @@ class Mozzarilla(Binilla):
 
         if self.directory_frame is not None:
             self.directory_frame.highlight_tags_dir(self.tags_dir)
-        self.update_window_settings()
+        self.apply_style()
 
     @property
     def tags_dir(self):
@@ -827,22 +827,12 @@ class Mozzarilla(Binilla):
             pass
         window.update_title(title)
 
-    def update_window_settings(self):
+    def apply_style(self, seen=None):
         if not self._initialized:
             return
 
-        Binilla.update_window_settings(self)
+        Binilla.apply_style(self, seen)
         try:
-            for m in (self.defs_menu, self.tools_menu):
-                m.config(bg=self.default_bg_color, fg=self.text_normal_color)
-
-            self.window_panes.config(
-                bg=self.frame_bg_color, bd=self.frame_depth)
-            self.directory_frame.apply_style()
-            for w in self.tool_windows.values():
-                if w is not None:
-                    w.apply_style()
-
             try:
                 mozz = self.config_file.data.mozzarilla
                 show_hierarchy = mozz.flags.show_hierarchy_window
