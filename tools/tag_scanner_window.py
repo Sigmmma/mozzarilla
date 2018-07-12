@@ -263,10 +263,10 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             if not root.endswith(PATHDIV):
                 root += PATHDIV
 
-            root = relpath(root, tags_dir)
+            rel_root = relpath(root, tags_dir)
 
             for filename in files:
-                filepath = join(sani(root), filename)
+                filepath = join(sani(rel_root), filename)
 
                 if time() - c_time > p_int:
                     c_time = time()
