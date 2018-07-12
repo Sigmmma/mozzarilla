@@ -2,13 +2,12 @@ import gc
 
 from array import array
 from copy import deepcopy
-from os.path import getsize, splitext, dirname, join
+from os.path import getsize, splitext, dirname, join, exists, isfile, relpath
 from threading import Thread
 from tkinter.filedialog import asksaveasfilename, askdirectory
 from time import sleep, time
 from traceback import format_exc
 
-from reclaimer.hek.handler import HaloHandler
 from reclaimer.hek.defs.bitm import bitm_def
 from reclaimer.hek.defs.objs.bitm import P8_PALETTE
 from reclaimer.field_types import *
@@ -40,7 +39,7 @@ BITMAP_FORMATS = ("A8", "Y8", "AY8", "A8Y8", "????", "????", "R5G6B5",
 
 VALID_FORMAT_ENUMS = frozenset((0, 1, 2, 3, 6, 8, 9, 10, 11, 14, 15, 16, 17))
 FORMAT_OPTIONS = (
-    "Unchanged"
+    "Unchanged",
     "A8", "Y8", "AY8", "A8Y8",
     "R5G6B5", "A1R5G5B5", "A4R4G4B4",
     "X8R8G8B8", "A8R8G8B8",
@@ -48,14 +47,14 @@ FORMAT_OPTIONS = (
     "P8-Bump")
 
 class ConversionFlags:
-    platform = BITMAP_PLATFORMS.index("XBOX")
+    platform = BITMAP_PLATFORMS.index("PC")
     multi_swap = MULTI_SWAP_OPTIONS.index("")
     p8_mode = P8_MODE_OPTIONS.index("Auto")
     mono_channel_to_keep = AY8_OPTIONS.index("Alpha")
 
     extract_to = EXTRACT_TO_OPTIONS.index("")
     downres = 0
-    cutoff_bias = 127
+    alpha_bias = 127
     new_format = 0
 
     swizzled = False
@@ -64,11 +63,59 @@ class ConversionFlags:
     mip_gen = False
 
 
+class BitmapInfo:
+    type = 0
+    format = 0
+    swizzled = False
+    width = 0
+    height = 0
+    depth = 0
+    mipmaps = 0
+
+    def __init__(self, bitmap_block=None):
+        if not bitmap_block:
+            return
+        self.type = bitmap_block.type.data
+        self.format = bitmap_block.format.data
+        self.swizzled = bitmap_block.flags.swizzled
+        self.width = bitmap_block.width
+        self.height = bitmap_block.height
+        self.depth = bitmap_block.depth
+        self.mipmaps = bitmap_block.mipmaps
+
+
+class BitmapTagInfo:
+    platform = 0
+    pixel_data_size = 0
+    tiff_data_size = 0
+    bitmap_infos = ()
+
+    def __init__(self, bitm_tag=None):
+        self.bitmap_infos = []
+        if not bitm_tag:
+            return
+
+        bitm_data = bitm_tag.data.tagdata
+        self.tiff_data_size = bitm_data.compressed_color_plate_data.size
+        self.pixel_data_size = bitm_data.processed_pixel_data.size
+        for bitmap in bitm_data.bitmaps.STEPTREE:
+            self.bitmap_infos.append(BitmapInfo(bitmap))
+
+    @property
+    def type(self):
+        return 0 if not self.bitmap_infos else self.bitmap_infos[0].type
+    @property
+    def format(self):
+        return 0 if not self.bitmap_infos else self.bitmap_infos[0].format
+    @property
+    def swizzled(self):
+        return 0 if not self.bitmap_infos else self.bitmap_infos[0].swizzled
+
+
 class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
     app_root = None
     tag_list_frame = None
-    tags_dir = ''
-    handler = None
+    loaded_tags_dir = ''
 
     prune_tiff = None
     read_only = None
@@ -76,23 +123,31 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
     open_log = None
 
     conversion_flags = ()
+    bitmap_tag_infos = ()
 
     _processing = False
+    _cancel_processing = False
     _populating_settings = False
     _populating_bitmap_info = False
 
-    min_listbox_height = 70
+    print_interval = 5
+
+    # these cache references to the settings widgets for iteratively
+    # enabling/disabling settings before and after converting.
+    checkbuttons = ()
+    buttons = ()
+    spinboxes = ()
+    entries = ()
+    menus = ()
 
     def __init__(self, app_root, *args, **kwargs):
-        if self.handler is None:
-            BitmapConverterWindow.handler = HaloHandler(valid_def_ids=())
-        self.handler.reset_tags()
-        if "bitm" not in self.handler.defs:
-            self.handler.add_def(bitm_def)
-
         self.app_root = app_root
+        BinillaWidget.__init__(self, *args, **kwargs)
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
+
+        self.conversion_flags = {}
+        self.bitmap_tag_infos = {}
 
         self.title("Bitmap converter")
         self.resizable(0, 1)
@@ -113,6 +168,11 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
         self.scan_dir_path = tk.StringVar(self)
         self.log_file_path = tk.StringVar(self)
+
+        self.write_trace(self.read_only, lambda *a, s=self:
+                         s.convert_button.config(
+                             text="Make log" if s.read_only.get()
+                             else "Convert"))
 
         # make the frames
         self.main_frame = tk.Frame(self)
@@ -168,7 +228,6 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
         self.scan_dir_browse_button = tk.Button(
             self.scan_dir_frame, text="Browse", command=self.dir_browse)
 
-
         self.log_file_entry = tk.Entry(
             self.log_file_frame, textvariable=self.log_file_path)
         self.log_file_browse_button = tk.Button(
@@ -192,7 +251,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
             "Prunes the uncompressed TIFF pixel data\n"
             "from all bitmaps to reduce their filesize.")
         self.read_only_cbutton.tooltip_string = (
-            "Prevents editing bitmaps and instead writes a\n"
+            "Does no conversion, and instead writes a\n"
             "log detailing all bitmaps in the directory.")
         self.backup_tags_cbutton.tooltip_string = (
             "Backs up all bitmaps before editing\n"
@@ -269,9 +328,12 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
             "black, while values at or above it round to white.")
 
 
-        self.scan_button = tk.Button(self.buttons_frame, text="Scan")
-        self.convert_button = tk.Button(self.buttons_frame, text="Convert")
-        self.cancel_button = tk.Button(self.buttons_frame, text="Cancel")
+        self.scan_button = tk.Button(self.buttons_frame, text="Scan directory",
+                                     command=self.scan_pressed)
+        self.convert_button = tk.Button(self.buttons_frame, text="Convert",
+                                        command=self.convert_pressed)
+        self.cancel_button = tk.Button(self.buttons_frame, text="Cancel",
+                                       command=self.cancel_pressed)
 
 
         self.main_frame.pack(fill='both')
@@ -385,6 +447,19 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
                     pass
             widgets = next_widgets
 
+        self.buttons = (self.scan_dir_browse_button, self.scan_button,
+                        self.log_file_browse_button, self.convert_button,
+                        self.cancel_button)
+        self.checkbuttons = (self.prune_tiff_cbutton, self.read_only_cbutton,
+                             self.backup_tags_cbutton, self.open_log_cbutton)
+        self.spinboxes = (self.downres_box, self.alpha_bias_box)
+        self.entries = (self.scan_dir_entry, self.log_file_entry)
+        self.menus = (self.platform_menu, self.format_menu,
+                      self.extract_to_menu, self.multi_swap_menu,
+                      self.generate_mips_menu, self.p8_mode_menu,
+                      self.ay8_channel_src_menu, self.ck_transparency_menu,
+                      self.swap_a8y8_menu, self.swizzled_menu)
+
         self.apply_style()
         self.populate_bitmap_info()
         self.populate_settings()
@@ -399,24 +474,142 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
         self.update()
-        w = self.main_frame.winfo_reqwidth()
-        h = self.main_frame.winfo_reqheight()
+        w = self.winfo_reqwidth()
+        h = self.winfo_reqheight()
         self.geometry("%sx%s" % (w, h))
-        self.minsize(width=w, height=h + self.min_listbox_height)
+        self.minsize(width=w, height=h)
 
     def initialize_conversion_flags(self):
-        tags = self.handler.tags.get('bitm', ())
-
         self.conversion_flags = {}
-        for fp in tags:
-            tag = tags[fp]
-            if not tag:
+        for fp, info in self.bitmap_tag_infos.items():
+            if not info:
                 continue
 
             self.conversion_flags[fp] = flags = ConversionFlags()
 
-            flags.platform = int(tag.is_xbox_bitmap)
-            flags.swizzled = int(tag.swizzled())
+            flags.platform = info.platform
+            flags.swizzled = info.swizzled
+
+    def scan_pressed(self):
+        if self._processing:
+            return
+
+        new_tags_dir = self.scan_dir_path.get()
+        if not exists(new_tags_dir):
+            print("The specified directory to scan does not exist.")
+            return
+
+        self.conversion_flags = {}
+        self.bitmap_tag_infos = {}
+        self.loaded_tags_dir = new_tags_dir
+
+        try: self.scan_thread.join()
+        except Exception: pass
+        self.disable_settings()
+        self.scan_thread = Thread(target=self._scan)
+        self.scan_thread.daemon = True
+        self.scan_thread.start()
+
+    def _scan(self):
+        self._processing = True
+        try:
+            print("Locating bitmaps...")
+            self.initialize_conversion_flags()
+            
+            s_time = time()
+            c_time = s_time
+            p_int = self.print_interval
+
+            scan_dir = self.loaded_tags_dir
+            for root, _, files in os.walk(scan_dir):
+                if not root.endswith(PATHDIV):
+                    root += PATHDIV
+
+                rel_root = relpath(root, scan_dir)
+
+                for filename in files:
+                    if splitext(filename)[-1].lower() != ".bitmap":
+                        continue
+
+                    fp = join(sanitize_path(rel_root), filename)
+
+                    if time() - c_time > p_int:
+                        c_time = time()
+                        print(' '*4 + fp)
+                        if self.app_root:
+                            self.app_root.update_idletasks()
+
+                    if self._cancel_processing:
+                        print('Bitmap scanning cancelled.\n')
+                        self.after(0, self.enable_settings)
+                        return
+
+                    bitm_tag = bitm_def.build(filepath=join(root, filename))
+                    if not bitm_tag:
+                        print("Could not load: %s" % join(root, filename))
+                        continue
+
+                    self.conversion_flags[fp] = ConversionFlags()
+                    self.bitmap_tag_infos[fp] = BitmapTagInfo(bitm_tag)
+
+            print("Finished in %s seconds." % int(time() - s_time))
+        except Exception:
+            print(format_exc())
+
+        self.tag_list_frame.build_tag_sort_mappings()
+        self.tag_list_frame.display_sorted_tags()
+        self.after(0, self.populate_bitmap_info)
+        self.after(0, self.populate_settings)
+        self.after(0, self.enable_settings)
+        self._processing = False
+
+    def convert_pressed(self):
+        if self._processing or not self.bitmap_tag_infos:
+            return
+
+        try: self.convert_thread.join()
+        except Exception: pass
+        self.disable_settings()
+        self.convert_thread = Thread(target=self._convert)
+        self.convert_thread.daemon = True
+        self.convert_thread.start()
+
+    def _convert(self):
+        self._processing = True
+        try:
+            pass
+        except Exception:
+            print(format_exc())
+
+        self.after(0, self.enable_settings)
+        self._processing = False
+
+    def cancel_pressed(self):
+        if self._processing:
+            self._cancel_processing = True
+
+    def enable_settings(self):
+        self._enable_disable_settings(False)
+
+    def disable_settings(self):
+        self._enable_disable_settings(True)
+
+    def _enable_disable_settings(self, disable):
+        new_state = tk.DISABLED if disable else tk.NORMAL
+        for w in self.checkbuttons + self.buttons + self.entries:
+            w.config(state=new_state)
+
+        if not disable:
+            new_state = "readonly"
+
+        for w in self.spinboxes:
+            w.config(state=new_state)
+
+        for w in self.menus:
+            if disable:
+                w.disable()
+            else:
+                w.enable()
 
     def populate_settings(self):
         if self._populating_settings:
@@ -434,19 +627,22 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
             for w in (self.downres_box, self.alpha_bias_box):
                 w.delete(0, tk.END)
 
-            tag_paths = self.get_selected_tag_paths()
-            if len(tag_paths) == 0:
-                return
-
             conv_flags = self.conversion_flags
-            comb_flags = deepcopy(conv_flags[tag_paths[0]])
+            tag_paths = self.tag_list_frame.selected_paths
+            comb_flags = None
+            for tag_path in tag_paths:
+                comb_flags = deepcopy(conv_flags.get(tag_path))
+                break
+
             if not comb_flags:
                 comb_flags = ConversionFlags()
+                print("Could not locate conversion settings for this/these tags.")
 
-            for fp in tag_paths[1: ]:
+            for fp in tag_paths:
                 flags = conv_flags.get(fp)
                 if not flags:
                     continue
+
                 for name in ("platform", "multi_swap", "p8_mode",
                              "mono_channel_to_keep", "extract_to", "new_format",
                              "swizzled", "mono_swap", "ck_trans", "mip_gen"):
@@ -464,8 +660,10 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
             self.ck_transparency_menu.sel_index = comb_flags.ck_trans
             self.generate_mips_menu.sel_index = comb_flags.mip_gen
 
-            self.downres_box.set(comb_flags.downres)
-            self.alpha_bias_box.set(comb_flags.cutoff_bias)
+            self.downres_box.delete(0, tk.END)
+            self.alpha_bias_box.delete(0, tk.END)
+            self.downres_box.insert(0, comb_flags.downres)
+            self.downres_box.insert(0, comb_flags.alpha_bias)
         except Exception:
             print(format_exc())
         self._populating_settings = False
@@ -476,6 +674,11 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
         self._populating_bitmap_info = True
         try:
+            for w in (self.curr_width_entry, self.curr_height_entry,
+                      self.curr_depth_entry, self.curr_mip_entry,
+                      self.curr_bitmap_spinbox, self.max_bitmap_entry):
+                w.config(state=tk.NORMAL)
+
             for w in (self.curr_type_menu, self.curr_format_menu,
                       self.curr_platform_menu, self.curr_swizzled_menu):
                 w.sel_index = -1
@@ -485,45 +688,56 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
                       self.max_bitmap_entry, self.curr_bitmap_spinbox):
                 w.delete(0, tk.END)
 
-            tag_paths = self.get_selected_tag_paths()
-            if len(tag_paths) != 1:
-                return
+            tag_paths = self.tag_list_frame.selected_paths
+            if len(tag_paths) == 1:
+                for tag_path in tag_paths:
+                    bitm_tag_info = self.bitmap_tag_infos.get(tag_path)
 
-            bitm_tag = self.handler.tags.get('bitm', {}).get(tag_paths[0])
-            if not bitm_tag:
-                return
+                if bitm_tag_info:
+                    bitm_ct = len(bitm_tag_info.bitmap_infos)
+                    try:
+                        i = int(self.curr_bitmap_spinbox.get())
+                    except ValueError:
+                        i = 0
 
-            bitm_ct = bitm_tag.bitmap_count()
-            i = int(self.curr_bitmap_spinbox.get())
-            if i >= bitm_ct:
-                self.curr_bitmap_spinbox.set("0")
-                i = 0
+                    if i >= bitm_ct:
+                        self.curr_bitmap_spinbox.set("0")
+                        i = 0
 
-            self.curr_bitmap_spinbox.config(to=bitm_ct - 1)
-            if i >= bitm_ct:
-                return
+                    self.curr_bitmap_spinbox.config(to=bitm_ct - 1)
+                    self.curr_bitmap_spinbox.insert(tk.END, str(i))
+                    self.max_bitmap_entry.insert(tk.END, str(bitm_ct - 1))
+                    if i < bitm_ct:
+                        bitm_info = bitm_tag_info.bitmap_infos[i]
 
-            self.curr_type_menu.sel_index = bitm_tag.bitmap_type(i)
-            self.curr_format_menu.sel_index = bitm_tag.bitmap_format(i)
-            self.curr_platform_menu.sel_index = int(bitm_tag.is_xbox_bitmap)
-            self.curr_swizzled_menu.sel_index = int(bitm_tag.swizzled(i, None))
+                        self.curr_type_menu.sel_index = bitm_info.type
+                        self.curr_format_menu.sel_index = bitm_info.format
+                        self.curr_platform_menu.sel_index = bitm_tag_info.platform
+                        self.curr_swizzled_menu.sel_index = bitm_info.swizzled
 
-            self.max_bitmap_entry.insert(tk.END, str(bitm_ct))
-            self.curr_width_entry.insert(tk.END, str(bitm_tag.bitmap_width(i)))
-            self.curr_height_entry.insert(tk.END, str(bitm_tag.bitmap_height(i)))
-            self.curr_depth_entry.insert(tk.END, str(bitm_tag.bitmap_depth(i)))
-            self.curr_mip_entry.insert(tk.END, str(bitm_tag.bitmap_mipmaps_count(i)))
+                        self.curr_width_entry.insert(tk.END, str(bitm_info.width))
+                        self.curr_height_entry.insert(tk.END, str(bitm_info.height))
+                        self.curr_depth_entry.insert(tk.END, str(bitm_info.depth))
+                        self.curr_mip_entry.insert(tk.END, str(bitm_info.mipmaps))
+                else:
+                    print("Could not locate bitmap info for: %s" % tag_path)
+
         except Exception:
             print(format_exc())
+            
+        for w in (self.curr_width_entry, self.curr_height_entry,
+                  self.curr_depth_entry, self.curr_mip_entry):
+            w.config(state=tk.DISABLED)
+
+        for w in (self.curr_bitmap_spinbox, self.max_bitmap_entry):
+            w.config(state="readonly")
 
         self._populating_bitmap_info = False
-
-    def get_selected_tag_paths(self):
-        return ()
 
     def dir_browse(self):
         if self._processing:
             return
+
         dirpath = askdirectory(initialdir=self.scan_dir_path.get(),
                                parent=self, title="Select directory to scan")
         if not dirpath:
@@ -534,11 +748,13 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
             dirpath += PATHDIV
 
         self.scan_dir_path.set(dirpath)
-        self.app_root.last_load_dir = dirname(dirpath)
+        if self.app_root:
+            self.app_root.last_load_dir = dirname(dirpath)
 
     def log_browse(self):
         if self._processing:
             return
+
         fp = asksaveasfilename(
             initialdir=dirname(self.log_file_path.get()),
             title="Save scan log to...", parent=self,
@@ -551,103 +767,30 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
             fp += ".log"
 
         self.log_file_path.set(sanitize_path(fp))
-        self.app_root.last_load_dir = dirname(self.log_file_path.get())
+        if self.app_root:
+            self.app_root.last_load_dir = dirname(self.log_file_path.get())
 
-    #used when doing a read-only scan of a tagset to figure out what's what
-    def make_detailed_log(self):
-        logstr = ("CE-XBOX Bitmap Converter: tagset scan results\n\n\n"
-                  "These are the bitmaps located in the tags folder "
-                  "organized by type and then by format.\n\n")
-
-        base_str = "Bitmap %s --- WxHxD: %sx%sx%s --- Mipmaps: %s\n"
-        tag_counts = [0, 0, 0]
-
-        formatted_strs = {}
-        tag_header_strs = ("2D Textures", "3D Textures", "Cubemaps")
-
-        # so we can sort bitmaps by filesize we'll create a dict to hold all
-        # the strings before we concate them so we can sort them later by size
-        tag_info_strs = {}
-
-        # add dicts for all three types to the tag_info_strings
-        for typ in range(2):
-            formatted_strs[typ] = ['' * 18]
-            tag_info_strs[typ]  = ['' * 18]
-
-            # add the formats to each of these new dicts
-            for fmt in range(len(BITMAP_FORMATS)):
-                if "?" not in BITMAP_FORMATS[fmt]:
-                    formatted_strs[typ][fmt] = "\n\n%s%s" % (
-                        " " * 4, BITMAP_FORMATS[fmt])
-                    tag_info_strs[typ][fmt] = {}
-
-        # loop through each tag and create a
-        # string that details each bitmap in it
-        tags = self.handler.tags.get('bitm', ())
-        for filepath in tags:
-            tag = tags[filepath]
-            filesize = (getsize(tag.filepath) -
-                        tag.color_plate_data_bytes_size()) // 1024
-            tagstr = ("\n" + " "*8 + filepath +
-                      "\n" + " "*12 + "Compiled tag size = %sKB\n" %
-                      ("less than 1" if filesize <= 0 else str(filesize)))
-
-            for i in range(tag.bitmap_count()):
-                tagstr += (" " * 12 + base_str %
-                           (i, tag.bitmap_width(i), tag.bitmap_height(i),
-                            tag.bitmap_depth(i), tag.bitmap_mipmaps_count(i)) )
-
-            tag_strs = tag_info_strs[tag.bitmap_type()][tag.bitmap_format()]
-            tag_strs.setdefault(filesize, [])
-            tag_strs[filesize].append(tagstr)
-
-        # Take all the tag strings generated above and concatenate them
-        # to the appropriate b_format string under the appropriate b_type
-        for typ in range(2):
-            for fmt in VALID_FORMAT_ENUMS:
-                for size in reversed(sorted(tag_info_strs[typ][fmt])):
-                    for tagstr in tag_info_strs[typ][fmt][size]:
-                        tag_counts[typ] += 1
-                        formatted_strs[typ][fmt] += tagstr
-
-        #concate all the strings to the
-        #log in order of b_type and b_format
-        for typ in range(2):
-            logstr += "\n\n%s:\n    Count = %s\n%s" % (
-                tag_header_strs[typ], tag_counts[typ],
-                ''.join(formatted_strs[typ]))
-
-        return logstr
-
-    def convert_bitmap_tag(self, tag, **kwargs):
-        '''tons of possibilities here. not gonna try to name
-        them. Basically this is the main conversion routine'''
-        conversion_flags = tag.tag_conversion_settings
+    def convert_bitmap_tag(self, tag, flags, tag_path):
         for i in range(tag.bitmap_count()):
             if not(tag.is_power_of_2_bitmap(i)):
-                conversion_report[tag_path] = False
                 return False
 
-        if conversion_flags[NEW_FORMAT] < 0:
-            new_format = None
-        else:
-            new_format = FORMAT_NAME_MAP[conversion_flags[NEW_FORMAT]]
+        new_format = None
+        if flags.new_format:
+            new_format = FORMAT_NAME_MAP[flags.new_format]
 
-        processing = process_bitmap_tag(tag_path)
+        processing = self.process_bitmap_tag(tag_path)
 
         bm = ab.Arbytmap()
         bad_bitmaps = tag.sanitize_mipmap_counts()
 
         if len(bad_bitmaps) > 0:
             print("ERROR: Bad bitmap block(s) encountered in this tag:\n", tag_path)
-            load_status = False
+            error = True
         else:
-            load_status = tag.parse_bitmap_blocks()
+            error = not tag.parse_bitmap_blocks()
 
-        #If an error was encountered during the load
-        #attempt or the conversion was cancelled we quit
-        if root_window and (not load_status or root_window.conversion_cancelled):
-            conversion_report[tag_path] = False
+        if error:
             return False
 
         for i in range(tag.bitmap_count()):
@@ -676,7 +819,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
                     format_t = format_s
                     print("CANNOT CONVERT 3D TEXTURES TO DXT FORMAT.")
 
-                if not(channel_to_keep) and format_t == ab.FORMAT_A8:
+                if not flags.mono_channel_to_keep and format_t == ab.FORMAT_A8:
                     format_t = ab.FORMAT_L8
 
                 if (format_s in (ab.FORMAT_A8, ab.FORMAT_L8, ab.FORMAT_AL8) and
@@ -685,8 +828,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
 
             channel_mapping, channel_merge_mapping, format_t = \
-                             get_channel_mappings(format_s, mono_swap, format_t,
-                                                  multi_swap, channel_to_keep)
+                             get_channel_mappings(format_s, flags)
             palette_picker = None
             palettize = True
 
@@ -696,15 +838,15 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
                 palettize = False
             elif ab.CHANNEL_COUNTS[format_s] != 4:
                 pass
-            elif ck_transparency and format_s not in (ab.FORMAT_X8R8G8B8,
-                                                    ab.FORMAT_R5G6B5):
-                if p8_mode == 0:
+            elif flags.ck_trans and format_s not in (ab.FORMAT_X8R8G8B8,
+                                                     ab.FORMAT_R5G6B5):
+                if flags.p8_mode == 0:
                     # auto-bias
                     palette_picker = P8_PALETTE.argb_array_to_p8_array_auto_alpha
                 else:
                     # average-bias
                     palette_picker = P8_PALETTE.argb_array_to_p8_array_average_alpha
-            elif p8_mode == 0:
+            elif flags.p8_mode == 0:
                 # auto-bias
                 palette_picker = P8_PALETTE.argb_array_to_p8_array_auto
             else:
@@ -717,15 +859,15 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
                 format_t in (ab.FORMAT_P8, ab.FORMAT_DXT1)):
                 ck_transparency = True
 
-            bm.load_new_texture(texture_block = tex_block,
-                                texture_info = tex_info)
+            bm.load_new_texture(texture_block=tex_block,
+                                texture_info=tex_info)
 
             # build the initial conversion settings list from the above settings
             conv_settings = dict(
-                swizzle_mode=swizzle_mode, one_bit_bias=alpha_cutoff_bias,
-                downres_amount=downres_amount, palettize=palettize,
-                color_key_transparency=ck_transparency,
-                gamma=gamma, mipmap_gen=mipmap_gen)
+                swizzle_mode=flags.swizzle, one_bit_bias=flags.alpha_bias,
+                downres_amount=flags.downres, palettize=palettize,
+                color_key_transparency=flags.ck_trans, gamma=gamma,
+                mipmap_gen=flags.mip_gen)
 
             # add the variable settings into the conversion settings list
             conv_settings["format_t"] = format_t
@@ -747,11 +889,11 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
                 status = bm.convert_texture()
                 tag.tex_infos[i] = bm.texture_info  # tex_info may have changed
 
-            if export_format != " ":
+            if flags.extract_to != " ":
                 path = bm.filepath
                 if tag.bitmap_count() > 1:
                     path += ("_"+str(i))
-                bm.save_to_file(output_path=path, ext=export_format.lower())
+                bm.save_to_file(output_path=path, ext=flags.extract_to.lower())
 
             if status and processing:
                 tex_root = tag.data.tagdata.processed_pixel_data.data[i]
@@ -760,42 +902,40 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
                 #change the bitmap format to the new format
                 tag.bitmap_format(i, I_FORMAT_NAME_MAP[format_t])
-            elif not (extracting_texture(tag) or prune_tiff):
+            elif not (extracting_texture(tag) or self.prune_tiff.get()):
                 print("Error occurred while attempting to convert the tag:")
-                print(tag_path+"\n")
-                conversion_report[tag_path] = False
+                print(tag_path + "\n")
                 return False
 
-        if prune_tiff:
+        if self.prune_tiff.get():
             tag.data.tagdata.compressed_color_plate_data.data = bytearray()
 
         if processing:
             tag.sanitize_bitmaps()
-            tag.set_platform(save_as_xbox)
-            tag.processed_by_hboc(True)
-            tag.add_bitmap_padding(save_as_xbox)
+            tag.set_platform(flags.platform)
+            tag.add_bitmap_padding(flags.platform)
 
-        if processing or prune_tiff:
+        if processing or self.prune_tiff.get():
             try:
                 save_status = tag.serialize()
-                conversion_report[tag_path] = True
             except Exception:
                 print(format_exc())
-                conversion_report[tag_path] = save_status = False
+                save_status = False
             return save_status
-        elif export_format == " ":
-            conversion_report[tag_path] = False
+        elif not flags.extract_to:
             return False
 
-        conversion_report[tag_path] = None
         return None
 
-    def get_channel_mappings(self, format_s, mono_swap, format_t,
-                             multi_swap, channel_to_keep):
+    def get_channel_mappings(self, format_s, flags):
         """Goes through a ton of checks to figure out which channel
         mapping to use for converting(and returns it). Also checks a
         few exception cases where converting to that format would
         be bad and instead resets the target format to the source format"""
+        mono_swap = flags.mono_swap
+        format_t = flags.new_format
+        multi_swap = flags.multi_swap
+        channel_to_keep = flags.mono_channel_to_keep
 
         channel_count = ab.CHANNEL_COUNTS[format_s]
         target_channel_count = ab.CHANNEL_COUNTS[format_t]
@@ -885,63 +1025,126 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
     def process_bitmap_tag(self, tag_path):
         flags = self.conversion_flags[tag_path]
-        tag = self.handler.tags['bitm'][tag_path]
+        info = self.bitmap_tag_infos[tag_path]
 
-        if not tag.is_xbox_bitmap:
-            format = tag.bitmap_format()
-
-
-
-            # FINISH THIS
-
-
+        if not info.platform:
+            format = info.format
 
             # if all these are true we skip the tag
             if (flags.downres == 0 and flags.multi_swap == 0 and
                  flags.new_format == 0 and flags.mip_gen == False and
-                 tag.is_xbox_bitmap == flags.platform and
+                 flags.platform == info.platform and
                  (flags.mono_swap == False or format != FORMAT_A8Y8) and
-                 (tag.swizzled() == flags.swizzled or
+                 (info.swizzled == flags.swizzled or
                   FORMAT_NAME_MAP[format] in ab.DDS_FORMATS) ):
                 return False
         return True
 
     def get_will_be_processed(self, tag_path):
-        bitm_tag = self.handler.tags.get("bitm", {}).get(tag)
-        if not bitm_tag:
+        info = self.bitmap_tag_infos.get(tag_path)
+        if not info:
             return False
 
-        if bitm_tag.bitmap_count() == 0 or self.read_only.get():
+        if not info.bitmap_infos or self.read_only.get():
             return False
 
         return (self.prune_tiff.get() or
                 self.process_bitmap_tag(tag_path) or
                 self.extracting_texture(tag_path))
 
+    def make_detailed_log(self):
+        logstr = ("CE-XBOX Bitmap Converter: tagset scan results\n\n\n"
+                  "These are the bitmaps located in the tags folder "
+                  "organized by type and then by format.\n\n")
+
+        base_str = "Bitmap %s --- WxHxD: %sx%sx%s --- Mipmaps: %s\n"
+        tag_counts = [0, 0, 0]
+
+        formatted_strs = {}
+        tag_header_strs = ("2D Textures", "3D Textures", "Cubemaps")
+
+        # so we can sort bitmaps by filesize we'll create a dict to hold all
+        # the strings before we concate them so we can sort them later by size
+        tag_info_strs = {}
+
+        # add dicts for all three types to the tag_info_strings
+        for typ in range(2):
+            formatted_strs[typ] = ['' * 18]
+            tag_info_strs[typ]  = ['' * 18]
+
+            # add the formats to each of these new dicts
+            for fmt in range(len(BITMAP_FORMATS)):
+                if "?" not in BITMAP_FORMATS[fmt]:
+                    formatted_strs[typ][fmt] = "\n\n%s%s" % (
+                        " " * 4, BITMAP_FORMATS[fmt])
+                    tag_info_strs[typ][fmt] = {}
+
+        # loop through each tag and create a
+        # string that details each bitmap in it
+        for fp, info in self.bitmap_tag_infos:
+            filesize = (getsize(fp) - info.tiff_data_size()) // 1024
+            tagstr = ("\n" + " "*8 + filepath +
+                      "\n" + " "*12 + "Compiled tag size = %sKB\n" %
+                      ("less than 1" if filesize <= 0 else str(filesize)))
+
+            i = 0
+            for bitm_info in info.bitmap_infos:
+                tagstr += (" " * 12 + base_str %
+                           (i, info.width, info.height, info.depth, info.mipmaps))
+                i += 1
+
+            tag_strs = tag_info_strs[info.type][info.format]
+            tag_strs.setdefault(filesize, [])
+            tag_strs[filesize].append(tagstr)
+
+        # Take all the tag strings generated above and concatenate them
+        # to the appropriate b_format string under the appropriate b_type
+        for typ in range(2):
+            for fmt in VALID_FORMAT_ENUMS:
+                for size in reversed(sorted(tag_info_strs[typ][fmt])):
+                    for tagstr in tag_info_strs[typ][fmt][size]:
+                        tag_counts[typ] += 1
+                        formatted_strs[typ][fmt] += tagstr
+
+        #concate all the strings to the
+        #log in order of b_type and b_format
+        for typ in range(2):
+            logstr += "\n\n%s:\n    Count = %s\n%s" % (
+                tag_header_strs[typ], tag_counts[typ],
+                ''.join(formatted_strs[typ]))
+
+        return logstr
+
 
 class BitmapConverterList(tk.Frame, BinillaWidget):
     listboxes = ()
     reverse_listbox = False
-    populating = False
+    toggle_to = True
     sort_method = 'path'
 
     displayed_paths = ()
     selected_paths = ()
 
+    _populating = False
+
     def __init__(self, master, **options):
         tk.Frame.__init__(self, master, **options )
 
+        self.formats_shown = [True] * len(BITMAP_FORMATS)
+        self.types_shown   = [True] * len(BITMAP_TYPES)
         self.displayed_paths = []
         self.selected_paths = set()
-        self.initialize_sort_maps()
+        self.build_tag_sort_mappings()
 
         self.sort_menu = tk.Menu(self, tearoff=False)
         self.types_menu = tk.Menu(self, tearoff=False)
         self.formats_menu = tk.Menu(self, tearoff=False)
 
-        self.sort_menu.add_command(label="Toggle all to Xbox")
-        self.sort_menu.add_command(label="Invert selection", command=lambda:
-                                   self.invert_selection())
+        self.sort_menu.add_command(
+            label="Toggle all to %s" % BITMAP_PLATFORMS[int(self.toggle_to)],
+            command=self.toggle_all)
+        self.sort_menu.add_command(
+            label="Invert selection", command=self.invert_selection)
         self.sort_menu.add_separator()
 
         self.sort_menu.add_command(
@@ -962,7 +1165,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget):
             self.toggle_types_allowed(0, -1))
         for typ in range(len(BITMAP_TYPES)):
             self.types_menu.add_command(
-                label="%s %s" % (BITMAP_TYPES[typ], u'\u2713'),
+                label=BITMAP_TYPES[typ] + u' \u2713',
                 command=lambda t=typ: self.toggle_types_allowed(t + 1, t))
 
         self.formats_menu.add_command(
@@ -971,7 +1174,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget):
         i = 1
         for fmt in VALID_FORMAT_ENUMS:
             self.formats_menu.add_command(
-                label="%s %s" % (BITMAP_FORMATS[fmt], u'\u2713'),
+                label=BITMAP_FORMATS[fmt] + u' \u2713',
                 command=lambda i=i, f=fmt:self.toggle_formats_allowed(i, f))
             i += 1
 
@@ -979,21 +1182,25 @@ class BitmapConverterList(tk.Frame, BinillaWidget):
         self.hsb = tk.Scrollbar(self, orient="horizontal")
         self.listboxes = []
         self.listboxes.append(
-            tk.Listbox(self, yscrollcommand=self._path_scrolled,
+            tk.Listbox(self, height=5,
+                       yscrollcommand=self._path_scrolled,
                        xscrollcommand=self.hsb.set))
-        self.listboxes.append(tk.Listbox(
-            self, width=8, yscrollcommand=self._size_scrolled))
-        self.listboxes.append(tk.Listbox(
-            self, width=11, yscrollcommand=self._format_scrolled))
-        self.listboxes.append(tk.Listbox(
-            self, width=6, yscrollcommand=self._type_scrolled))
+        self.listboxes.append(
+            tk.Listbox(self, width=8, height=5,
+                       yscrollcommand=self._size_scrolled))
+        self.listboxes.append(
+            tk.Listbox(self, width=11, height=5,
+                       yscrollcommand=self._format_scrolled))
+        self.listboxes.append(
+            tk.Listbox(self, width=6, height=5,
+                       yscrollcommand=self._type_scrolled))
 
         self.path_listbox.bind("<Button-3>", lambda e, m=self.sort_menu:
                                self.post_rightclick_menu(e, m))
         self.size_listbox.bind("<Button-3>", lambda e, m=self.sort_menu:
                                self.post_rightclick_menu(e, m))
         self.format_listbox.bind("<Button-3>", lambda e, m=self.formats_menu:
-                               self.post_rightclick_menu(e, m))
+                                 self.post_rightclick_menu(e, m))
         self.type_listbox.bind("<Button-3>", lambda e, m=self.types_menu:
                                self.post_rightclick_menu(e, m))
 
@@ -1013,11 +1220,11 @@ class BitmapConverterList(tk.Frame, BinillaWidget):
         for listbox in self.listboxes[1: ]:
             listbox.pack(side="left", fill="both")
 
-        for i in range(30):
+        '''for i in range(30):
             self.path_listbox.insert(tk.END, "asdf\\qwer\\%s.bitmap" % i)
             self.format_listbox.insert(tk.END, BITMAP_FORMATS[i % 18])
             self.type_listbox.insert(tk.END, BITMAP_TYPES[i % 4])
-            self.size_listbox.insert(tk.END, str(i))
+            self.size_listbox.insert(tk.END, str(i))'''
         self.apply_style()
 
     @property
@@ -1038,19 +1245,6 @@ class BitmapConverterList(tk.Frame, BinillaWidget):
         for listbox in self.listboxes:
             listbox.delete(0, tk.END)
 
-    def initialize_sort_maps(self):
-        self.selected_paths = set()
-        self.displayed_paths = []
-        self.formats_shown = [True] * len(BITMAP_FORMATS)
-        self.types_shown   = [True] * len(BITMAP_TYPES)
-        self.type_format_map = []
-        self.size_map = {}
-
-        for typ in range(4):
-            self.type_format_map.append([])
-            for fmt in range(18):
-                self.type_format_map[typ].append([])
-
     def set_selected_tags_list(self, event=None):
         '''used to set which tags are selected when the tags listbox
         is clicked so we can easily edit their conversion variables'''
@@ -1069,6 +1263,15 @@ class BitmapConverterList(tk.Frame, BinillaWidget):
 
         self.master.populate_bitmap_info()
         self.master.populate_settings()
+
+    def toggle_all(self):
+        for flags in self.master.conversion_flags.values():
+            flags.swizzled = flags.platform = self.toggle_to
+
+        self.toggle_to = not self.toggle_to
+        self.sort_menu.entryconfig(0, label="Toggle all to %s" %
+                                   BITMAP_PLATFORMS[int(self.toggle_to)])
+        self.display_sorted_tags()
 
     def invert_selection(self):
         self.path_listbox.selection_clear(first=0, last=tk.END)
@@ -1095,16 +1298,14 @@ class BitmapConverterList(tk.Frame, BinillaWidget):
             for typ in range(len(BITMAP_TYPES)):
                 self.types_shown[typ] = not self.types_shown[typ]
                 typ_str = BITMAP_TYPES[typ]
-                if self.types_shown[typ]:
-                    typ_str += " " + u'\u2713'
+                if self.types_shown[typ]: typ_str += u' \u2713'
 
                 self.types_menu.entryconfig(typ + 1, label=typ_str)
             return
 
         typ_str = BITMAP_TYPES[typ]
         self.types_shown[typ] = not self.types_shown[typ]
-        if self.types_shown[typ]:
-            typ_str += " " + u'\u2713'
+        if self.types_shown[typ]: typ_str += u' \u2713'
 
         self.types_menu.entryconfig(menu_idx, label=typ_str)
         self.display_sorted_tags()
@@ -1116,8 +1317,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget):
                 if fmt in VALID_FORMAT_ENUMS:
                     self.formats_shown[fmt] = not self.formats_shown[fmt]
                     fmt_str = BITMAP_FORMATS[fmt]
-                    if self.formats_shown[fmt]:
-                        fmt_str += " " + u'\u2713'
+                    if self.formats_shown[fmt]: fmt_str += u' \u2713'
 
                     self.formats_menu.entryconfig(i, label=fmt_str)
                     i += 1
@@ -1125,11 +1325,28 @@ class BitmapConverterList(tk.Frame, BinillaWidget):
 
         fmt_str = BITMAP_FORMATS[fmt]
         self.formats_shown[fmt] = not self.formats_shown[fmt]
-        if self.formats_shown[fmt]:
-            fmt_str += " " + u'\u2713'
+        if self.formats_shown[fmt]: fmt_str += u' \u2713'
 
         self.formats_menu.entryconfig(menu_idx, label=fmt_str)
         self.display_sorted_tags()
+
+    def build_tag_sort_mappings(self):
+        self.selected_paths = set()
+        self.displayed_paths = []
+        self.type_format_map = []
+        self.size_map = {}
+
+        for typ in range(4):
+            self.type_format_map.append([])
+            for fmt in range(18):
+                self.type_format_map[typ].append([])
+
+        for fp, info in self.master.bitmap_tag_infos.items():
+            if not info.pixel_data_size in self.size_map:
+                self.size_map[info.pixel_data_size] = []
+
+            self.type_format_map[info.type][info.format].append(fp)
+            self.size_map[info.pixel_data_size].append(fp)
 
     def display_sorted_tags(self, sort_by=None, allow_reverse=False):
         if sort_by is None:
@@ -1137,29 +1354,27 @@ class BitmapConverterList(tk.Frame, BinillaWidget):
 
         self.reverse_listbox = not self.reverse_listbox and allow_reverse
         self.sort_displayed_tags(sort_by)
-        self.populate_tag_list_boxes()
+        self.after(0, self.populate_tag_list_boxes)
 
     def sort_displayed_tags(self, sort_by):
-        if not self.master.handler.tags_loaded or self.populating:
+        if not self.master.bitmap_tag_infos:
             return
 
-        bitmaps = self.handler.tags["bitm"]
+        bitmap_tag_infos = self.master.bitmap_tag_infos
         self.displayed_paths = displayed_paths = []
         if sort_by == 'path':
-            for path in sorted(bitmaps.keys()):
-                tag = bitmaps[path]
-                if tag and tag.bitmap_count()!= 0:
-                    if (self.formats_shown[tag.bitmap_format()] and
-                        self.types_shown[tag.bitmap_type()]):
-                        displayed_paths.append(path)
+            for path in sorted(bitmap_tag_infos.keys()):
+                info = bitmap_tag_infos[path]
+                if (self.formats_shown[info.format] and
+                    self.types_shown[info.type]):
+                    displayed_paths.append(path)
 
         elif sort_by == 'size':
-            size_mapping = sorted(self.size_map)
-            for tagsize in size_mapping:
+            for tagsize in sorted(self.size_map):
                 for path in self.size_map[tagsize]:
-                    tag = bitmaps[path]
-                    if (self.formats_shown[tag.bitmap_format()] and
-                        self.types_shown[tag.bitmap_type()]):
+                    info = bitmap_tag_infos[path]
+                    if (self.formats_shown[info.format] and
+                        self.types_shown[info.type]):
                         displayed_paths.append(path)
 
         elif sort_by == 'format':
@@ -1178,43 +1393,35 @@ class BitmapConverterList(tk.Frame, BinillaWidget):
         if self.reverse_listbox:
             displayed_paths.reverse()
 
-    def build_tag_sort_mappings(self):
-        tags = self.master.handler.tags.get("bitm", ())
-        for fp, tag in tags.items():
-            size = tag.pixel_data_bytes_size()
-
-            if not size in self.bitmaps_indexed_by_size:
-                self.size_map[size] = []
-
-            self.type_format_map[tag.bitmap_type()][tag.bitmap_format()].append(fp)
-            self.size_map[size].append(fp)
-
     def populate_tag_list_boxes(self):
-        if self.populating:
+        if self._populating:
             return
 
-        self.populating = True
+        self._populating = True
         try:
-            self.reset_listboxes()
+            for listbox in self.listboxes:
+                listbox.delete(0, tk.END)
+
             for fp in self.displayed_paths:
-                tag = self.handler.tags["bitm"][fp]
-                size = tag.pixel_data_bytes_size()
+                info = self.master.bitmap_tag_infos[fp]
+                size = info.pixel_data_size
                 if size < 1024:
-                    size_str += str(bitmap_size) + "  B"
+                    size_str = str(size) + "  B"
                 elif size < 1024**2:
-                    size_str += str((size + 512) // 1024) + "  KB"
+                    size_str = str((size + 512) // 1024) + "  KB"
                 else:
-                    size_str += str((size + 1024**2 // 2) // 1024**2) + "  MB"
+                    size_str = str((size + 1024**2 // 2) // 1024**2) + "  MB"
+
+                self.path_listbox.insert(tk.END, fp)
+                self.format_listbox.insert(tk.END, BITMAP_FORMATS[info.format])
+                self.type_listbox.insert(tk.END, BITMAP_TYPES[info.type])
+                self.size_listbox.insert(tk.END, size_str)
 
                 self.set_listbox_entry_color(tk.END, fp)
-                self.path_listbox.insert(tk.END, fp)
-                self.format_listbox.insert(tk.END, BITMAP_FORMATS[tag.bitmap_format()])
-                self.type_listbox.insert(tk.END, BITMAP_TYPES[tag.bitmap_type()])
-                self.size_listbox.insert(tk.END, size_str)
         except Exception:
             print(format_exc())
 
-        self.populating = False
+        self._populating = False
 
     def set_listbox_entry_color(self, listbox_index, filepath):
         if self.master.get_will_be_processed(filepath):
