@@ -164,21 +164,13 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
         self.sequence_menu.set_options(options)
         self.sequence_menu.sel_index = (self.sequence_menu.max_index >= 0) - 1
 
+    
+class HaloBitmapDisplayBase:
+    def get_base_address(self, tag):
+        if tag is None:
+            return 0
 
-class HaloBitmapDisplayButton(BitmapDisplayButton):
-    tags_dir = ""
-    display_frame_class = HaloBitmapDisplayFrame
-
-    def __init__(self, *args, **kwargs):
-        self.tags_dir = kwargs.pop("tags_dir", self.tags_dir)
-        BitmapDisplayButton.__init__(self, *args, **kwargs)
-
-    def get_base_address(self):
-        tag = self.bitmap_tag
-        if tag is None: return ()
-        bitmaps = tag.data.tagdata.bitmaps.STEPTREE
-
-        for b in bitmaps:
+        for b in tag.data.tagdata.bitmaps.STEPTREE:
             if b.pixels_offset:
                 return b.pixels_offset
         return 0
@@ -189,15 +181,14 @@ class HaloBitmapDisplayButton(BitmapDisplayButton):
         except AttributeError:
             return False
 
-    def get_textures(self):
-        tag = self.bitmap_tag
+    def get_textures(self, tag):
         if tag is None: return ()
 
         textures = []
         is_meta_tag = not hasattr(tag, "tags_dir")
 
         get_mip_dims = arbytmap.get_mipmap_dimensions
-        pixels_base  = self.get_base_address()
+        pixels_base  = self.get_base_address(tag)
         pixel_data = tag.data.tagdata.processed_pixel_data.data
         bitmaps    = tag.data.tagdata.bitmaps.STEPTREE
 
@@ -262,11 +253,20 @@ class HaloBitmapDisplayButton(BitmapDisplayButton):
 
         return textures
 
+
+class HaloBitmapDisplayButton(HaloBitmapDisplayBase, BitmapDisplayButton):
+    tags_dir = ""
+    display_frame_class = HaloBitmapDisplayFrame
+
+    def __init__(self, *args, **kwargs):
+        self.tags_dir = kwargs.pop("tags_dir", self.tags_dir)
+        BitmapDisplayButton.__init__(self, *args, **kwargs)
+
     def show_window(self, e=None, parent=None):
         w = tk.Toplevel()
         tag = self.bitmap_tag
         self.display_frame = weakref.ref(self.display_frame_class(w, tag))
-        self.display_frame().change_textures(self.get_textures())
+        self.display_frame().change_textures(self.get_textures(self.bitmap_tag))
         self.display_frame().pack(expand=True, fill="both")
 
         try:
@@ -282,8 +282,7 @@ class HaloBitmapDisplayButton(BitmapDisplayButton):
 
 
 class Halo2BitmapDisplayButton(HaloBitmapDisplayButton):
-
-    def get_base_address(self):
+    def get_base_address(self, tag):
         return 0
 
 
