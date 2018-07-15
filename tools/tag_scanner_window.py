@@ -89,7 +89,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             self.def_ids_frame, orient="vertical")
         self.def_ids_listbox = tk.Listbox(
             self.def_ids_frame, selectmode='multiple', highlightthickness=0,
-            yscrollcommand=self.def_ids_scrollbar.set)
+            yscrollcommand=self.def_ids_scrollbar.set, exportselection=False)
         self.def_ids_scrollbar.config(command=self.def_ids_listbox.yview)
 
         for def_id in self.listbox_index_to_def_id:
