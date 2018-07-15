@@ -1,9 +1,12 @@
+import ctypes
 import gc
+import sys
 import weakref
+import arbytmap as ab
 
 from array import array
 from copy import deepcopy
-from os.path import getsize, splitext, dirname, join, exists, isfile, relpath
+from os.path import getsize, splitext, dirname, join, normpath, exists, isfile, relpath
 from threading import Thread
 from tkinter.filedialog import asksaveasfilename, askdirectory
 from time import sleep, time
@@ -34,12 +37,14 @@ MULTI_SWAP_OPTIONS = ("", "PC to XBOX", "XBOX to PC")
 P8_MODE_OPTIONS = ("Auto", "Average")
 AY8_OPTIONS = ("Alpha", "Intensity")
 EXTRACT_TO_OPTIONS = ("", "DDS", "TGA", "PNG")
+NO_YES_OPTIONS = ("No", "Yes")
 BITMAP_TYPES = ("2D", "3D", "Cube", "White")
 BITMAP_FORMATS = ("A8", "Y8", "AY8", "A8Y8", "????", "????", "R5G6B5",
                   "????", "A1R5G5B5", "A4R4G4B4", "X8R8G8B8", "A8R8G8B8",
                   "????", "????", "DXT1", "DXT3", "DXT5", "P8 Bump")
 
-VALID_FORMAT_ENUMS = frozenset((0, 1, 2, 3, 6, 8, 9, 10, 11, 14, 15, 16, 17))
+VALID_FORMAT_ENUMS = (0, 1, 2, 3, 6, 8, 9, 10, 11, 14, 15, 16, 17)
+PARAM_FORMAT_TO_FORMAT = (-1, ) + VALID_FORMAT_ENUMS
 FORMAT_OPTIONS = (
     "Unchanged",
     "A8", "Y8", "AY8", "A8Y8",
@@ -47,6 +52,28 @@ FORMAT_OPTIONS = (
     "X8R8G8B8", "A8R8G8B8",
     "DXT1", "DXT3", "DXT5",
     "P8-Bump")
+
+
+platform = sys.platform.lower()
+if "linux" in platform:
+    platform = "linux"
+
+
+SetFileAttributesW = None
+if platform == "win32":
+    TEXT_EDITOR_NAME = "notepad"
+    SetFileAttributesW = ctypes.windll.kernel32.SetFileAttributesW
+elif platform == "darwin":
+    # I don't actually think this will work since mac seems to require
+    # the "open" argument and the -a argument before the application name.
+    # leaving this here just in case it somehow works though.
+    TEXT_EDITOR_NAME = "TextEdit"
+elif platform == "linux":
+    TEXT_EDITOR_NAME = "nano"
+else:
+    # idfk
+    TEXT_EDITOR_NAME = "vim"
+
 
 class ConversionFlags:
     platform = BITMAP_PLATFORMS.index("PC")
@@ -131,6 +158,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
     _cancel_processing = False
     _populating_settings = False
     _populating_bitmap_info = False
+    _settings_enabled = True
 
     print_interval = 5
 
@@ -181,10 +209,11 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
         self.settings_frame = tk.LabelFrame(self.main_frame, text="Settings")
         self.bitmap_info_frame = tk.LabelFrame(self.main_frame, text="Bitmap info")
         self.buttons_frame = tk.Frame(self.main_frame)
+        self.tagset_info_frame = tk.Frame(self.main_frame)
         self.tag_list_frame = BitmapConverterList(self)
 
         self.log_file_frame  = tk.LabelFrame(
-            self.settings_frame, text="Output log filepath")
+            self.settings_frame, text="Scan log filepath")
         self.scan_dir_frame = tk.LabelFrame(
             self.settings_frame, text="Directory to scan")
         self.global_params_frame = tk.LabelFrame(
@@ -202,7 +231,9 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
         self.curr_bitmap_label_0 = tk.Label(self.bitmap_index_frame, text="Current")
         self.curr_bitmap_spinbox = tk.Spinbox(self.bitmap_index_frame, width=3,
-                                              state="readonly", repeatinterval=5)
+                                              state="readonly", repeatinterval=5,
+                                              command=lambda *a, s=self:
+                                              s.populate_bitmap_info())
         self.curr_bitmap_label_1 = tk.Label(self.bitmap_index_frame, text=" to ")
         self.max_bitmap_entry = tk.Entry(self.bitmap_index_frame, width=3,
                                          state='disabled')
@@ -211,10 +242,12 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
                                          disabled=True, options=BITMAP_TYPES)
         self.curr_format_menu = ScrollMenu(self.bitmap_info_frame, menu_width=8,
                                            disabled=True, options=BITMAP_FORMATS)
+        self.curr_swizzled_menu = ScrollMenu(self.bitmap_info_frame, menu_width=8,
+                                             options=NO_YES_OPTIONS, disabled=True)
         self.curr_platform_menu = ScrollMenu(self.bitmap_info_frame, menu_width=8,
                                              disabled=True, options=BITMAP_PLATFORMS)
-        self.curr_swizzled_menu = ScrollMenu(self.bitmap_info_frame, menu_width=8,
-                                             options=("No", "Yes"), disabled=True)
+        self.curr_has_tiff_menu = ScrollMenu(self.bitmap_info_frame, menu_width=8,
+                                             options=NO_YES_OPTIONS, disabled=True)
         self.curr_height_entry = tk.Entry(self.bitmap_info_frame, width=12,
                                           state='disabled')
         self.curr_width_entry = tk.Entry(self.bitmap_info_frame, width=12,
@@ -264,28 +297,28 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
         
         self.platform_menu = ScrollMenu(
             self.general_params_frame, menu_width=12,
-            options=BITMAP_PLATFORMS, callback=lambda i, s=self:
+            options=BITMAP_PLATFORMS, callback=lambda *a, s=self:
             s.set_conversion_flag(self.platform_menu, "platform"))
         self.format_menu = ScrollMenu(
             self.general_params_frame, menu_width=12,
-            options=FORMAT_OPTIONS, callback=lambda i, s=self:
+            options=FORMAT_OPTIONS, callback=lambda *a, s=self:
             s.set_conversion_flag(self.format_menu, "new_format"))
         self.extract_to_menu = ScrollMenu(
             self.general_params_frame, menu_width=12,
-            options=EXTRACT_TO_OPTIONS, callback=lambda i, s=self:
+            options=EXTRACT_TO_OPTIONS, callback=lambda *a, s=self:
             s.set_conversion_flag(self.extract_to_menu, "extract_to"))
         self.multi_swap_menu = ScrollMenu(
             self.general_params_frame, menu_width=12,
-            options=MULTI_SWAP_OPTIONS, callback=lambda i, s=self:
+            options=MULTI_SWAP_OPTIONS, callback=lambda *a, s=self:
             s.set_conversion_flag(self.multi_swap_menu, "multi_swap"))
         self.generate_mips_menu = ScrollMenu(
             self.general_params_frame, menu_width=12,
-            options=("No", "Yes"), callback=lambda i, s=self:
+            options=NO_YES_OPTIONS, callback=lambda *a, s=self:
             s.set_conversion_flag(self.generate_mips_menu, "mip_gen"))
         self.downres_box = tk.Spinbox(
-            self.general_params_frame, from_=0, to=12, width=4,
-            state="readonly")#, callback=lambda i, s=self:
-            #s.set_conversion_flag(self.downres_box, "downres"))
+            self.general_params_frame, from_=0, to=12, width=16,
+            state="readonly", command=lambda *a, s=self:
+            s.set_conversion_flag(self.downres_box, "downres"))
 
 
         self.platform_menu.tooltip_string = (
@@ -306,29 +339,29 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
         self.p8_mode_menu = ScrollMenu(
             self.format_params_frame, menu_width=10,
-            options=P8_MODE_OPTIONS, callback=lambda i, s=self:
+            options=P8_MODE_OPTIONS, callback=lambda *a, s=self:
             s.set_conversion_flag(self.p8_mode_menu, "p8_mode"))
         self.ay8_channel_src_menu = ScrollMenu(
             self.format_params_frame, menu_width=10,
-            options=AY8_OPTIONS, callback=lambda i, s=self:
+            options=AY8_OPTIONS, callback=lambda *a, s=self:
             s.set_conversion_flag(self.ay8_channel_src_menu, "mono_channel_to_keep"))
         self.ck_transparency_menu = ScrollMenu(
             self.format_params_frame, menu_width=10,
-            options=("No", "Yes"), callback=lambda i, s=self:
+            options=NO_YES_OPTIONS, callback=lambda *a, s=self:
             s.set_conversion_flag(self.ck_transparency_menu, "ck_trans"))
         self.swap_a8y8_menu = ScrollMenu(
             self.format_params_frame, menu_width=10,
-            options=("No", "Yes"), callback=lambda i, s=self:
+            options=NO_YES_OPTIONS, callback=lambda *a, s=self:
             s.set_conversion_flag(self.swap_a8y8_menu, "mono_swap"))
         self.swizzled_menu = ScrollMenu(
             self.format_params_frame, menu_width=10,
-            options=("No", "Yes"), callback=lambda i, s=self:
+            options=NO_YES_OPTIONS, callback=lambda *a, s=self:
             s.set_conversion_flag(self.swizzled_menu, "swizzled"))
         self.alpha_bias_box = tk.Spinbox(
-            self.format_params_frame, from_=0, to=255, width=5,
-            state="readonly", repeatinterval=10)#, callback=lambda i, s=self:
-            #s.set_conversion_flag(self.alpha_bias_box, "alpha_bias"))
-        
+            self.format_params_frame, from_=0, to=255, width=14,
+            state="readonly", repeatinterval=10, command=lambda *a, s=self:
+            s.set_conversion_flag(self.alpha_bias_box, "alpha_bias"))
+
 
         self.p8_mode_menu.tooltip_string = (
             "The method used for picking P8-bump normals.\n"
@@ -437,17 +470,18 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
         self.max_bitmap_entry.pack(side='left', fill='x', expand=True)
 
         self.bitmap_index_frame.grid(row=0, column=0, sticky='we',
-                                     columnspan=2, pady=(10, 20))
+                                     columnspan=2, pady=(5, 10))
         i = 1
         widgets = (self.curr_type_menu, self.curr_format_menu,
-                   self.curr_platform_menu, self.curr_swizzled_menu,
+                   self.curr_swizzled_menu,
+                   self.curr_platform_menu, self.curr_has_tiff_menu,
                    self.curr_width_entry, self.curr_height_entry,
                    self.curr_depth_entry, self.curr_mip_entry)
-        for name in ("Type", "Format", "Platform", "Swizzled",
+        for name in ("Type", "Format", "Swizzled", "Platform", "Has TIFF",
                      "Width", "Height", "Depth", "Mipmaps"):
             w = widgets[i - 1]
             lbl = tk.Label(self.bitmap_info_frame, text=name)
-            lbl.grid(row=i, column=0, sticky='w', pady=4)
+            lbl.grid(row=i, column=0, sticky='w', pady=3)
             w.grid(row=i, column=1, sticky='e')
             try:
                 if w.tooltip_string:
@@ -505,6 +539,21 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
         h = self.winfo_reqheight()
         self.geometry("%sx%s" % (w, h))
         self.minsize(width=w, height=h)
+
+    def show_log_in_text_editor(self):
+        Thread(target=self._show_log_in_text_editor, daemon=True).start()
+
+    def _show_log_in_text_editor(self):
+        try:
+            log_path = self.log_file_path.get()
+            if not exists(log_path):
+                return
+
+            do_subprocess(TEXT_EDITOR_NAME, (), (log_path, ),
+                          proc_controller=ProcController(abandon=True),
+                          stdout=None, stderr=None, stdin=None)
+        except Exception:
+            print(format_exc())
 
     def set_conversion_flag(self, widget, flag_name):
         if isinstance(widget, ScrollMenu):
@@ -600,7 +649,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
                     self.conversion_flags[fp] = ConversionFlags()
                     self.bitmap_tag_infos[fp] = BitmapTagInfo(bitm_tag)
 
-            print("Finished in %s seconds." % int(time() - s_time))
+            print("    Finished in %s seconds." % int(time() - s_time))
         except Exception:
             print(format_exc())
 
@@ -626,7 +675,8 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
         self._processing = True
         try:
             if self.read_only.get():
-                self.make_log()
+                if self.make_log() and self.open_log.get():
+                    self.show_log_in_text_editor()
             else:
                 pass
         except Exception:
@@ -646,11 +696,16 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
         self._enable_disable_settings(True)
 
     def _enable_disable_settings(self, disable):
+        if disable != self._settings_enabled:
+            return
+
         new_state = tk.DISABLED if disable else tk.NORMAL
         for w in self.checkbuttons + self.buttons + self.entries:
             w.config(state=new_state)
 
-        if not disable:
+        self._settings_enabled = not disable
+        if disable:
+            self._settings_enabled = False
             new_state = "readonly"
 
         for w in self.spinboxes:
@@ -667,7 +722,9 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
             return
 
         self._populating_settings = True
+        settings_enabled = self._settings_enabled
         try:
+            self.enable_settings()
             menus = (self.platform_menu, self.format_menu,
                      self.multi_swap_menu, self.extract_to_menu,
                      self.generate_mips_menu, self.p8_mode_menu,
@@ -701,7 +758,8 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
                 for name in ("platform", "multi_swap", "p8_mode",
                              "mono_channel_to_keep", "extract_to", "new_format",
-                             "swizzled", "mono_swap", "ck_trans", "mip_gen"):
+                             "swizzled", "mono_swap", "ck_trans", "mip_gen",
+                             "downres", "alpha_bias"):
                     if getattr(flags, name) != getattr(comb_flags, name):
                         setattr(comb_flags, name, -1)
 
@@ -718,12 +776,16 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
             for w in menus:
                 if w.sel_index < 0:
-                    w.update_label("<Mixed values>")
+                    w.update_label("<mixed values>")
 
-            self.downres_box.delete(0, tk.END)
-            self.alpha_bias_box.delete(0, tk.END)
-            self.downres_box.insert(0, comb_flags.downres)
-            self.downres_box.insert(0, comb_flags.alpha_bias)
+            for name, w in (("downres", self.downres_box),
+                            ("alpha_bias", self.alpha_bias_box)):
+                w.delete(0, tk.END)
+                val = getattr(comb_flags, name)
+                w.insert(0, str(val) if val >= 0 else "<mixed values>")
+
+            if not settings_enabled:
+                self.disble_settings()
         except Exception:
             print(format_exc())
         self._populating_settings = False
@@ -745,7 +807,8 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
                 w.config(state=tk.NORMAL)
 
             for w in (self.curr_type_menu, self.curr_format_menu,
-                      self.curr_platform_menu, self.curr_swizzled_menu):
+                      self.curr_swizzled_menu,
+                      self.curr_platform_menu, self.curr_has_tiff_menu):
                 w.sel_index = -1
 
             for w in (self.curr_width_entry, self.curr_height_entry,
@@ -772,8 +835,9 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
                         self.curr_type_menu.sel_index = bitm_info.type
                         self.curr_format_menu.sel_index = bitm_info.format
-                        self.curr_platform_menu.sel_index = bitm_tag_info.platform
                         self.curr_swizzled_menu.sel_index = bitm_info.swizzled
+                        self.curr_platform_menu.sel_index = bitm_tag_info.platform
+                        self.curr_has_tiff_menu.sel_index = bitm_tag_info.tiff_data_size > 0
 
                         self.curr_width_entry.insert(tk.END, str(bitm_info.width))
                         self.curr_height_entry.insert(tk.END, str(bitm_info.height))
@@ -823,7 +887,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
         if not fp:
             return
 
-        if len(splitext(fp)) == 2:
+        if not splitext(fp)[-1]:
             fp += ".log"
 
         self.log_file_path.set(sanitize_path(fp))
@@ -839,7 +903,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
         if flags.new_format:
             new_format = FORMAT_NAME_MAP[flags.new_format]
 
-        processing = self.process_bitmap_tag(tag_path)
+        processing = self.get_will_be_converted(tag_path)
 
         bm = ab.Arbytmap()
         bad_bitmaps = tag.sanitize_mipmap_counts()
@@ -962,7 +1026,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
                 #change the bitmap format to the new format
                 tag.bitmap_format(i, I_FORMAT_NAME_MAP[format_t])
-            elif not (will_extract(tag) or self.prune_tiff.get()):
+            elif not (get_will_extract_from(tag) or self.prune_tiff.get()):
                 print("Error occurred while attempting to convert the tag:")
                 print(tag_path + "\n")
                 return False
@@ -1065,38 +1129,49 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
         return (channel_mapping, channel_merge_mapping, format_t)
 
-    def will_extract(self, tag_path):
+    def get_will_extract_from(self, tag_path):
         # determines if a texture extraction is to take place
         return self.conversion_flags[tag_path].extract_to != 0
 
-    def process_bitmap_tag(self, tag_path):
+    def get_will_be_converted(self, tag_path):
         flags = self.conversion_flags[tag_path]
-        info = self.bitmap_tag_infos[tag_path]
+        tag_info = self.bitmap_tag_infos[tag_path]
 
-        if not info.platform:
-            format = info.format
+        if flags.platform != tag_info.platform:
+            return True
+        elif (flags.swizzled != tag_info.swizzled and
+              tag_info.format not in (14, 15, 16)):
+            return True
+        elif (flags.mono_swap and (PARAM_FORMAT_TO_FORMAT[flags.new_format] == 3 or
+                                   tag_info.format == 3)):
+            return True
+        elif flags.multi_swap and tag_info.format in (6, 8, 9, 10, 11, 14, 15, 16):
+            return True
 
-            # if all these are true we skip the tag
-            if (flags.downres == 0 and flags.multi_swap == 0 and
-                 flags.new_format == 0 and flags.mip_gen == False and
-                 flags.platform == info.platform and
-                 (flags.mono_swap == False or format != FORMAT_A8Y8) and
-                 (info.swizzled == flags.swizzled or
-                  FORMAT_NAME_MAP[format] in ab.DDS_FORMATS) ):
-                return False
-        return True
+        for info in tag_info.bitmap_infos:
+            if PARAM_FORMAT_TO_FORMAT[flags.new_format] not in (-1, info.format):
+                return True
+            elif flags.downres and max(info.width, info.height, info.depth) > 4:
+                return True
+            elif flags.mip_gen and info.mipmaps == 0:
+                return True
+
+        return False
 
     def get_will_be_processed(self, tag_path):
         info = self.bitmap_tag_infos.get(tag_path)
         if self.read_only.get() or (not info or not info.bitmap_infos):
             return False
 
-        return (self.prune_tiff.get() or
-                self.process_bitmap_tag(tag_path) or
-                self.will_extract(tag_path))
+        if self.prune_tiff.get():
+            return True
+        elif self.get_will_extract_from(tag_path):
+            return True
+        return self.get_will_be_converted(tag_path)
 
     def make_log(self):
         attempts = 0
+        success = True
 
         while attempts < 2:
             log_file_path = self.log_file_path.get()
@@ -1115,12 +1190,21 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
                 self.log_file_path.set("")
                 self.log_browse()
 
-        logstr = "Mozzarilla Bitmap Converter conversion log:\n\n"
-        base_str = "Bitmap %s --- WxHxD: %sx%sx%s --- Mipmaps: %s\n"
-        tag_counts = [0, 0, 0]
+        logstr = "Mozzarilla Bitmap Converter tagset log:\n\n"
+
+        total_size = 0
+        tiff_data_size = 0
+        for filename, info in self.bitmap_tag_infos.items():
+            total_size += getsize(normpath(join(self.loaded_tags_dir, filename)))
+            tiff_data_size += info.tiff_data_size
+
+        logstr += "%s bitmaps total\n%sKB of bitmap data\n%sKB of TIFF data" % (
+            len(self.bitmap_tag_infos), total_size // 1024, tiff_data_size // 1024)
 
         formatted_strs = {}
+        tag_counts = [0, 0, 0]
         tag_header_strs = ("2D Textures", "3D Textures", "Cubemaps")
+        base_str = "Bitmap %s\t--- WxHxD: %sx%sx%s\t--- Mipmaps: %s\n"
 
         tag_info_strs = {}
 
@@ -1130,20 +1214,24 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
             for fmt in range(len(BITMAP_FORMATS)):
                 if "?" not in BITMAP_FORMATS[fmt]:
-                    formatted_strs[typ][fmt] = "\n\n%s%s" % (
-                        " " * 4, BITMAP_FORMATS[fmt])
+                    formatted_strs[typ][fmt] = "\n\n\t%s" % BITMAP_FORMATS[fmt]
                     tag_info_strs[typ][fmt] = {}
 
         for filename, info in self.bitmap_tag_infos.items():
-            fp = join(self.loaded_tags_dir, filename)
+            fp = normpath(join(self.loaded_tags_dir, filename))
             filesize = (getsize(fp) - info.tiff_data_size) // 1024
-            tagstr = ("\n" + " "*8 + fp +
-                      "\n" + " "*12 + "Compiled tag size = %sKB\n" %
+            tagstr = ("\n\t\t" + fp +
+                      "\n\t\t\tCompiled tag size\t= %sKB\n" %
                       ("less than 1" if filesize <= 0 else str(filesize)))
+
+            if info.tiff_data_size > 0:
+                tagstr += "\t\t\tTIFF data size\t= %sKB\n" % (
+                    "less than 1" if info.tiff_data_size < 1024
+                    else info.tiff_data_size // 1024)
 
             i = 0
             for bitm_info in info.bitmap_infos:
-                tagstr += (" " * 12 + base_str %
+                tagstr += ("\t\t\t" + base_str %
                            (i, bitm_info.width, bitm_info.height,
                             bitm_info.depth, bitm_info.mipmaps))
                 i += 1
@@ -1160,15 +1248,22 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
                         formatted_strs[typ][fmt] += tagstr
 
         for typ in range(3):
-            logstr += "\n\n%s:\n    Count = %s%s" % (
+            logstr += "\n\n%s:\n\tCount = %s%s" % (
                 tag_header_strs[typ], tag_counts[typ],
                 ''.join(formatted_strs[typ]))
 
         if log_file_path:
-            with open(log_file_path, "w") as f:
-                f.write(logstr)
+            try:
+                with open(log_file_path, "w") as f:
+                    f.write(logstr)
+            except Exception:
+                print(format_exc())
+                success = False
         else:
-            print(log_file_path)
+            print(logstr)
+            success = False 
+
+        return success
 
 
 class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
@@ -1217,7 +1312,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             label="Sort by Filepath", command=lambda:
             self.display_sorted_tags('path'))
         self.sort_menu.add_command(
-            label="Sort by Filesize", command=lambda:
+            label="Sort by Bitmap data size", command=lambda:
             self.display_sorted_tags('size'))
         self.sort_menu.add_command(
             label="Sort by Bitmap type", command=lambda:
@@ -1278,6 +1373,8 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             self.listboxes[i].config(selectmode=tk.EXTENDED, highlightthickness=0)
             self.listboxes[i].bind('<Double-Button-1>', lambda e, idx=i:
                                    self.display_selected_tag(idx))
+            self.listboxes[i].bind('<Return>', lambda e, idx=i:
+                                   self.display_selected_tag(idx))
             if i != 0:
                 self.listboxes[i].bind('<<ListboxSelect>>', lambda e, idx=i:
                                        self.select_path_listbox(idx))
@@ -1299,7 +1396,12 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
     @property
     def type_listbox(self): return self.listboxes[3]
 
+    def apply_style(self, seen=None):
+        BinillaWidget.apply_style(self, seen)
+        self.populate_tag_list_boxes()
+
     def post_rightclick_menu(self, event, menu):
+        self.update_sort_menu()
         menu.post(event.x_root, event.y_root)
 
     def reset_listboxes(self):
@@ -1309,8 +1411,6 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             listbox.delete(0, tk.END)
 
     def set_selected_tags_list(self, event=None):
-        '''used to set which tags are selected when the tags listbox
-        is clicked so we can easily edit their conversion variables'''
         selected = set(self.path_listbox.curselection())
         if len(selected) == 1:
             self.selected_paths.clear()
@@ -1332,20 +1432,55 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             flags.swizzled = flags.platform = self.toggle_to
 
         self.toggle_to = not self.toggle_to
-        self.sort_menu.entryconfig(0, label="Toggle all to %s" %
-                                   BITMAP_PLATFORMS[int(self.toggle_to)])
         self.display_sorted_tags()
+        self.master.populate_settings()
+
+    def update_sort_menu(self):
+        sort_menu_strs = []
+        for i in range(10):
+            try:
+                label = self.sort_menu.entryconfig(i)["label"][-1]
+            except Exception:
+                label = ""
+
+            sort_menu_strs.append(label.rstrip(u' \u2713'))
+
+        sort_menu_strs[0] = "Toggle all to %s" % BITMAP_PLATFORMS[int(self.toggle_to)]
+
+        if self.reverse_listbox:
+            sort_menu_strs[4] += u' \u2713'
+        else:
+            sort_menu_strs[3] += u' \u2713'
+
+        if self.sort_method == 'path':
+            sort_menu_strs[6] += u' \u2713'
+        elif self.sort_method == 'size':
+            sort_menu_strs[7] += u' \u2713'
+        elif self.sort_method == 'format':
+            sort_menu_strs[8] += u' \u2713'
+        elif self.sort_method == 'type':
+            sort_menu_strs[9] += u' \u2713'
+
+        for i in range(len(sort_menu_strs)):
+            if sort_menu_strs[i]:
+                self.sort_menu.entryconfig(i, label=sort_menu_strs[i])
 
     def invert_selection(self):
-        self.path_listbox.selection_clear(0, tk.END)
         for i in range(self.path_listbox.size()):
             fp = self.path_listbox.get(i)
-            if fp not in self.selected_paths:
-                self.path_listbox.selection_set(i)
-            else:
+            if fp in self.selected_paths:
                 self.selected_paths.remove(fp)
+            else:
+                self.selected_paths.add(fp)
 
+        self.synchronize_selection()
         self.set_selected_tags_list()
+
+    def synchronize_selection(self):
+        self.path_listbox.selection_clear(0, tk.END)
+        for i in range(self.path_listbox.size()):
+            if self.path_listbox.get(i) in self.selected_paths:
+                self.path_listbox.selection_set(i)
 
     def display_selected_tag(self, src_listbox_index=0):
         self.select_path_listbox(src_listbox_index)
@@ -1386,9 +1521,13 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
     def select_path_listbox(self, src_listbox_index=0):
         src_listbox = self.listboxes[src_listbox_index]
+
         if len(src_listbox.curselection()) > 0:
             self.path_listbox.selection_set(src_listbox.curselection()[0])
             self.set_selected_tags_list()
+
+        if src_listbox_index > 0:
+            src_listbox.selection_clear(0, tk.END)
 
         self.master.populate_bitmap_info()
         self.master.populate_settings()
@@ -1520,6 +1659,8 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
                 self.size_listbox.insert(tk.END, size_str)
 
                 self.set_listbox_entry_color(tk.END, fp)
+
+            self.synchronize_selection()
         except Exception:
             print(format_exc())
 
