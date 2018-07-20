@@ -256,7 +256,6 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
         typ   = BITMAP_TYPES[tag.bitmap_type(i)]
         fmt_s = BITMAP_FORMATS[tag.bitmap_format(i)]
         fmt_t = fmt_s if conv_flags.new_format <= 0 else new_format
-        print(fmt_s, fmt_t)
 
         #get the texture block to be loaded
         tex_block = list(pixel_data[i])
@@ -304,7 +303,7 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
         conv_settings = dict(
             swizzle_mode=conv_flags.swizzled, palettize=palettize,
             one_bit_bias=conv_flags.alpha_bias,
-            downres_amount=conv_flags.downres, format=fmt_t,
+            downres_amount=conv_flags.downres, target_format=fmt_t,
             color_key_transparency=ck_trans, mipmap_gen=conv_flags.mip_gen,
             channel_mapping=chan_map, channel_merge_mapping=chan_merge_map)
 
@@ -325,12 +324,12 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
             tag.tex_infos[i] = bm.texture_info  # tex_info may have changed
 
             if success:
-                tex_root = tag.data.tagdata.processed_pixel_data.data[i]
+                tex_root = pixel_data[i]
                 tex_root.parse(initdata=bm.texture_block)
                 tag.swizzled(i, bm.swizzled)
 
                 #change the bitmap format to the new format
-                tag.bitmap_format(i, I_FORMAT_NAME_MAP[fmt_t])
+                tag.bitmap_format(i, I_FORMAT_NAME_MAP[bm.texture_info])
             else:
                 print("Error occurred while converting:\n\t%s\n" % tag.filepath)
                 return False
