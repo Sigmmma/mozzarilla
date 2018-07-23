@@ -329,7 +329,7 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
                 tag.swizzled(i, bm.swizzled)
 
                 #change the bitmap format to the new format
-                tag.bitmap_format(i, I_FORMAT_NAME_MAP[bm.texture_info])
+                tag.bitmap_format(i, I_FORMAT_NAME_MAP[bm.format])
             else:
                 print("Error occurred while converting:\n\t%s\n" % tag.filepath)
                 return False
@@ -1567,6 +1567,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
                 if self.types_shown[typ]: typ_str += u' \u2713'
 
                 self.types_menu.entryconfig(typ + 1, label=typ_str)
+            self.display_sorted_tags()
             return
 
         typ_str = BITMAP_TYPES[typ]
@@ -1587,6 +1588,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
                     self.formats_menu.entryconfig(i, label=fmt_str)
                     i += 1
+            self.display_sorted_tags()
             return
 
         fmt_str = BITMAP_FORMATS[fmt]
@@ -1733,4 +1735,4 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
         self._sync_yviews(self.size_listbox, *args)
 
 if __name__ == "__main__":
-    BitmapConverterWindow(None)
+    BitmapConverterWindow(None).mainloop()

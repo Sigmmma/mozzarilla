@@ -222,10 +222,10 @@ class HaloBitmapDisplayBase:
 
             for j in range(j_max):
                 start_off = 0
-                if not is_xbox: mw, mh, md = get_mip_dims(w, h, d, j, fmt)
+                if not is_xbox: mw, mh, md = get_mip_dims(w, h, d, j)
 
                 for k in range(k_max):
-                    if is_xbox: mw, mh, md = get_mip_dims(w, h, d, k, fmt)
+                    if is_xbox: mw, mh, md = get_mip_dims(w, h, d, k)
 
                     if fmt == arbytmap.FORMAT_P8:
                         tex_block.append(
@@ -443,10 +443,10 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
         if undo:
             nodes = state.undo_node
 
-        inject_color('a', nodes['a'], parent, attr_index)
-        inject_color('r', nodes['r'], parent, attr_index)
-        inject_color('g', nodes['g'], parent, attr_index)
-        inject_color('b', nodes['b'], parent, attr_index)
+        inject_color('a', int(nodes['a'] * 255.0 + 0.5), parent, attr_index)
+        inject_color('r', int(nodes['r'] * 255.0 + 0.5), parent, attr_index)
+        inject_color('g', int(nodes['g'] * 255.0 + 0.5), parent, attr_index)
+        inject_color('b', int(nodes['b'] * 255.0 + 0.5), parent, attr_index)
 
         if w is not None:
             try:
@@ -475,7 +475,7 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
         for chan_char in self.desc['COLOR_CHANNELS']:
             chan = channel_name_map[chan_char]
             w = f_widgets[f_widget_ids_map[chan]]
-            w.node = getattr(self, chan)
+            w.node = int(getattr(self, chan) * 255.0 + 0.5)
             w.reload()
 
     def populate(self):
@@ -517,10 +517,11 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
 
         for chan_char in desc['COLOR_CHANNELS']:
             chan = channel_name_map[chan_char]
+            node_val = int(getattr(self, chan) * 255.0 + 0.5)
             # make an entry widget for each color channel
             w = HaloColorEntry(self.content, f_widget_parent=self,
                                desc=self.color_descs[chan_char],
-                               node=getattr(self, chan), vert_oriented=False,
+                               node=node_val, vert_oriented=False,
                                tag_window=self.tag_window, attr_index=chan_char)
 
             wid = id(w)
@@ -548,38 +549,42 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
 
     @property
     def alpha(self):
-        return extract_color('a', self.node)
+        return extract_color('a', self.node) / 255.0
 
     @alpha.setter
     def alpha(self, new_val):
-        inject_color('a', new_val, self.parent, self.attr_index)
+        inject_color('a', int(new_val * 255.0 + 0.5),
+                     self.parent, self.attr_index)
         self.node = self.parent[self.attr_index]
 
     @property
     def red(self):
-        return extract_color('r', self.node)
+        return extract_color('r', self.node) / 255.0
 
     @red.setter
     def red(self, new_val):
-        inject_color('r', new_val, self.parent, self.attr_index)
+        inject_color('r', int(new_val * 255.0 + 0.5),
+                     self.parent, self.attr_index)
         self.node = self.parent[self.attr_index]
 
     @property
     def green(self):
-        return extract_color('g', self.node)
+        return extract_color('g', self.node) / 255.0
 
     @green.setter
     def green(self, new_val):
-        inject_color('g', new_val, self.parent, self.attr_index)
+        inject_color('g', int(new_val * 255.0 + 0.5),
+                     self.parent, self.attr_index)
         self.node = self.parent[self.attr_index]
 
     @property
     def blue(self):
-        return extract_color('b', self.node)
+        return extract_color('b', self.node) / 255.0
 
     @blue.setter
     def blue(self, new_val):
-        inject_color('b', new_val, self.parent, self.attr_index)
+        inject_color('b', int(new_val * 255.0 + 0.5),
+                     self.parent, self.attr_index)
         self.node = self.parent[self.attr_index]
 
 
