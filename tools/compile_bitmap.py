@@ -201,6 +201,9 @@ def bitmap_from_dds(app, fps=()):
                 w, h, d = width, height, depth
                 for mip in range(mip_count):
                     i = mip*6 + face
+
+                    # TODO: Fix this to determine the pixel data size
+                    # using arbytmap's size calculation functions
                     image_size = (bpp*w*h*d)//8
                     images[i] = dds_pixels[pos: pos + image_size]
 
