@@ -164,21 +164,13 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
         self.sequence_menu.set_options(options)
         self.sequence_menu.sel_index = (self.sequence_menu.max_index >= 0) - 1
 
+    
+class HaloBitmapDisplayBase:
+    def get_base_address(self, tag):
+        if tag is None:
+            return 0
 
-class HaloBitmapDisplayButton(BitmapDisplayButton):
-    tags_dir = ""
-    display_frame_class = HaloBitmapDisplayFrame
-
-    def __init__(self, *args, **kwargs):
-        self.tags_dir = kwargs.pop("tags_dir", self.tags_dir)
-        BitmapDisplayButton.__init__(self, *args, **kwargs)
-
-    def get_base_address(self):
-        tag = self.bitmap_tag
-        if tag is None: return ()
-        bitmaps = tag.data.tagdata.bitmaps.STEPTREE
-
-        for b in bitmaps:
+        for b in tag.data.tagdata.bitmaps.STEPTREE:
             if b.pixels_offset:
                 return b.pixels_offset
         return 0
@@ -189,15 +181,14 @@ class HaloBitmapDisplayButton(BitmapDisplayButton):
         except AttributeError:
             return False
 
-    def get_textures(self):
-        tag = self.bitmap_tag
+    def get_textures(self, tag):
         if tag is None: return ()
 
         textures = []
         is_meta_tag = not hasattr(tag, "tags_dir")
 
         get_mip_dims = arbytmap.get_mipmap_dimensions
-        pixels_base  = self.get_base_address()
+        pixels_base  = self.get_base_address(tag)
         pixel_data = tag.data.tagdata.processed_pixel_data.data
         bitmaps    = tag.data.tagdata.bitmaps.STEPTREE
 
@@ -231,10 +222,10 @@ class HaloBitmapDisplayButton(BitmapDisplayButton):
 
             for j in range(j_max):
                 start_off = 0
-                if not is_xbox: mw, mh, md = get_mip_dims(w, h, d, j, fmt)
+                if not is_xbox: mw, mh, md = get_mip_dims(w, h, d, j)
 
                 for k in range(k_max):
-                    if is_xbox: mw, mh, md = get_mip_dims(w, h, d, k, fmt)
+                    if is_xbox: mw, mh, md = get_mip_dims(w, h, d, k)
 
                     if fmt == arbytmap.FORMAT_P8:
                         tex_block.append(
@@ -262,11 +253,20 @@ class HaloBitmapDisplayButton(BitmapDisplayButton):
 
         return textures
 
+
+class HaloBitmapDisplayButton(HaloBitmapDisplayBase, BitmapDisplayButton):
+    tags_dir = ""
+    display_frame_class = HaloBitmapDisplayFrame
+
+    def __init__(self, *args, **kwargs):
+        self.tags_dir = kwargs.pop("tags_dir", self.tags_dir)
+        BitmapDisplayButton.__init__(self, *args, **kwargs)
+
     def show_window(self, e=None, parent=None):
         w = tk.Toplevel()
         tag = self.bitmap_tag
         self.display_frame = weakref.ref(self.display_frame_class(w, tag))
-        self.display_frame().change_textures(self.get_textures())
+        self.display_frame().change_textures(self.get_textures(self.bitmap_tag))
         self.display_frame().pack(expand=True, fill="both")
 
         try:
@@ -282,8 +282,7 @@ class HaloBitmapDisplayButton(BitmapDisplayButton):
 
 
 class Halo2BitmapDisplayButton(HaloBitmapDisplayButton):
-
-    def get_base_address(self):
+    def get_base_address(self, tag):
         return 0
 
 
@@ -444,10 +443,10 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
         if undo:
             nodes = state.undo_node
 
-        inject_color('a', nodes['a'], parent, attr_index)
-        inject_color('r', nodes['r'], parent, attr_index)
-        inject_color('g', nodes['g'], parent, attr_index)
-        inject_color('b', nodes['b'], parent, attr_index)
+        inject_color('a', int(nodes['a'] * 255.0 + 0.5), parent, attr_index)
+        inject_color('r', int(nodes['r'] * 255.0 + 0.5), parent, attr_index)
+        inject_color('g', int(nodes['g'] * 255.0 + 0.5), parent, attr_index)
+        inject_color('b', int(nodes['b'] * 255.0 + 0.5), parent, attr_index)
 
         if w is not None:
             try:
@@ -476,7 +475,7 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
         for chan_char in self.desc['COLOR_CHANNELS']:
             chan = channel_name_map[chan_char]
             w = f_widgets[f_widget_ids_map[chan]]
-            w.node = getattr(self, chan)
+            w.node = int(getattr(self, chan) * 255.0 + 0.5)
             w.reload()
 
     def populate(self):
@@ -504,30 +503,33 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
 
         self.display_comment(self)
 
+        try: title_font = self.tag_window.app_root.default_font
+        except AttributeError: title_font = None
         self.title_label = tk.Label(
-            self, anchor='w', justify='left',
+            self, anchor='w', justify='left', font=title_font,
             width=self.title_size, text=self.gui_name,
             bg=self.default_bg_color, fg=self.text_normal_color)
         self.title_label.pack(fill="x", side="left")
 
         node = self.node
         desc = self.desc
-        tooltip_string = self.tooltip_string = desc.get('TOOLTIP')
+        self.title_label.tooltip_string = self.tooltip_string = desc.get('TOOLTIP')
 
         for chan_char in desc['COLOR_CHANNELS']:
             chan = channel_name_map[chan_char]
+            node_val = int(getattr(self, chan) * 255.0 + 0.5)
             # make an entry widget for each color channel
             w = HaloColorEntry(self.content, f_widget_parent=self,
                                desc=self.color_descs[chan_char],
-                               node=getattr(self, chan), vert_oriented=False,
+                               node=node_val, vert_oriented=False,
                                tag_window=self.tag_window, attr_index=chan_char)
 
             wid = id(w)
             f_widget_ids.append(wid)
             f_widget_ids_map[chan] = wid
             f_widget_ids_map_inv[wid] = chan
-            if tooltip_string:
-                w.tooltip_string = tooltip_string
+            if self.tooltip_string:
+                w.tooltip_string = self.tooltip_string
 
         self.color_btn = tk.Button(
             self.content, width=4, command=self.select_color,
@@ -547,38 +549,42 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
 
     @property
     def alpha(self):
-        return extract_color('a', self.node)
+        return extract_color('a', self.node) / 255.0
 
     @alpha.setter
     def alpha(self, new_val):
-        inject_color('a', new_val, self.parent, self.attr_index)
+        inject_color('a', int(new_val * 255.0 + 0.5),
+                     self.parent, self.attr_index)
         self.node = self.parent[self.attr_index]
 
     @property
     def red(self):
-        return extract_color('r', self.node)
+        return extract_color('r', self.node) / 255.0
 
     @red.setter
     def red(self, new_val):
-        inject_color('r', new_val, self.parent, self.attr_index)
+        inject_color('r', int(new_val * 255.0 + 0.5),
+                     self.parent, self.attr_index)
         self.node = self.parent[self.attr_index]
 
     @property
     def green(self):
-        return extract_color('g', self.node)
+        return extract_color('g', self.node) / 255.0
 
     @green.setter
     def green(self, new_val):
-        inject_color('g', new_val, self.parent, self.attr_index)
+        inject_color('g', int(new_val * 255.0 + 0.5),
+                     self.parent, self.attr_index)
         self.node = self.parent[self.attr_index]
 
     @property
     def blue(self):
-        return extract_color('b', self.node)
+        return extract_color('b', self.node) / 255.0
 
     @blue.setter
     def blue(self, new_val):
-        inject_color('b', new_val, self.parent, self.attr_index)
+        inject_color('b', int(new_val * 255.0 + 0.5),
+                     self.parent, self.attr_index)
         self.node = self.parent[self.attr_index]
 
 
