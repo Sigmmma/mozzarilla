@@ -20,6 +20,12 @@ from binilla.util import *
 from binilla.widgets import BinillaWidget, ScrollMenu
 from mozzarilla.field_widgets import HaloBitmapDisplayFrame, HaloBitmapDisplayBase
 
+if __name__ == "__main__":
+    bitmap_converter_base_class = tk.Tk
+else:
+    bitmap_converter_base_class = tk.Toplevel
+
+
 curr_dir = get_cwd(__file__)
 
 #                      (A, R, G, B)
@@ -43,13 +49,7 @@ DXT_ALPHA_FORMATS = (ab.FORMAT_DXT2, ab.FORMAT_DXT3,
 
 VALID_FORMAT_ENUMS = (0, 1, 2, 3, 6, 8, 9, 10, 11, 14, 15, 16, 17)
 PARAM_FORMAT_TO_FORMAT = (-1, ) + VALID_FORMAT_ENUMS
-FORMAT_OPTIONS = (
-    "Unchanged",
-    "A8", "Y8", "AY8", "A8Y8",
-    "R5G6B5", "A1R5G5B5", "A4R4G4B4",
-    "X8R8G8B8", "A8R8G8B8",
-    "DXT1", "DXT3", "DXT5",
-    "P8-Bump")
+FORMAT_OPTIONS = ("Unchanged", ) + tuple(BITMAP_FORMATS[i] for i in VALID_FORMAT_ENUMS)
 
 
 platform = sys.platform.lower()
@@ -165,15 +165,18 @@ def get_will_be_converted(flags, tag_info):
 
 def get_channel_mappings(conv_flags, bitmap_info):
     mono_swap = conv_flags.mono_swap
-    fmt_s = bitmap_info.format
+    fmt_s = FORMAT_NAME_MAP[bitmap_info.format]
     fmt_t = PARAM_FORMAT_TO_FORMAT[conv_flags.new_format]
+    fmt_t = fmt_s if fmt_t < 0 else FORMAT_NAME_MAP[fmt_t]
+
     multi_swap = conv_flags.multi_swap
     chan_to_keep = conv_flags.mono_channel_to_keep
 
-    chan_ct_s = ab.CHANNEL_COUNTS[BITMAP_FORMATS[fmt_s]]
-    chan_ct_t = ab.CHANNEL_COUNTS[BITMAP_FORMATS[fmt_t]]
+    chan_ct_s = ab.CHANNEL_COUNTS[fmt_s]
+    chan_ct_t = ab.CHANNEL_COUNTS[fmt_t]
     chan_map = None
     chan_merge_map = None
+
     if chan_ct_s == 4:
         if chan_ct_t == 4:
             # TAKES CARE OF ALL THE MULTIPURPOSE CHANNEL SWAPPING
@@ -187,7 +190,9 @@ def get_channel_mappings(conv_flags, bitmap_info):
 
         elif fmt_t in (ab.FORMAT_A8, ab.FORMAT_L8, ab.FORMAT_AL8):
             # CONVERTING FROM A 4 CHANNEL FORMAT TO MONOCHROME
-            if chan_to_keep == 0:
+            if fmt_t == ab.FORMAT_L8:
+                chan_merge_map = ab.M_ARGB_TO_L
+            elif fmt_t == ab.FORMAT_A8 or chan_to_keep == 0:
                 chan_map = ab.ANYTHING_TO_A
             else:
                 chan_merge_map = ab.M_ARGB_TO_L
@@ -199,12 +204,15 @@ def get_channel_mappings(conv_flags, bitmap_info):
 
         elif fmt_s == ab.FORMAT_A8L8:
             if chan_ct_t == 4:
-                chan_map = ab.AL_TO_ARGB
+                if mono_swap:
+                    chan_map = ab.LA_TO_ARGB
+                else:
+                    chan_map = ab.AL_TO_ARGB
             elif fmt_t == ab.FORMAT_A8 or (fmt_t == ab.FORMAT_AL8 and
-                                           chan_to_keep):
+                                           not chan_to_keep):
                 chan_map = ab.ANYTHING_TO_A
             elif fmt_t == ab.FORMAT_L8 or (fmt_t == ab.FORMAT_AL8 and
-                                           not chan_to_keep):
+                                           chan_to_keep):
                 chan_map = ab.AL_TO_L
             elif mono_swap:
                 if fmt_t == ab.FORMAT_A8L8:
@@ -244,7 +252,7 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
     if not do_conversion and not extract_ext:
         return True
 
-    bm = ab.Arbytmap()
+    arb = ab.Arbytmap()
     if tag.sanitize_mipmap_counts():
         print("ERROR: Bad mipmap counts in this tag:\n%s\t\n" % tag.filepath)
         return False
@@ -274,62 +282,55 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
 
         chan_map, chan_merge_map = get_channel_mappings(conv_flags, bitmap_info)
         palette_picker = None
-        palettize = True
-
-        if fmt_s == ab.FORMAT_P8:
-            palette_picker = P8_PALETTE.argb_array_to_p8_array_auto
-        elif fmt_t != ab.FORMAT_P8:
-            palettize = False
-        elif ab.CHANNEL_COUNTS[fmt_s] != 4:
-            pass
-        elif ck_trans and fmt_s not in (ab.FORMAT_X8R8G8B8, ab.FORMAT_R5G6B5):
-            if conv_flags.p8_mode == 0:
-                palette_picker = P8_PALETTE.argb_array_to_p8_array_auto_alpha
-            else:
-                palette_picker = P8_PALETTE.argb_array_to_p8_array_average_alpha
-        elif conv_flags.p8_mode == 0:
-            palette_picker = P8_PALETTE.argb_array_to_p8_array_auto
-        else:
-            palette_picker = P8_PALETTE.argb_array_to_p8_array_average
+        palettize = fmt_t == ab.FORMAT_P8
 
         # we want to preserve the color key transparency of
         # the original image if converting to the same format
         if fmt_s == fmt_t and fmt_t in (ab.FORMAT_P8, ab.FORMAT_DXT1):
             ck_trans = True
 
-        bm.load_new_texture(texture_block=tex_block, texture_info=tex_info)
+        if ab.CHANNEL_COUNTS[fmt_s] == 4:
+            if fmt_s == ab.FORMAT_P8:
+                palette_picker = P8_PALETTE.argb_array_to_p8_array_auto
+            elif ck_trans and fmt_s not in (ab.FORMAT_X8R8G8B8, ab.FORMAT_R5G6B5):
+                if conv_flags.p8_mode == 0:
+                    palette_picker = P8_PALETTE.argb_array_to_p8_array_auto_alpha
+                else:
+                    palette_picker = P8_PALETTE.argb_array_to_p8_array_average_alpha
+            elif conv_flags.p8_mode == 0:
+                palette_picker = P8_PALETTE.argb_array_to_p8_array_auto
+            else:
+                palette_picker = P8_PALETTE.argb_array_to_p8_array_average
+
+        arb.load_new_texture(texture_block=tex_block, texture_info=tex_info)
 
         # build the initial conversion settings list from the above settings
         conv_settings = dict(
             swizzle_mode=conv_flags.swizzled, palettize=palettize,
-            one_bit_bias=conv_flags.alpha_bias,
+            one_bit_bias=conv_flags.alpha_bias, palette_picker=palette_picker,
             downres_amount=conv_flags.downres, target_format=fmt_t,
             color_key_transparency=ck_trans, mipmap_gen=conv_flags.mip_gen,
             channel_mapping=chan_map, channel_merge_mapping=chan_merge_map)
 
-        # add the variable settings into the conversion settings list
-        if palette_picker is not None:
-            conv_settings["palette_picker"] = palette_picker
-
-        bm.load_new_conversion_settings(**conv_settings)
+        arb.load_new_conversion_settings(**conv_settings)
 
         if extract_ext and conv_flags.extract_path:
             path = conv_flags.extract_path
             if tag.bitmap_count() > 1:
                 path = join(path, str(i))
-            bm.save_to_file(output_path=path, ext=extract_ext)
+            arb.save_to_file(output_path=path, ext=extract_ext)
 
         if do_conversion:
-            success = bm.convert_texture()
-            tag.tex_infos[i] = bm.texture_info  # tex_info may have changed
+            success = arb.convert_texture()
+            tag.tex_infos[i] = arb.texture_info  # tex_info may have changed
 
             if success:
                 tex_root = pixel_data[i]
-                tex_root.parse(initdata=bm.texture_block)
-                tag.swizzled(i, bm.swizzled)
+                tex_root.parse(initdata=arb.texture_block)
+                tag.swizzled(i, arb.swizzled)
 
                 #change the bitmap format to the new format
-                tag.bitmap_format(i, I_FORMAT_NAME_MAP[bm.format])
+                tag.bitmap_format(i, I_FORMAT_NAME_MAP[arb.format])
             else:
                 print("Error occurred while converting:\n\t%s\n" % tag.filepath)
                 return False
@@ -342,7 +343,7 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
     return True
 
 
-class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
+class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
     app_root = None
     tag_list_frame = None
     loaded_tags_dir = ''
@@ -354,6 +355,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
     conversion_flags = ()
     bitmap_tag_infos = ()
+    bitmap_display_windows = ()
 
     _processing = False
     _cancel_processing = False
@@ -373,11 +375,13 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
     def __init__(self, app_root, *args, **kwargs):
         self.app_root = app_root
         BinillaWidget.__init__(self, *args, **kwargs)
-        kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
-        tk.Toplevel.__init__(self, app_root, *args, **kwargs)
+        if bitmap_converter_base_class == tk.Toplevel:
+            kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
+        bitmap_converter_base_class.__init__(self, app_root, *args, **kwargs)
 
         self.conversion_flags = {}
         self.bitmap_tag_infos = {}
+        self.bitmap_display_windows = {}
 
         self.title("Bitmap converter")
         self.resizable(0, 1)
@@ -393,7 +397,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
         # make the tkinter variables
         self.prune_tiff = tk.BooleanVar(self)
         self.read_only = tk.BooleanVar(self)
-        self.backup_tags = tk.BooleanVar(self)
+        self.backup_tags = tk.BooleanVar(self, True)
         self.open_log = tk.BooleanVar(self, True)
 
         self.scan_dir_path = tk.StringVar(self)
@@ -479,18 +483,18 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
             self.data_dir_frame, text="Browse", command=self.data_dir_browse)
 
 
-        self.prune_tiff_cbutton = tk.Checkbutton(
-            self.global_params_frame, text="Prune tiff data �",
-            variable=self.prune_tiff)
         self.read_only_cbutton = tk.Checkbutton(
             self.global_params_frame, text="Read-only �",
-            variable=self.read_only)
+            variable=self.read_only, command=self.update_all_path_colors)
         self.backup_tags_cbutton = tk.Checkbutton(
             self.global_params_frame, text="Backup tags �",
             variable=self.backup_tags)
         self.open_log_cbutton = tk.Checkbutton(
             self.global_params_frame, text="Open log when done �",
             variable=self.open_log)
+        self.prune_tiff_cbutton = tk.Checkbutton(
+            self.global_params_frame, text="Prune tiff data �",
+            variable=self.prune_tiff, command=self.update_all_path_colors)
 
         self.prune_tiff_cbutton.tooltip_string = (
             "Prunes the uncompressed TIFF pixel data\n"
@@ -736,12 +740,17 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
         self.populate_bitmap_info()
         self.populate_settings()
 
+    def update_all_path_colors(self):
+        update_color = self.tag_list_frame.update_path_listbox_entry_color
+        for i in range(self.tag_list_frame.path_listbox.size()):
+            update_color(i)
+
     def destroy(self):
         try:
             self.app_root.tool_windows.pop(self.window_name, None)
         except AttributeError:
             pass
-        tk.Toplevel.destroy(self)
+        bitmap_converter_base_class.destroy(self)
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
@@ -778,7 +787,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
         conv_flags = self.conversion_flags
         path_listbox = self.tag_list_frame.path_listbox
-        set_listbox_entry_color = self.tag_list_frame.set_listbox_entry_color
+        update_color = self.tag_list_frame.update_path_listbox_entry_color
         for i in path_listbox.curselection():
             fp = path_listbox.get(i)
 
@@ -795,7 +804,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
             if conv_flags.get(fp):
                 setattr(conv_flags[fp], flag_name, new_value)
 
-            set_listbox_entry_color(i, fp)
+            update_color(i)
 
     def initialize_conversion_flags(self):
         data_dir = self.data_dir_path.get()
@@ -820,6 +829,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
         self.conversion_flags = {}
         self.bitmap_tag_infos = {}
+        self.bitmap_display_windows = {}
         self.loaded_tags_dir = new_tags_dir
 
         try: self.scan_thread.join()
@@ -923,25 +933,27 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
 
                     bitmap_info = self.bitmap_tag_infos[fp]
                     conv_flags = self.conversion_flags[fp]
+                    extracting = conv_flags.extract_to != 0
+                    pruning = self.prune_tiff.get()
                     converting = get_will_be_converted(conv_flags, bitmap_info)
-                    if conv_flags.extract_to == 0 and not converting:
-                        continue
+                    if pruning or converting or extracting:
+                        tag = bitm_def.build(filepath=join(tags_dir, fp))
+                        if pruning:
+                            tag.data.tagdata.compressed_color_plate_data.data = bytearray()
 
-                    tag = bitm_def.build(filepath=join(tags_dir, fp))
-                    if self.prune_tiff.get():
-                        tag.data.tagdata.compressed_color_plate_data.data = bytearray()
+                        if converting or extracting:
+                            convert_bitmap_tag(tag, conv_flags, bitmap_info)
 
-                    convert_bitmap_tag(tag, conv_flags, bitmap_info)
+                        if converting or pruning:
+                            tag.serialize(temp=False, calc_pointers=False,
+                                          backup=self.backup_tags.get())
 
-                    if converting:
-                        tag.serialize(temp=False, backup=True,
-                                      calc_pointers=False)
+                        self.bitmap_tag_infos.pop(fp, None)
+                        self.conversion_flags.pop(fp, None)
+                        self.bitmap_display_windows.pop(fp, None)
 
-                    self.bitmap_tag_infos.pop(fp, None)
-                    self.conversion_flags.pop(fp, None)
-
-                    del tag
-                    gc.collect()
+                        del tag
+                        gc.collect()
                 except Exception:
                     print(format_exc())
                     print("Could not convert: %s" % fp)
@@ -1189,7 +1201,7 @@ class BitmapConverterWindow(tk.Toplevel, BinillaWidget):
         if self.read_only.get() or (not info or not info.bitmap_infos):
             return False
 
-        if self.prune_tiff.get():
+        if self.prune_tiff.get() and info.tiff_data_size:
             return True
         elif self.conversion_flags[tag_path].extract_to != 0:
             return True
@@ -1299,8 +1311,6 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
     toggle_to = True
     sort_method = 'path'
 
-    loaded_tags = ()
-    bitmap_display_windows = ()
     displayed_paths = ()
     selected_paths = ()
 
@@ -1311,8 +1321,6 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
         self.formats_shown = [True] * len(BITMAP_FORMATS)
         self.types_shown   = [True] * len(BITMAP_TYPES)
-        self.loaded_tags = {}
-        self.bitmap_display_windows = {}
         self.displayed_paths = []
         self.selected_paths = set()
         self.build_tag_sort_mappings()
@@ -1511,19 +1519,16 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
     def display_selected_tag(self, src_listbox_index=0):
         self.select_path_listbox(src_listbox_index)
-        tag_paths = self.selected_paths
-        if len(tag_paths) != 1 or not self.master.loaded_tags_dir:
+        if len(self.selected_paths) != 1 or not self.master.loaded_tags_dir:
             return
 
-        for tag_path in tag_paths:
-            tag = self.loaded_tags.get(tag_path)
+        for tag_path in self.selected_paths:
             break
 
-        display_frame = self.bitmap_display_windows.get(tag_path)
+        display_frame = self.master.bitmap_display_windows.get(tag_path)
         if display_frame is None or display_frame() is None:
             tags_dir = self.master.loaded_tags_dir
-            if not tag:
-                tag = bitm_def.build(filepath=join(tags_dir, tag_path))
+            tag = bitm_def.build(filepath=join(tags_dir, tag_path))
 
             if not tag:
                 print("Could not load the tag: %s" % tag_path)
@@ -1541,8 +1546,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             w.title("Preview: %s" % tag_path)
             w.transient(self.master)
 
-            self.loaded_tags[tag_path] = tag
-            self.bitmap_display_windows[tag_path] = display_frame
+            self.master.bitmap_display_windows[tag_path] = display_frame
 
         display_frame().focus_set()
 
@@ -1697,7 +1701,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
                 self.type_listbox.insert(tk.END, BITMAP_TYPES[info.type])
                 self.size_listbox.insert(tk.END, size_str)
 
-                self.set_listbox_entry_color(tk.END, fp)
+                self.update_path_listbox_entry_color(tk.END)
 
             self.synchronize_selection()
         except Exception:
@@ -1705,11 +1709,12 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
         self._populating = False
 
-    def set_listbox_entry_color(self, listbox_index, filepath):
-        if self.master.get_will_be_processed(filepath):
-            self.path_listbox.itemconfig(listbox_index, bg='dark green', fg='white')
+    def update_path_listbox_entry_color(self, i):
+        fp = self.path_listbox.get(i)
+        if self.master.get_will_be_processed(fp):
+            self.path_listbox.itemconfig(i, bg='dark green', fg='white')
         else:
-            self.path_listbox.itemconfig(listbox_index, bg=self.enum_normal_color,
+            self.path_listbox.itemconfig(i, bg=self.enum_normal_color,
                                          fg=self.text_normal_color,)
 
     def _scroll_all_yviews(self, *args):
@@ -1733,6 +1738,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
     def _size_scrolled(self, *args):
         self._sync_yviews(self.size_listbox, *args)
+
 
 if __name__ == "__main__":
     BitmapConverterWindow(None).mainloop()
