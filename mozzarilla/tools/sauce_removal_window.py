@@ -92,13 +92,14 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
             print("Scenario path does not point to a file.")
             return
 
+        print("Scrubbing sauce from scenario...")
         try:
             scnr_tag = self.handler.build_tag(filepath=scenario_path)
         except KeyError:
             scnr_tag = None
 
         if scnr_tag is None:
-            print("Could not load scenario.")
+            print("    Could not load scenario.")
             return
 
         tagdata = scnr_tag.data.tagdata
@@ -107,8 +108,6 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
         if tagdata.project_yellow_definitions.filepath:
             print("    WARNING: Removing project yelo definitions.")
             tagdata.project_yellow_definitions.filepath = ""
-            tagdata.project_yellow_definitions.tag_class.set_to(
-                "scenario_structure_bsp")
 
         if tagdata.bsp_modifiers.size > 0:
             print("    WARNING: Removing all bsp modifiers.")
@@ -142,3 +141,4 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
             tagdata.script_syntax_data.data = new_syntax_data + syntax_data[34: 380076]
 
         scnr_tag.serialize(backup=True, calc_pointers=False, temp=False)
+        print("    Finished")
