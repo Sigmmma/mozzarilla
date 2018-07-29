@@ -11,6 +11,7 @@ class HaloTagWindow(TagWindow):
         '''Flushes any lingering changes in the widgets to the tag.'''
         flags = self.app_root.config_file.data.mozzarilla.flags
         tag = self.tag
+        kwargs.setdefault("calc_pointers", False)
         if hasattr(self.tag, 'calc_internal_data') and flags.calc_internal_data:
             tag.calc_internal_data()
 
