@@ -54,7 +54,7 @@ this_curr_dir = get_cwd(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.2.8'
+    version = '1.2.9'
     log_filename = 'mozzarilla.log'
     debug = 0
 
