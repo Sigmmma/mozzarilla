@@ -9,26 +9,30 @@ from supyr_struct.defs.constants import PATHDIV
 from supyr_struct.defs.bitmaps.dds import dds_def
 
 
-def bitmap_from_dds(app, *args, **kwargs):
+def bitmap_from_dds(app, fps=()):
     load_dir = app.bitmap_load_dir
+    data_dir = app.data_dir
+    if not data_dir:
+        data_dir = ""
     if not load_dir:
-        load_dir = app.last_load_dir
+        load_dir = data_dir
     
-    fps = askopenfilenames(initialdir=load_dir, parent=app,
-                           filetypes=(("DDS image", "*.dds"), ("All", "*")),
-                           title="Select dds files to turn into a bitmap tags")
+    if not fps:
+        fps = askopenfilenames(
+            initialdir=load_dir, parent=app,
+            filetypes=(("DDS image", "*.dds"), ("All", "*")),
+            title="Select dds files to turn into bitmap tags")
 
     if not fps:
         return
 
-    app.bitmap_load_dir = dirname(fps[0])
-
     for fp in fps:
-        fp = sanitize_path(fp)
-        print("Creating bitmap from this dds texture:")
-        print("    %s" % fp)
-
         try:
+            fp = sanitize_path(fp)
+            app.bitmap_load_dir = dirname(fp)
+            print("Creating bitmap from this dds texture:")
+            print("    %s" % fp)
+
             dds_tag = dds_def.build(filepath=fp)
             dds_head = dds_tag.data.header
             caps  = dds_head.caps
@@ -197,6 +201,9 @@ def bitmap_from_dds(app, *args, **kwargs):
                 w, h, d = width, height, depth
                 for mip in range(mip_count):
                     i = mip*6 + face
+
+                    # TODO: Fix this to determine the pixel data size
+                    # using arbytmap's size calculation functions
                     image_size = (bpp*w*h*d)//8
                     images[i] = dds_pixels[pos: pos + image_size]
 

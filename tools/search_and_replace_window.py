@@ -10,23 +10,23 @@ curr_dir = get_cwd(__file__)
 
 class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
     app_root = None
-    window_name = "s_and_r_window"
 
     def __init__(self, app_root, *args, **kwargs):
         self.app_root = app_root
         kwargs.update(width=450, height=270, bd=0, highlightthickness=0)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
-        try:
-            try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
-            except Exception:
-                self.iconbitmap(join(curr_dir, '..', 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
 
         self.title("Search and Replace")
         self.minsize(width=450, height=270)
         self.resizable(1, 0)
+        self.update()
+        try:
+            try:
+                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+            except Exception:
+                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
+        except Exception:
+            print("Could not load window icon.")
 
         # make the tkinter variables
         self.find_var = tk.StringVar(self)
@@ -73,24 +73,6 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
         self.apply_style()
         self.transient(app_root)
 
-    def apply_style(self):
-        self.config(bg=self.default_bg_color)
-        for w in (self.find_frame, self.replace_frame):
-            w.config(fg=self.text_normal_color, bg=self.default_bg_color)
-
-        for w in (self.search_button, self.replace_button):
-            w.config(bg=self.button_color, activebackground=self.button_color,
-                     fg=self.text_normal_color, bd=self.button_depth,
-                     disabledforeground=self.text_disabled_color)
-
-        for w in (self.find_entry, self.replace_entry):
-            w.config(bd=self.entry_depth,
-                bg=self.entry_normal_color, fg=self.text_normal_color,
-                disabledbackground=self.entry_disabled_color,
-                disabledforeground=self.text_disabled_color,
-                selectbackground=self.entry_highlighted_color,
-                selectforeground=self.text_highlighted_color)
-
     def destroy(self):
         try:
             self.app_root.tool_windows.pop(self.window_name, None)
@@ -105,13 +87,17 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
         self.search_and_replace(True)
 
     def search_and_replace(self, replace=False):
-        app_root = self.app_root
-        try:
-            window = app_root.get_tag_window_by_tag(app_root.selected_tag)
-        except Exception:
-            window = None
+        if not self.app_root:
+            print("app_root object is invalid.")
+            return
+        elif not self.app_root.selected_tag:
+            print("No tag selected for search and replace.")
+            return
+
+        window = self.app_root.get_tag_window_by_tag(self.app_root.selected_tag)
 
         if window is None:
+            print("Could not locate the window the selected tag is displayed by.")
             return
 
         find_str = self.find_var.get()

@@ -24,17 +24,19 @@ from reclaimer.stubbs.handler import StubbsHandler
 from mozzarilla.config_def import config_def, guerilla_workspace_def
 from mozzarilla.widget_picker import *
 from mozzarilla.tag_window import HaloTagWindow
-from mozzarilla.tools import SearchAndReplaceWindow,\
-     DependencyWindow, TagScannerWindow,\
+from mozzarilla.tools import \
+     SearchAndReplaceWindow, SauceRemovalWindow, BitmapConverterWindow,\
+     DependencyWindow, TagScannerWindow, DataExtractionWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
-     bitmap_from_dds, bitmap_from_bitmap_source
+     bitmap_from_dds, bitmap_from_bitmap_source, physics_from_jms,\
+     hud_message_text_from_hmt
 
 
 default_hotkeys.update({
     '<F1>': "show_dependency_viewer",
     '<F2>': "show_tag_scanner",
     '<F3>': "show_search_and_replace",
-    '<F4>': "create_hek_pool_window",
+    '<F4>': "show_data_extraction_window",
 
     '<F5>': "switch_tags_dir",
     '<F6>': "set_tags_dir",
@@ -43,7 +45,7 @@ default_hotkeys.update({
 
     '<F9>': "bitmap_from_dds",
     '<F10>': "bitmap_from_bitmap_source",
-    #'<F11>': "???",
+    '<F11>': "create_hek_pool_window",
     #'<F12>': "???",
     })
 
@@ -52,7 +54,7 @@ this_curr_dir = get_cwd(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.2.5'
+    version = '1.2.9'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -101,6 +103,7 @@ class Mozzarilla(Binilla):
     directory_frame = None
     directory_frame_width = 200
     bitmap_load_dir = ""
+    jms_load_dir = ""
 
     def __init__(self, *args, **kwargs):
         self.debug = kwargs.pop('debug', self.debug)
@@ -138,16 +141,18 @@ class Mozzarilla(Binilla):
             label="Edit config", command=self.show_config_file)
         self.settings_menu.add_separator()
         self.settings_menu.add_command(
-            label="Load style", command=self.apply_style)
+            label="Load style", command=self.load_style)
         self.settings_menu.add_command(
             label="Save current style", command=self.make_style)
 
         # make the tools and tag set menus
         self.tools_menu = tk.Menu(self.main_menu, tearoff=0)
+        self.compile_menu = tk.Menu(self.main_menu, tearoff=0)
         self.defs_menu = tk.Menu(self.main_menu, tearoff=0)
 
         self.main_menu.add_cascade(label="Tag set", menu=self.defs_menu)
         self.main_menu.add_cascade(label="Tools", menu=self.tools_menu)
+        self.main_menu.add_cascade(label="Compile Tag", menu=self.compile_menu)
         try:
             if e_c.IS_WIN and not is_main_frozen():
                 import hek_pool
@@ -164,14 +169,31 @@ class Mozzarilla(Binilla):
             label="Dependency viewer", command=self.show_dependency_viewer)
         self.tools_menu.add_command(
             label="Tags directory scanner", command=self.show_tag_scanner)
-        self.tools_menu.add_command(
-            label="Search and replace", command=self.show_search_and_replace)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
-            label="Bitmap from dds texture", command=self.bitmap_from_dds)
+            label="Search and replace", command=self.show_search_and_replace)
         self.tools_menu.add_command(
-            label="Bitmap from uncompressed bitmap source",
-            command=self.bitmap_from_bitmap_source)
+            label="Scenario sauce scrubber", command=self.show_sauce_removal_window)
+        self.tools_menu.add_separator()
+        self.tools_menu.add_command(
+            label="Bitmap converter",
+            command=self.show_bitmap_converter_window)
+        self.tools_menu.add_separator()
+        self.tools_menu.add_command(
+            label="Tag data extraction",
+            command=self.show_data_extraction_window)
+
+        self.compile_menu.add_command(
+            label="Bitmap from dds texture", command=self.bitmap_from_dds)
+        self.compile_menu.add_command(
+            label="Bitmap from bitmap source", command=self.bitmap_from_bitmap_source)
+        self.compile_menu.add_separator()
+        self.compile_menu.add_command(
+            label="Physics from jms", command=self.physics_from_jms)
+        self.compile_menu.add_separator()
+        self.compile_menu.add_command(
+            label="Hud_message_text from hmt", command=self.hud_message_text_from_hmt)
+
 
         self.defs_menu.add_separator()
         self.handlers = list(self.handlers)
@@ -193,12 +215,23 @@ class Mozzarilla(Binilla):
 
         if self.directory_frame is not None:
             self.directory_frame.highlight_tags_dir(self.tags_dir)
-        self.update_window_settings()
+        self.apply_style()
 
     @property
     def tags_dir(self):
         try:
             return self.tags_dirs[self._curr_tags_dir_index]
+        except IndexError:
+            return None
+
+    @property
+    def data_dir(self):
+        try:
+            tags_dir = self.tags_dir
+            if not tags_dir:
+                return ""
+
+            return join(dirname(tags_dir.rstrip(PATHDIV)), "data")
         except IndexError:
             return None
 
@@ -616,39 +649,54 @@ class Mozzarilla(Binilla):
         self.update_tag_window_title(w)
         return tag
 
+    def get_handler(self, handler_name=None, initialize=True):
+        try:
+            menu_index = self.handler_names.index(handler_name)
+            handler = self.handlers[menu_index]
+
+            if isinstance(handler, type) and initialize:
+                self.handlers[menu_index] = handler = handler(debug=self.debug)
+
+            return handler
+        except Exception:
+            return None
+
     def select_defs(self, menu_index=None, manual=True):
-        names = self.handler_names
         if menu_index is None:
-            try:
-                names[self._curr_handler_index]
-            except Exception:
-                self._curr_handler_index = 0
             menu_index = self._curr_handler_index
+            try:
+                # make sure the current handler index is valid
+                self.handler_names[menu_index]
+            except Exception:
+                menu_index = 0
 
-        name = names[menu_index]
-        handler = self.handlers[menu_index]
+        try:
+            handler_name = self.handler_names[menu_index]
+        except Exception:
+            print(format_exc())
+            handler_name = None
 
+        handler = self.get_handler(handler_name, False)
         if handler is None or handler is self.handler:
             return
 
         if manual:
-            print("Changing tag set to %s" % name)
+            print("Changing tag set to %s" % handler_name)
             self.io_text.update_idletasks()
 
         if isinstance(handler, type):
             self.handlers[menu_index] = handler(debug=self.debug)
 
         self.handler = self.handlers[menu_index]
+        self._curr_handler_index = menu_index
+        for i in range(len(self.handler_names)):
+            self.defs_menu.entryconfig(i, label=self.handler_names[i])
 
-        entryconfig = self.defs_menu.entryconfig
-        for i in range(len(names)):
-            entryconfig(i, label=names[i])
+        self.defs_menu.entryconfig(self._curr_handler_index,
+                                   label=("%s %s" % (handler_name, u'\u2713')))
 
-        entryconfig(menu_index, label=("%s %s" % (name, u'\u2713')))
         if manual:
             print("    Finished")
-
-        self._curr_handler_index = menu_index
 
         self.config_file.data.mozzarilla.selected_handler.data = menu_index
 
@@ -669,9 +717,10 @@ class Mozzarilla(Binilla):
                          needs_tag_refs=False):
         w = self.tool_windows.get(window_name)
         if w is not None:
+            try: del self.tool_windows[window_name]
+            except Exception: pass
             try: w.destroy()
             except Exception: pass
-            del self.tool_windows[window_name]
             return
 
         if needs_tag_refs and not hasattr(self.handler, 'tag_ref_cache'):
@@ -688,8 +737,17 @@ class Mozzarilla(Binilla):
     def show_tag_scanner(self, e=None):
         self.show_tool_window("tag_scanner_window", TagScannerWindow, True)
 
+    def show_bitmap_converter_window(self, e=None):
+        self.show_tool_window("show_bitmap_converter_window", BitmapConverterWindow)
+
+    def show_data_extraction_window(self, e=None):
+        self.show_tool_window("data_extraction_window", DataExtractionWindow, True)
+
     def show_search_and_replace(self, e=None):
         self.show_tool_window("s_and_r_window", SearchAndReplaceWindow)
+
+    def show_sauce_removal_window(self, e=None):
+        self.show_tool_window("sauce_removal_window", SauceRemovalWindow)
 
     def create_hek_pool_window(self, e=None):
         try:
@@ -769,22 +827,12 @@ class Mozzarilla(Binilla):
             pass
         window.update_title(title)
 
-    def update_window_settings(self):
+    def apply_style(self, seen=None):
         if not self._initialized:
             return
 
-        Binilla.update_window_settings(self)
+        Binilla.apply_style(self, seen)
         try:
-            for m in (self.defs_menu, self.tools_menu):
-                m.config(bg=self.default_bg_color, fg=self.text_normal_color)
-
-            self.window_panes.config(
-                bg=self.frame_bg_color, bd=self.frame_depth)
-            self.directory_frame.apply_style()
-            for w in self.tool_windows.values():
-                if w is not None:
-                    w.apply_style()
-
             try:
                 mozz = self.config_file.data.mozzarilla
                 show_hierarchy = mozz.flags.show_hierarchy_window
@@ -817,3 +865,9 @@ class Mozzarilla(Binilla):
 
     def bitmap_from_bitmap_source(self, e=None):
         bitmap_from_bitmap_source(self)
+
+    def physics_from_jms(self, e=None):
+        physics_from_jms(self)
+
+    def hud_message_text_from_hmt(self, e=None):
+        hud_message_text_from_hmt(self)
