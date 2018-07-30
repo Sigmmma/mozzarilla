@@ -28,7 +28,8 @@ from mozzarilla.tools import \
      SearchAndReplaceWindow, SauceRemovalWindow, BitmapConverterWindow,\
      DependencyWindow, TagScannerWindow, DataExtractionWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
-     bitmap_from_dds, bitmap_from_bitmap_source, physics_from_jms,\
+     bitmap_from_dds, bitmap_from_bitmap_source, \
+     model_from_jms, physics_from_jms,\
      hud_message_text_from_hmt
 
 
@@ -54,7 +55,7 @@ this_curr_dir = get_cwd(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.2.9'
+    version = '1.3.0'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -188,6 +189,8 @@ class Mozzarilla(Binilla):
         self.compile_menu.add_command(
             label="Bitmap from bitmap source", command=self.bitmap_from_bitmap_source)
         self.compile_menu.add_separator()
+        self.compile_menu.add_command(
+            label="Gbxmodel from jms", command=self.model_from_jms)
         self.compile_menu.add_command(
             label="Physics from jms", command=self.physics_from_jms)
         self.compile_menu.add_separator()
@@ -865,6 +868,9 @@ class Mozzarilla(Binilla):
 
     def bitmap_from_bitmap_source(self, e=None):
         bitmap_from_bitmap_source(self)
+
+    def model_from_jms(self, e=None):
+        model_from_jms(self)
 
     def physics_from_jms(self, e=None):
         physics_from_jms(self)
