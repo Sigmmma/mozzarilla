@@ -5,7 +5,7 @@ from os.path import dirname, join, relpath, basename, isfile, exists
 from tkinter.filedialog import askdirectory
 
 from supyr_struct.defs.util import sanitize_path, is_in_dir
-from reclaimer.jms import read_jms
+from reclaimer.jms import read_jms, verify_jms
 from reclaimer.hek.defs.objs.matrices import quaternion_to_matrix, Matrix
 
 
@@ -61,7 +61,7 @@ def model_from_jms(app, fps=(), tag_path=""):
             print("      %s" % fp)
             if app: app.update()
             with open(fp, "r") as f:
-                jms_datas[fp] = read_jms(f.read())
+                jms_datas[basename(fp).split('.')[0]] = read_jms(f.read())
         except Exception:
             print("        Could not parse jms file.")
             if app: app.update()
@@ -77,29 +77,27 @@ def model_from_jms(app, fps=(), tag_path=""):
     error = False
     for fp in sorted(jms_datas):
         if app: app.update()
-        crc, mats, regions, nodes, markers, verts, tris = jms_datas[fp]
-        node_error = False
+        jms_data = jms_datas[fp]
+        errors = verify_jms(jms_data)
+
+        if errors:
+            print("    Errors in '%s'" % fp)
+            for error in errors:
+                print("        " + error)
+            continue
+
+        crc, mats, _, nodes, __, ___, ____ = jms_data
         if first_nodes is None:
             first_crc = crc
             first_nodes = nodes
 
         if len(nodes) != len(first_nodes):
-            node_error = True
+            error = True
             nodes = ()
         elif first_crc != crc:
             crc_error = True
 
-        node_ct = len(nodes)
-        vert_ct = len(verts)
-        region_ct = len(regions)
-        mat_ct = len(mats)
-
-        if node_ct >= 64:
-            print("      Too many nodes. Max node count is 64.")
-            node_error = True
-            nodes = ()
-
-        for i in range(node_ct):
+        for i in range(len(nodes)):
             fn = first_nodes[i]
             n = nodes[i]
             if fn.name != n.name:
@@ -118,59 +116,11 @@ def model_from_jms(app, fps=(), tag_path=""):
                   abs(fn.pos_y - n.pos_y) > 0.000001 or
                   abs(fn.pos_z - n.pos_z) > 0.000001):
                 print("      Positions of node '%s' do not match." % n.name)
-            elif first_nodes is not nodes:
-                # only need to check the validity of the first jms's nodes
-                continue
-            elif (n.first_child >= len(nodes)):
-                print("      First child of '%s' is invalid." % n.name)
-            elif (n.sibling_index >= len(nodes)):
-                print("      Sibling node of '%s' is invalid." % n.name)
             else:
                 # nodes match
                 continue
 
-            node_error = True
-
-        if node_error:
             error = True
-            print("        Nodes do not match in:\n" +
-                  "          %s" % fp)
-            continue
-
-        err_str = "        Invalid %s index in %s(s) in:\n          " + fp
-        for tri in tris:
-            if tri.v0 >= vert_ct or tri.v1 >= vert_ct or tri.v2 >= vert_ct:
-                error = True
-                print(err_str % ("vertex", "triangle"))
-                break
-            elif tri.region >= region_ct:
-                error = True
-                print(err_str % ("region", "triangle"))
-                break
-            elif tri.shader >= mat_ct:
-                error = True
-                print(err_str % ("shader", "triangle"))
-                break
-
-        for marker in markers:
-            if marker.parent >= node_ct:
-                error = True
-                print(err_str % ("parent", "marker"))
-                break
-            elif marker.region >= region_ct:
-                error = True
-                print(err_str % ("region", "marker"))
-                break
-
-        for vert in verts:
-            if vert.node_0 >= node_ct:
-                error = True
-                print(err_str % ("node_0", "vertex"))
-                break
-            elif vert.node_1 >= node_ct:
-                error = True
-                print(err_str % ("node_1", "vertex"))
-                break
 
     if error:
         print("    Cannot compile model.")
