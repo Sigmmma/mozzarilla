@@ -37,9 +37,9 @@ def physics_from_jms(app, fp=None):
         print("Creating physics from this jms file:")
         print("    %s" % fp)
         with open(fp, "r") as f:
-            jms_data = read_jms(f.read(), "regions")
+            jms_model = read_jms(f.read(), "regions")
 
-        markers = jms_data[4]
+        markers = jms_model.markers
     except Exception:
         print("    Could not load jms file")
         return
