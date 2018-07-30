@@ -5,11 +5,11 @@ from os.path import dirname, join, relpath, basename, isfile, exists
 from tkinter.filedialog import askdirectory
 
 from supyr_struct.defs.util import sanitize_path, is_in_dir
-from reclaimer.jms import read_jms, verify_jms
+from reclaimer.jms import read_jms, JmsModel, merge_jms_models
 from reclaimer.hek.defs.objs.matrices import quaternion_to_matrix, Matrix
 
 
-def model_from_jms(app, fps=(), tag_path=""):
+def model_from_jms(app, models_dir="", tag_path=""):
     load_dir = app.jms_load_dir
     tags_dir = app.tags_dir
     data_dir = app.data_dir
@@ -21,7 +21,7 @@ def model_from_jms(app, fps=(), tag_path=""):
     if not load_dir:
         load_dir = data_dir
 
-    if not fps or not tag_path:
+    if not models_dir:
         src_dir = askdirectory(
             initialdir=load_dir, parent=app,
             title="Select folder containing the 'models' folder to compile")
@@ -37,15 +37,22 @@ def model_from_jms(app, fps=(), tag_path=""):
             print("The selected folder is not in the data directory.")
             return
 
-        fps = []
-        tag_path = join(src_dir, basename(src_dir) + ".gbxmodel")
-        tag_path = join(tags_dir, relpath(tag_path, data_dir))
-        for _, __, files in os.walk(models_dir):
-            for fname in files:
-                if fname.lower().endswith(".jms"):
-                    fps.append(join(models_dir, fname))
+        if not tag_path:
+            tag_path = join(src_dir, basename(src_dir) + ".gbxmodel")
+            tag_path = join(tags_dir, relpath(tag_path, data_dir))
 
-            break
+
+    if not models_dir:
+        return
+
+
+    fps = []
+    for _, __, files in os.walk(models_dir):
+        for fname in files:
+            if fname.lower().endswith(".jms"):
+                fps.append(join(models_dir, fname))
+
+        break
 
 
     if not fps:
@@ -53,7 +60,7 @@ def model_from_jms(app, fps=(), tag_path=""):
         return
 
 
-    jms_datas = {}
+    jms_datas = []
     print("    Parsing jms files...")
     if app: app.update()
     for fp in fps:
@@ -61,7 +68,8 @@ def model_from_jms(app, fps=(), tag_path=""):
             print("      %s" % fp)
             if app: app.update()
             with open(fp, "r") as f:
-                jms_datas[basename(fp).split('.')[0]] = read_jms(f.read())
+                jms_datas.append(read_jms(f.read(), '',
+                                          basename(fp).split('.')[0]))
         except Exception:
             print("        Could not parse jms file.")
             if app: app.update()
@@ -70,63 +78,31 @@ def model_from_jms(app, fps=(), tag_path=""):
         return
 
 
-    print("    Verifying integrity of jms files...")
-    first_crc = None
-    first_nodes = None
-    crc_error = False
-    error = False
-    for fp in sorted(jms_datas):
-        if app: app.update()
-        jms_data = jms_datas[fp]
-        errors = verify_jms(jms_data)
+    print("    Verifying integrity of jms files and merging them...")
+    if app: app.update()
+    merged_jms_data = JmsModel()
+    all_errors = merge_jms_models(merged_jms_data, *jms_datas)
 
-        if errors:
-            print("    Errors in '%s'" % fp)
+    if all_errors:
+        for jms_name in sorted(all_errors):
+            errors = all_errors[jms_name]
+            print("    Errors in '%s'" % jms_name)
             for error in errors:
                 print("        " + error)
-            continue
 
-        crc, mats, _, nodes, __, ___, ____ = jms_data
-        if first_nodes is None:
-            first_crc = crc
-            first_nodes = nodes
+            if app: app.update()
 
-        if len(nodes) != len(first_nodes):
-            error = True
-            nodes = ()
-        elif first_crc != crc:
-            crc_error = True
-
-        for i in range(len(nodes)):
-            fn = first_nodes[i]
-            n = nodes[i]
-            if fn.name != n.name:
-                print(("      Names of nodes '%s' do not match:\n"
-                       "        '%s' and '%s'") % (i, fn.name, n.name))
-            elif fn.first_child != n.first_child:
-                print("      First children of node '%s' do not match." % n.name)
-            elif fn.sibling_index != n.sibling_index:
-                print("      Sibling index of node '%s' do not match." % n.name)
-            elif (abs(fn.rot_i - n.rot_i) > 0.00001 or
-                  abs(fn.rot_j - n.rot_j) > 0.00001 or
-                  abs(fn.rot_k - n.rot_k) > 0.00001 or
-                  abs(fn.rot_w - n.rot_w) > 0.00001):
-                print("      Rotations of node '%s' do not match." % n.name)
-            elif (abs(fn.pos_x - n.pos_x) > 0.000001 or
-                  abs(fn.pos_y - n.pos_y) > 0.000001 or
-                  abs(fn.pos_z - n.pos_z) > 0.000001):
-                print("      Positions of node '%s' do not match." % n.name)
-            else:
-                # nodes match
-                continue
-
-            error = True
-
-    if error:
         print("    Cannot compile model.")
         return
-    elif crc_error:
-        print("    Warning, not all node list checksums match.")
+
+
+    first_crc = None
+    for jms_data in jms_datas:
+        if first_crc is None:
+            first_crc = jms_data.node_list_checksum
+        elif first_crc != jms_data.node_list_checksum:
+            print("    Warning, not all node list checksums match.")
+            break
 
 
     updating = isfile(tag_path)
