@@ -29,7 +29,7 @@ from mozzarilla.tools import \
      DependencyWindow, TagScannerWindow, DataExtractionWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
      bitmap_from_dds, bitmap_from_bitmap_source, \
-     model_from_jms, physics_from_jms,\
+     ModelCompilerWindow, physics_from_jms,\
      hud_message_text_from_hmt
 
 
@@ -190,13 +190,12 @@ class Mozzarilla(Binilla):
             label="Bitmap from bitmap source", command=self.bitmap_from_bitmap_source)
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
-            label="Gbxmodel from jms", command=self.model_from_jms)
+            label="Gbxmodel from jms", command=self.show_model_compiler_window)
         self.compile_menu.add_command(
             label="Physics from jms", command=self.physics_from_jms)
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
             label="Hud_message_text from hmt", command=self.hud_message_text_from_hmt)
-
 
         self.defs_menu.add_separator()
         self.handlers = list(self.handlers)
@@ -746,6 +745,9 @@ class Mozzarilla(Binilla):
     def show_data_extraction_window(self, e=None):
         self.show_tool_window("data_extraction_window", DataExtractionWindow, True)
 
+    def show_model_compiler_window(self, e=None):
+        self.show_tool_window("model_compiler_window", ModelCompilerWindow, True)
+
     def show_search_and_replace(self, e=None):
         self.show_tool_window("s_and_r_window", SearchAndReplaceWindow)
 
@@ -868,9 +870,6 @@ class Mozzarilla(Binilla):
 
     def bitmap_from_bitmap_source(self, e=None):
         bitmap_from_bitmap_source(self)
-
-    def model_from_jms(self, e=None):
-        model_from_jms(self)
 
     def physics_from_jms(self, e=None):
         physics_from_jms(self)

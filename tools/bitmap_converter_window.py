@@ -373,10 +373,12 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
     menus = ()
 
     def __init__(self, app_root, *args, **kwargs):
-        self.app_root = app_root
         BinillaWidget.__init__(self, *args, **kwargs)
         if bitmap_converter_base_class == tk.Toplevel:
             kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
+            self.app_root = app_root
+        else:
+            self.app_root = self
         bitmap_converter_base_class.__init__(self, app_root, *args, **kwargs)
 
         self.conversion_flags = {}
