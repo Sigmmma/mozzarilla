@@ -1207,9 +1207,7 @@ class ReflexiveFrame(DynamicArrayFrame):
         for i, v in options.items():
             options[i] = '%s. %s' % (i, v)
 
-        self.options_sane = True
         self.option_cache = options
-        self.sel_menu.update_label()
 
     def set_import_all_disabled(self, disable=True):
         if disable: self.import_all_btn.config(state="disabled")
@@ -1249,6 +1247,7 @@ class DynamicEnumFrame(DynamicEnumFrame):
             print("Tell Moses about this.")
             self.option_cache = options
             return
+
         try:
             p_out, p_in = dyn_name_path.split(DYN_I)
 

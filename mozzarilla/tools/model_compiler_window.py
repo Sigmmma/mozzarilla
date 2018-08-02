@@ -221,6 +221,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                     jms_datas.append(read_jms(f.read(), '',
                                               basename(fp).split('.')[0]))
             except Exception:
+                print(format_exc())
                 print("    Could not parse jms file.")
                 self.app_root.update()
 
@@ -240,17 +241,18 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         print("Parsing and merging jms files...")
         self.app_root.update()
         merged_jms_data = MergedJmsModel()
-        all_errors = merged_jms_data.merge_jms_models(*jms_datas)
-
-        if all_errors:
-            for jms_name in sorted(all_errors):
-                errors = all_errors[jms_name]
-                print("    Errors in '%s'" % jms_name)
+        errors_occurred = False
+        for jms_data in jms_datas:
+            errors = merged_jms_data.merge_jms_model(jms_data)
+            errors_occurred |= bool(errors)
+            if errors:
+                print("    Errors in '%s'" % jms_data.name)
                 for error in errors:
                     print("        " + error)
 
-                self.app_root.update()
+            self.app_root.update()
 
+        if errors_occurred:
             print("    Cannot load all jms files.")
             return
 
