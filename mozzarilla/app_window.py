@@ -189,8 +189,8 @@ class Mozzarilla(Binilla):
         self.compile_menu.add_command(
             label="Bitmap from bitmap source", command=self.bitmap_from_bitmap_source)
         self.compile_menu.add_separator()
-        self.compile_menu.add_command(
-            label="Gbxmodel from jms", command=self.show_model_compiler_window)
+        #self.compile_menu.add_command(
+        #    label="Gbxmodel from jms", command=self.show_model_compiler_window)
         self.compile_menu.add_command(
             label="Physics from jms", command=self.physics_from_jms)
         self.compile_menu.add_separator()
