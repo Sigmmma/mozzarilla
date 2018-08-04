@@ -2,6 +2,7 @@ import os
 import tkinter as tk
 import zlib
 
+from math import sqrt
 from os.path import splitext, dirname, join, relpath, basename, isfile, exists
 from tkinter import messagebox
 from tkinter.filedialog import askdirectory, asksaveasfilename
@@ -26,7 +27,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
     app_root = None
     tags_dir = ''
 
-    merged_jms_data = None
+    merged_jms = None
     mod2_tag = None
 
     shader_paths = ()
@@ -208,7 +209,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             print("    No valid jms files found in the folder.")
             return
 
-        self.mod2_tag = self.merged_jms_data = None
+        self.mod2_tag = self.merged_jms = None
 
         jms_datas = []
         print("Loading jms files...")
@@ -240,10 +241,10 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         print("Parsing and merging jms files...")
         self.app_root.update()
-        merged_jms_data = MergedJmsModel()
+        self.merged_jms = merged_jms = MergedJmsModel()
         errors_occurred = False
         for jms_data in jms_datas:
-            errors = merged_jms_data.merge_jms_model(jms_data)
+            errors = merged_jms.merge_jms_model(jms_data)
             errors_occurred |= bool(errors)
             if errors:
                 print("    Errors in '%s'" % jms_data.name)
@@ -255,6 +256,18 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         if errors_occurred:
             print("    Cannot load all jms files.")
             return
+
+        merged_jms.u_scale, merged_jms.v_scale = merged_jms.calc_uv_scales()
+        p_node_idx = 0
+        for node in merged_jms.nodes:
+            if node.first_child and node.parent_index < 0:
+                sib_idx = node.first_child
+                while sib_idx >= 0:
+                    node = merged_jms.nodes[sib_idx]
+                    merged_jms.nodes[sib_idx].parent_index = p_node_idx
+                    sib_idx = merged_jms.nodes[sib_idx].sibling_index
+
+            p_node_idx += 1
 
         try:
             if isfile(self.gbxmodel_path.get()):
@@ -268,6 +281,9 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         print("    Finished")
 
     def compile_gbxmodel(self):
+        if not self.merged_jms:
+            return
+
         updating = self.mod2_tag is not None
         if updating:
             print("Updating existing gbxmodel tag.")
@@ -278,9 +294,41 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         self.app_root.update()
 
+        tagdata = mod2_tag.data.tagdata
+        tagdata.base_map_u_scale = self.merged_jms.u_scale
+        tagdata.base_map_v_scale = self.merged_jms.v_scale
+        tagdata.node_list_checksum = self.merged_jms.node_list_checksum
 
-        # DO MODEL COMPILATION HERE
+        # make nodes
+        mod2_nodes = tagdata.nodes.STEPTREE
+        del mod2_nodes[:]
+        for node in self.merged_jms.nodes:
+            mod2_nodes.append()
+            mod2_node = mod2_nodes[-1]
 
+            mod2_node.name = node.name[: 31]
+            mod2_node.next_sibling_node = node.sibling_index
+            mod2_node.first_child_node = node.first_child
+            mod2_node.parent_node = node.parent_index
+            mod2_node.translation[:] = node.pos_x / 100,\
+                                       node.pos_y / 100,\
+                                       node.pos_z / 100
+            mod2_node.rotation[:] = node.rot_i, node.rot_j,\
+                                    node.rot_k, node.rot_w
+
+            if node.parent_index >= 0:
+                mod2_node.distance_from_parent = sqrt(
+                    node.pos_x**2 + node.pos_y**2 + node.pos_z**2) / 100
+
+        # make shader references
+        mod2_shaders = tagdata.shaders.STEPTREE
+        del mod2_shaders[:]
+        for mat in self.merged_jms.materials:
+            mod2_shaders.append()
+            mod2_shader = mod2_shaders[-1]
+            mod2_shader.shader.tag_class.set_to(mat.shader_type)
+            mod2_shader.shader.filepath = mat.shader_path
+            
 
         if not updating:
             while not self.gbxmodel_path.get():
