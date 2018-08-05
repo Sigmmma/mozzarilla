@@ -4,15 +4,30 @@ import zlib
 
 from math import sqrt
 from os.path import splitext, dirname, join, relpath, basename, isfile, exists
+from struct import Struct as PyStruct
 from tkinter import messagebox
 from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
 from binilla.util import sanitize_path, is_in_dir, get_cwd
 from binilla.widgets import BinillaWidget
-from reclaimer.jms import read_jms, MergedJmsModel
-from reclaimer.hek.defs.mod2 import mod2_def
+from reclaimer.jms import read_jms, MergedJmsModel, GeometryMesh
+from reclaimer.hek.defs.mod2 import mod2_def,\
+     triangle as mod2_tri_struct, fast_uncompressed_vertex as mod2_vert_struct
 from reclaimer.hek.defs.objs.matrices import quaternion_to_matrix, Matrix
+from reclaimer.stripify import Stripifier
+
+from reclaimer.common_descs import raw_reflexive, BlockDef
+
+mod2_verts_def = BlockDef(
+    raw_reflexive("vertices", mod2_vert_struct),
+    endian='>'
+    )
+
+mod2_tri_strip_def = BlockDef(
+    raw_reflexive("triangle", mod2_tri_struct),
+    endian='>'
+    )
 
 
 if __name__ == "__main__":
@@ -390,7 +405,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                     perm_added = True
 
 
-                if True or len(perm.markers) > 32:
+                if len(perm.markers) > 32:
                     for marker in perm.markers:
                         global_markers.setdefault(
                             marker.name[: 31], []).append(marker)
@@ -454,7 +469,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 mod2_marker.rotation[:] = marker.rot_i, marker.rot_j,\
                                           marker.rot_k, marker.rot_w
 
-
+        # set the node counts per lod
         for lod in LOD_NAMES:
             lod_nodes = all_lod_nodes[lod]
             adding = True
@@ -468,40 +483,81 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             setattr(tagdata, "%s_lod_nodes" % lod, max(0, node_ct - 1))
 
 
+        # calculate triangle strips
+        stripped_geom_meshes = []
+        for geom_idx in range(len(geom_meshes)):
+            material_meshes = {}
+            stripped_geom_meshes.append(material_meshes)
+            for mat_idx in sorted(geom_meshes[geom_idx]):
+                material_meshes[mat_idx] = mesh_list = []
+                geom_mesh = geom_meshes[geom_idx][mat_idx]
+                all_verts = geom_mesh.verts
+
+                stripifier = Stripifier(geom_mesh.tris)
+                stripifier.max_strip_len = 32760
+                stripifier.make_strips()
+                stripifier.link_strips()
+
+                all_strips = stripifier.all_strips[0]
+                if len(all_strips) == 1:
+                    mesh_list.append(GeometryMesh(all_verts, all_strips[0]))
+                    continue
+
+                print("FUCK FUCK FUCK")
+                for strip in all_strips:
+                    geom_mesh = GeometryMesh()
+
+
         # make the geometries
         mod2_geoms = tagdata.geometries.STEPTREE
         del mod2_geoms[:]
         centroid = [0, 0, 0]
-        for geom_idx in range(len(geom_meshes)):
+        vert_packer = PyStruct(">14f2h2f").pack_into
+        for geom_idx in range(len(stripped_geom_meshes)):
             mod2_geoms.append()
             mod2_parts = mod2_geoms[-1].parts.STEPTREE
 
-            for mat_idx in sorted(geom_meshes[geom_idx]):
-                geom_mesh = geom_meshes[geom_idx][mat_idx]
+            for mat_idx in sorted(stripped_geom_meshes[geom_idx]):
+                geom_mesh_list = stripped_geom_meshes[geom_idx][mat_idx]
+                for geom_mesh in geom_mesh_list:
+                    mod2_parts.append()
+                    mod2_part = mod2_parts[-1]
+                    mod2_verts = mod2_part.uncompressed_vertices.STEPTREE
 
-                mod2_parts.append()
-                mod2_part = mod2_parts[-1]
-                mod2_verts = mod2_part.uncompressed_vertices.STEPTREE
-                mod2_tris  = mod2_part.triangles.STEPTREE
-                mod2_verts.extend(len(geom_mesh.verts))
+                    tris  = geom_mesh.tris
+                    verts = geom_mesh.verts
+                    mod2_verts.extend(len(verts))
 
-                mod2_part.shader_index = mat_idx
-                mod2_part.centroid_translation[:] = centroid
+                    mod2_part.shader_index = mat_idx
+                    mod2_part.centroid_translation[:] = centroid
 
-                # TODO: Modify this to cap vert and triangle counts at 32767
-                # and to take into account possible local nodes
-                i = 0
-                for vert in geom_mesh.verts:
-                    mod2_vert = mod2_verts[i]
-                    mod2_vert[:] = (
-                        vert.pos_x / 100,  vert.pos_y / 100,  vert.pos_z / 100,
-                        vert.norm_i, vert.norm_j, vert.norm_k,
-                        # TODO: Calculate the binormal and tangent
-                        0, 0, 0,
-                        0, 0, 0,
-                        vert.tex_u, vert.tex_v, vert.node_0, vert.node_1,
-                        1 - vert.node_1_weight, vert.node_1_weight)
-                    i += 1
+                    # TODO: Modify this to take into account local nodes
+                    # make a raw vert reflexive and replace the one in the part
+                    mod2_part.uncompressed_vertices = mod2_verts_def.build()
+                    mod2_verts = mod2_part.uncompressed_vertices.STEPTREE = \
+                                 bytearray(68 * len(verts))
+                    i = 0
+                    for vert in verts:
+                        vert_packer(
+                            mod2_verts, i,
+                            vert.pos_x / 100,  vert.pos_y / 100,  vert.pos_z / 100,
+                            vert.norm_i, vert.norm_j, vert.norm_k,
+                            # TODO: Calculate the binormal and tangent
+                            0, 0, 0,
+                            0, 0, 0,
+                            vert.tex_u, 1 - vert.tex_v, vert.node_0, vert.node_1,
+                            1 - vert.node_1_weight, vert.node_1_weight)
+                        i += 68
+
+                    # make a raw tri reflexive and replace the one in the part
+                    mod2_part.triangles = mod2_tri_strip_def.build()
+                    mod2_tris = mod2_part.triangles.STEPTREE = bytearray(
+                        [255, 255]) * (3 * ((len(tris) + 2) // 3))
+                    i = 0
+                    for tri in tris:
+                        mod2_tris[i]     = tri >> 8
+                        mod2_tris[i + 1] = tri & 0xFF
+                        i += 2
 
 
         if not updating:
