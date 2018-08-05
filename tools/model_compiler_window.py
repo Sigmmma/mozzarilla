@@ -493,7 +493,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 geom_mesh = geom_meshes[geom_idx][mat_idx]
                 all_verts = geom_mesh.verts
 
-                stripifier = Stripifier(geom_mesh.tris)
+                stripifier = Stripifier(geom_mesh.tris, True)
                 stripifier.max_strip_len = 32760
                 stripifier.make_strips()
                 stripifier.link_strips()
@@ -575,7 +575,8 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         try:
             mod2_tag.calc_internal_data()
-            mod2_tag.serialize(temp=False, backup=False, calc_pointers=False)
+            mod2_tag.serialize(temp=False, backup=False, calc_pointers=False,
+                               int_test=False)
             print("    Finished")
         except Exception:
             print(format_exc())
