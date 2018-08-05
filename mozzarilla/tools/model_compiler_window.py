@@ -22,6 +22,7 @@ else:
 
 curr_dir = get_cwd(__file__)
 
+LOD_NAMES = ("superhigh", "high", "medium", "low", "superlow")
 
 class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
     app_root = None
@@ -257,17 +258,21 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             print("    Cannot load all jms files.")
             return
 
-        merged_jms.u_scale, merged_jms.v_scale = merged_jms.calc_uv_scales()
-        p_node_idx = 0
-        for node in merged_jms.nodes:
-            if node.first_child and node.parent_index < 0:
+        u_scale, v_scale = merged_jms.calc_uv_scales()
+        merged_jms.u_scale = max(1.0, u_scale)
+        merged_jms.v_scale = max(1.0, v_scale)
+        parented_nodes = set()
+        # setup the parent node hierarchy
+        for parent_idx in range(len(merged_jms.nodes)):
+            node = merged_jms.nodes[parent_idx]
+            if node.first_child > 0:
                 sib_idx = node.first_child
                 while sib_idx >= 0:
-                    node = merged_jms.nodes[sib_idx]
-                    merged_jms.nodes[sib_idx].parent_index = p_node_idx
-                    sib_idx = merged_jms.nodes[sib_idx].sibling_index
+                    parented_nodes.add(sib_idx)
+                    sib_node = merged_jms.nodes[sib_idx]
+                    sib_node.parent_index = parent_idx
+                    sib_idx = sib_node.sibling_index
 
-            p_node_idx += 1
 
         try:
             if isfile(self.gbxmodel_path.get()):
@@ -320,6 +325,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 mod2_node.distance_from_parent = sqrt(
                     node.pos_x**2 + node.pos_y**2 + node.pos_z**2) / 100
 
+
         # make shader references
         mod2_shaders = tagdata.shaders.STEPTREE
         del mod2_shaders[:]
@@ -328,7 +334,175 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             mod2_shader = mod2_shaders[-1]
             mod2_shader.shader.tag_class.set_to(mat.shader_type)
             mod2_shader.shader.filepath = mat.shader_path
+
+
+        # make regions
+        mod2_regions = tagdata.regions.STEPTREE
+        del mod2_regions[:]
+
+        global_markers = {}
+        geom_meshes = []
+        all_lod_nodes = {lod: set([0]) for lod in LOD_NAMES}
+        for region_name in sorted(self.merged_jms.regions):
+            region = self.merged_jms.regions[region_name]
+
+            mod2_regions.append()
+            mod2_region = mod2_regions[-1]
+            mod2_region.name = region_name[: 31]
+
+            mod2_perms = mod2_region.permutations.STEPTREE
+            for perm_name in sorted(region.perm_meshes):
+                perm = region.perm_meshes[perm_name]
+
+                mod2_perms.append()
+                mod2_perm = mod2_perms[-1]
+                mod2_perm.name = perm_name[: 31]
+
+                mod2_perm.flags.cannot_be_chosen_randomly = not perm.is_random_perm
+
+                perm_added = False
+                for i in range(len(LOD_NAMES)):
+                    if LOD_NAMES[i] not in perm.lod_meshes:
+                        continue
+                    elif not perm.lod_meshes[LOD_NAMES[i]]:
+                        continue
+                    geom_index = len(geom_meshes)
+                    lod_mesh = perm.lod_meshes[LOD_NAMES[i]]
+                    geom_meshes.append(lod_mesh)
+
+                    # figure out which nodes this mesh utilizes
+                    this_meshes_nodes = set()
+                    for mesh in lod_mesh.values():
+                        for vert in mesh.verts:
+                            if vert.node_1_weight < 1:
+                                this_meshes_nodes.add(vert.node_0)
+                            if vert.node_1_weight > 0:
+                                this_meshes_nodes.add(vert.node_1)
+
+                    all_lod_nodes[LOD_NAMES[i]].update(this_meshes_nodes)
+
+                    while i < 5:
+                        setattr(mod2_perm,
+                                "%s_geometry_block" % LOD_NAMES[i],
+                                geom_index)
+                        i += 1
+
+                    perm_added = True
+
+
+                if True or len(perm.markers) > 32:
+                    for marker in perm.markers:
+                        global_markers.setdefault(
+                            marker.name[: 31], []).append(marker)
+                else:
+                    perm_added |= bool(perm.markers)
+                    mod2_markers = mod2_perm.local_markers.STEPTREE
+                    for marker in perm.markers:
+                        mod2_markers.append()
+                        mod2_marker = mod2_markers[-1]
+
+                        mod2_marker.name = marker.name[: 31]
+                        mod2_marker.node_index = marker.parent
+                        mod2_marker.translation[:] = marker.pos_x / 100,\
+                                                     marker.pos_y / 100,\
+                                                     marker.pos_z / 100
+                        mod2_marker.rotation[:] = marker.rot_i, marker.rot_j,\
+                                                  marker.rot_k, marker.rot_w
+
+
+                if not perm_added:
+                    del mod2_perms[-1]
+                    continue
+
+        if len(geom_meshes) > 256:
+            print("Cannot add more than 256 geometries to a model. "
+                  "Each material in each region in each permutation "
+                  "in each LOD is counted as a single geometry.\n"
+                  "This model would contain %s geometries." % len(geom_meshes))
+            return
+
+        # make the markers
+        mod2_marker_headers = tagdata.markers.STEPTREE
+        del mod2_marker_headers[:]
+        for marker_name in sorted(global_markers):
+            marker_list = global_markers[marker_name]
+            mod2_marker_headers.append()
+            mod2_marker_header = mod2_marker_headers[-1]
+
+            mod2_marker_header.name = marker_name[: 31]
+            mod2_marker_list = mod2_marker_header.marker_instances.STEPTREE
+
+            for marker in marker_list:
+                mod2_marker_list.append()
+                mod2_marker = mod2_marker_list[-1]
+
+                # figure out which permutation index this marker
+                # matches for all the permutations in its region
+                i = perm_index = 0
+                for perm in mod2_regions[marker.region].permutations.STEPTREE:
+                    if perm.name == marker.permutation:
+                        perm_index = i
+                        break
+                    i += 1
+
+                mod2_marker.region_index = marker.region
+                mod2_marker.permutation_index = perm_index
+                mod2_marker.node_index = marker.parent
+                mod2_marker.translation[:] = marker.pos_x / 100,\
+                                             marker.pos_y / 100,\
+                                             marker.pos_z / 100
+                mod2_marker.rotation[:] = marker.rot_i, marker.rot_j,\
+                                          marker.rot_k, marker.rot_w
+
+
+        for lod in LOD_NAMES:
+            lod_nodes = all_lod_nodes[lod]
+            adding = True
+            node_ct = len(mod2_nodes)
             
+            for i in range(node_ct - 1, -1, -1):
+                if i in lod_nodes:
+                    break
+                node_ct -= 1
+
+            setattr(tagdata, "%s_lod_nodes" % lod, max(0, node_ct - 1))
+
+
+        # make the geometries
+        mod2_geoms = tagdata.geometries.STEPTREE
+        del mod2_geoms[:]
+        centroid = [0, 0, 0]
+        for geom_idx in range(len(geom_meshes)):
+            mod2_geoms.append()
+            mod2_parts = mod2_geoms[-1].parts.STEPTREE
+
+            for mat_idx in sorted(geom_meshes[geom_idx]):
+                geom_mesh = geom_meshes[geom_idx][mat_idx]
+
+                mod2_parts.append()
+                mod2_part = mod2_parts[-1]
+                mod2_verts = mod2_part.uncompressed_vertices.STEPTREE
+                mod2_tris  = mod2_part.triangles.STEPTREE
+                mod2_verts.extend(len(geom_mesh.verts))
+
+                mod2_part.shader_index = mat_idx
+                mod2_part.centroid_translation[:] = centroid
+
+                # TODO: Modify this to cap vert and triangle counts at 32767
+                # and to take into account possible local nodes
+                i = 0
+                for vert in geom_mesh.verts:
+                    mod2_vert = mod2_verts[i]
+                    mod2_vert[:] = (
+                        vert.pos_x / 100,  vert.pos_y / 100,  vert.pos_z / 100,
+                        vert.norm_i, vert.norm_j, vert.norm_k,
+                        # TODO: Calculate the binormal and tangent
+                        0, 0, 0,
+                        0, 0, 0,
+                        vert.tex_u, vert.tex_v, vert.node_0, vert.node_1,
+                        1 - vert.node_1_weight, vert.node_1_weight)
+                    i += 1
+
 
         if not updating:
             while not self.gbxmodel_path.get():
