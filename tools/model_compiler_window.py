@@ -254,22 +254,6 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             print("    Cannot load all jms files.")
             return
 
-        u_scale, v_scale = merged_jms.calc_uv_scales()
-        merged_jms.u_scale = max(1.0, u_scale)
-        merged_jms.v_scale = max(1.0, v_scale)
-        parented_nodes = set()
-        # setup the parent node hierarchy
-        for parent_idx in range(len(merged_jms.nodes)):
-            node = merged_jms.nodes[parent_idx]
-            if node.first_child > 0:
-                sib_idx = node.first_child
-                while sib_idx >= 0:
-                    parented_nodes.add(sib_idx)
-                    sib_node = merged_jms.nodes[sib_idx]
-                    sib_node.parent_index = parent_idx
-                    sib_idx = sib_node.sibling_index
-
-
         try:
             if isfile(self.gbxmodel_path.get()):
                 self.mod2_tag = mod2_def.build(filepath=self.gbxmodel_path.get())
