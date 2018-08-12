@@ -243,10 +243,13 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         for jms_data in jms_datas:
             old_vert_ct = len(jms_data.verts)
             jms_data.optimize_geometry()
-            vert_diff = old_vert_ct - len(jms_data.verts)
+            new_vert_ct = len(jms_data.verts)
+            vert_diff = old_vert_ct - new_vert_ct
             if vert_diff:
-                print("    Optimized %s verts from '%s'" %
-                      (vert_diff, jms_data.name))
+                print(("    Optimized vert count from %s to %s in '%s'"
+                       " (%s%% as large)") %
+                      (old_vert_ct, new_vert_ct, jms_data.name,
+                       round((1 - vert_diff / old_vert_ct) * 100, 1)))
 
             errors = merged_jms.merge_jms_model(jms_data)
             errors_occurred |= bool(errors)
