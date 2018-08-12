@@ -241,6 +241,13 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.merged_jms = merged_jms = MergedJmsModel()
         errors_occurred = False
         for jms_data in jms_datas:
+            old_vert_ct = len(jms_data.verts)
+            jms_data.optimize_geometry()
+            vert_diff = old_vert_ct - len(jms_data.verts)
+            if vert_diff:
+                print("    Optimized %s verts from '%s'" %
+                      (vert_diff, jms_data.name))
+
             errors = merged_jms.merge_jms_model(jms_data)
             errors_occurred |= bool(errors)
             if errors:
