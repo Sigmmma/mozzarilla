@@ -30,6 +30,9 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
     shader_paths = ()
     shader_types = ()
 
+    _compiling = False
+    _loading = False
+
     def __init__(self, app_root, *args, **kwargs):
         if model_compiler_base_class == tk.Toplevel:
             kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
@@ -122,6 +125,9 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.compile_button.pack(side='left', expand=True, fill='both', padx=3)
 
     def jms_dir_browse(self):
+        if self._compiling or self._loading:
+            return
+
         dirpath = askdirectory(
             initialdir=self.jms_dir.get(), parent=self,
             title="Select the folder of jms models to compile...")
@@ -145,6 +151,9 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.jms_dir.set(dirpath)
 
     def tags_dir_browse(self):
+        if self._compiling or self._loading:
+            return
+
         tags_dir = askdirectory(
             initialdir=self.tags_dir.get(), parent=self,
             title="Select the root of the tags directory")
@@ -156,7 +165,10 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.app_root.last_load_dir = dirname(tags_dir)
         self.tags_dir.set(tags_dir)
 
-    def gbxmodel_path_browse(self):
+    def gbxmodel_path_browse(self, force=False):
+        if not force and (self._compiling or self._loading):
+            return
+
         fp = asksaveasfilename(
             initialdir=dirname(self.gbxmodel_path.get()),
             title="Save gbxmodel to...", parent=self,
@@ -188,10 +200,27 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         model_compiler_base_class.destroy(self)
 
     def load_models(self):
+        if not self._compiling and not self._loading:
+            self._loading = True
+            try:
+                self._load_models()
+            except Exception:
+                print(format_exc())
+            self._loading = False
+
+    def compile_gbxmodel(self):
+        if not self._compiling and not self._loading:
+            self._compiling = True
+            try:
+                self._compile_gbxmodel()
+            except Exception:
+                print(format_exc())
+            self._compiling = False
+
+    def _load_models(self):
         models_dir = self.jms_dir.get()
         if not models_dir:
             return
-
 
         print("Locating jms files...")
         fps = []
@@ -275,7 +304,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         print("    Finished")
 
-    def compile_gbxmodel(self):
+    def _compile_gbxmodel(self):
         if not self.merged_jms:
             return
 
@@ -298,7 +327,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         if not updating:
             while not self.gbxmodel_path.get():
-                self.gbxmodel_path_browse()
+                self.gbxmodel_path_browse(True)
                 if not self.gbxmodel_path.get():
                     if messagebox.askyesno(
                             "Unsaved gbxmodel",
