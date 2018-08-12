@@ -1,5 +1,6 @@
 import os
 import tkinter as tk
+import time
 
 from os.path import splitext, dirname, join, relpath, basename, isfile, exists
 from tkinter import messagebox
@@ -29,9 +30,6 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
     shader_paths = ()
     shader_types = ()
-
-    _compiling = False
-    _loading = False
 
     def __init__(self, app_root, *args, **kwargs):
         if model_compiler_base_class == tk.Toplevel:
@@ -125,9 +123,6 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.compile_button.pack(side='left', expand=True, fill='both', padx=3)
 
     def jms_dir_browse(self):
-        if self._compiling or self._loading:
-            return
-
         dirpath = askdirectory(
             initialdir=self.jms_dir.get(), parent=self,
             title="Select the folder of jms models to compile...")
@@ -151,9 +146,6 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.jms_dir.set(dirpath)
 
     def tags_dir_browse(self):
-        if self._compiling or self._loading:
-            return
-
         tags_dir = askdirectory(
             initialdir=self.tags_dir.get(), parent=self,
             title="Select the root of the tags directory")
@@ -165,10 +157,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.app_root.last_load_dir = dirname(tags_dir)
         self.tags_dir.set(tags_dir)
 
-    def gbxmodel_path_browse(self, force=False):
-        if not force and (self._compiling or self._loading):
-            return
-
+    def gbxmodel_path_browse(self):
         fp = asksaveasfilename(
             initialdir=dirname(self.gbxmodel_path.get()),
             title="Save gbxmodel to...", parent=self,
@@ -200,28 +189,11 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         model_compiler_base_class.destroy(self)
 
     def load_models(self):
-        if not self._compiling and not self._loading:
-            self._loading = True
-            try:
-                self._load_models()
-            except Exception:
-                print(format_exc())
-            self._loading = False
-
-    def compile_gbxmodel(self):
-        if not self._compiling and not self._loading:
-            self._compiling = True
-            try:
-                self._compile_gbxmodel()
-            except Exception:
-                print(format_exc())
-            self._compiling = False
-
-    def _load_models(self):
         models_dir = self.jms_dir.get()
         if not models_dir:
             return
 
+        start = time.time()
         print("Locating jms files...")
         fps = []
         for _, __, files in os.walk(models_dir):
@@ -247,6 +219,16 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 with open(fp, "r") as f:
                     jms_datas.append(read_jms(f.read(), '',
                                               basename(fp).split('.')[0]))
+                jms_data = jms_datas[-1]
+                old_vert_ct = len(jms_data.verts)
+                print("        Optimizing geometry...")
+                jms_data.optimize_geometry()
+                vert_diff = old_vert_ct - len(jms_data.verts)
+                if vert_diff:
+                    print("        Optimized %s verts from '%s'" %
+                          (vert_diff, jms_data.name))
+                print("        Calculating vertex normals...")
+                jms_data.calculate_vertex_normals()
             except Exception:
                 print(format_exc())
                 print("    Could not parse jms file.")
@@ -270,16 +252,6 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.merged_jms = merged_jms = MergedJmsModel()
         errors_occurred = False
         for jms_data in jms_datas:
-            old_vert_ct = len(jms_data.verts)
-            jms_data.optimize_geometry()
-            new_vert_ct = len(jms_data.verts)
-            vert_diff = old_vert_ct - new_vert_ct
-            if vert_diff:
-                print(("    Optimized vert count from %s to %s in '%s'"
-                       " (%s%% as large)") %
-                      (old_vert_ct, new_vert_ct, jms_data.name,
-                       round((1 - vert_diff / old_vert_ct) * 100, 1)))
-
             errors = merged_jms.merge_jms_model(jms_data)
             errors_occurred |= bool(errors)
             if errors:
@@ -291,20 +263,19 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         if errors_occurred:
             print("    Cannot load all jms files.")
-            return
+        else:
+            try:
+                if isfile(self.gbxmodel_path.get()):
+                    self.mod2_tag = mod2_def.build(filepath=self.gbxmodel_path.get())
+            except Exception:
+                pass
 
-        try:
-            if isfile(self.gbxmodel_path.get()):
-                self.mod2_tag = mod2_def.build(filepath=self.gbxmodel_path.get())
-        except Exception:
-            pass
+            if not self.mod2_tag:
+                print("    Existing gbxmodel not detected. A new one will be created.")
 
-        if not self.mod2_tag:
-            print("    Existing gbxmodel not detected. A new one will be created.")
+        print("    Finished. Took %s seconds." % (time.time() - start))
 
-        print("    Finished")
-
-    def _compile_gbxmodel(self):
+    def compile_gbxmodel(self):
         if not self.merged_jms:
             return
 
@@ -322,12 +293,12 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         if errors:
             for error in errors:
                 print(error)
-
+            print("Gbxmodel compilation failed.")
             return
 
         if not updating:
             while not self.gbxmodel_path.get():
-                self.gbxmodel_path_browse(True)
+                self.gbxmodel_path_browse()
                 if not self.gbxmodel_path.get():
                     if messagebox.askyesno(
                             "Unsaved gbxmodel",
