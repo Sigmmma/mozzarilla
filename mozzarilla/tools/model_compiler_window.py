@@ -147,26 +147,26 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.lods_frame.grid(sticky='news', row=0, column=5)
 
 
-        self.superhigh_lod_label.grid(sticky='news', row=0, column=0,
-                                      pady=3, padx=3)
-        self.high_lod_label.grid(sticky='news', row=1, column=0,
-                                 pady=3, padx=3)
-        self.medium_lod_label.grid(sticky='news', row=2, column=0,
-                                   pady=3, padx=3)
-        self.low_lod_label.grid(sticky='news', row=3, column=0,
-                                pady=3, padx=3)
-        self.superlow_lod_label.grid(sticky='news', row=4, column=0,
-                                     pady=3, padx=3)
-        self.superhigh_lod_cutoff_entry.grid(sticky='news', row=0, column=1,
-                                             pady=3, padx=3)
-        self.high_lod_cutoff_entry.grid(sticky='news', row=1, column=1,
-                                        pady=3, padx=3)
-        self.medium_lod_cutoff_entry.grid(sticky='news', row=2, column=1,
-                                          pady=3, padx=3)
-        self.low_lod_cutoff_entry.grid(sticky='news', row=3, column=1,
-                                       pady=3, padx=3)
-        self.superlow_lod_cutoff_entry.grid(sticky='news', row=4, column=1,
-                                            pady=3, padx=3)
+        self.superhigh_lod_label.grid(
+            sticky='nes', row=0, column=0, pady=3, padx=3)
+        self.high_lod_label.grid(
+            sticky='nes', row=1, column=0, pady=3, padx=3)
+        self.medium_lod_label.grid(
+            sticky='nes', row=2, column=0, pady=3, padx=3)
+        self.low_lod_label.grid(
+            sticky='nes', row=3, column=0, pady=3, padx=3)
+        self.superlow_lod_label.grid(
+            sticky='nes', row=4, column=0, pady=3, padx=3)
+        self.superhigh_lod_cutoff_entry.grid(
+            sticky='news', row=0, column=1, pady=3, padx=3)
+        self.high_lod_cutoff_entry.grid(
+            sticky='news', row=1, column=1, pady=3, padx=3)
+        self.medium_lod_cutoff_entry.grid(
+            sticky='news', row=2, column=1, pady=3, padx=3)
+        self.low_lod_cutoff_entry.grid(
+            sticky='news', row=3, column=1, pady=3, padx=3)
+        self.superlow_lod_cutoff_entry.grid(
+            sticky='news', row=4, column=1, pady=3, padx=3)
 
 
         self.jms_dir_frame.pack(expand=True, fill='x')
@@ -188,20 +188,25 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.load_button.pack(side='left', expand=True, fill='both', padx=3)
         self.compile_button.pack(side='left', expand=True, fill='both', padx=3)
 
+        self.apply_style()
+
     def jms_dir_browse(self):
         if self._compiling or self._loading:
             return
 
+        tags_dir = self.tags_dir.get()
+        data_dir = join(dirname(dirname(tags_dir)), "data", "")
+        jms_dir = self.jms_dir.get()
+        if tags_dir and not jms_dir:
+            jms_dir = data_dir
+
         dirpath = askdirectory(
-            initialdir=self.jms_dir.get(), parent=self,
+            initialdir=jms_dir, parent=self,
             title="Select the folder of jms models to compile...")
 
         dirpath = join(sanitize_path(dirpath), "")
         if not dirpath:
             return
-
-        tags_dir = self.tags_dir.get()
-        data_dir = join(dirname(tags_dir), "data", "")
 
         if tags_dir and data_dir and basename(dirpath).lower() == "models":
             object_dir = dirname(dirpath)
@@ -233,8 +238,12 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         if not force and (self._compiling or self._loading):
             return
 
+        mod2_dir = dirname(self.gbxmodel_path.get())
+        if self.tags_dir.get() and not mod2_dir:
+            mod2_dir = self.tags_dir.get()
+
         fp = asksaveasfilename(
-            initialdir=dirname(self.gbxmodel_path.get()),
+            initialdir=mod2_dir,
             title="Save gbxmodel to...", parent=self,
             filetypes=(("Gearbox model", "*.gbxmodel"), ('All', '*')))
 
@@ -308,7 +317,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.app_root.update()
         for fp in fps:
             try:
-                print("    %s" % fp)
+                print("    %s" % fp.replace('/', '\\').split("\\")[-1])
                 self.app_root.update()
                 with open(fp, "r") as f:
                     jms_datas.append(read_jms(f.read(), '',
@@ -316,14 +325,12 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 jms_data = jms_datas[-1]
                 if optimize_level:
                     old_vert_ct = len(jms_data.verts)
-                    print("        Optimizing geometry...")
+                    print("        Optimizing...", end='')
                     jms_data.optimize_geometry(optimize_level == 1)
-                    vert_diff = old_vert_ct - len(jms_data.verts)
-                    if vert_diff:
-                        print("        Optimized %s verts from '%s'" %
-                              (vert_diff, jms_data.name))
+                    print(" Removed %s verts" %
+                          (old_vert_ct - len(jms_data.verts)))
 
-                print("        Calculating vertex normals...")
+                print("        Calculating normals...")
                 jms_data.calculate_vertex_normals()
             except Exception:
                 print(format_exc())
@@ -343,7 +350,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 break
 
 
-        print("Parsing and merging jms files...")
+        print("Merging jms data...")
         self.app_root.update()
         self.merged_jms = merged_jms = MergedJmsModel()
         errors_occurred = False
@@ -353,7 +360,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             if errors:
                 print("    Errors in '%s'" % jms_data.name)
                 for error in errors:
-                    print("        " + error)
+                    print("        ", error, sep='')
 
             self.app_root.update()
 
@@ -422,7 +429,8 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             print("    Existing gbxmodel not detected or could not be loaded. "
                   "A new one will be created.")
 
-        print("    Finished. Took %s seconds." % (time.time() - start))
+        print("Finished loading models. Took %s seconds.\n" %
+              str(time.time() - start).split('.')[0])
 
     def _compile_gbxmodel(self):
         if not self.merged_jms:
