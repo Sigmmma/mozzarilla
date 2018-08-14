@@ -8,7 +8,7 @@ from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
 from binilla.util import sanitize_path, is_in_dir, get_cwd
-from binilla.widgets import BinillaWidget
+from binilla.widgets import BinillaWidget, ScrollMenu
 from reclaimer.jms import read_jms, MergedJmsModel
 from reclaimer.hek.defs.mod2 import mod2_def
 from reclaimer.hek.defs.objs.matrices import quaternion_to_matrix, Matrix
@@ -31,6 +31,9 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
     shader_paths = ()
     shader_types = ()
 
+    _compiling = False
+    _loading = False
+
     def __init__(self, app_root, *args, **kwargs):
         if model_compiler_base_class == tk.Toplevel:
             kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
@@ -52,24 +55,51 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             print("Could not load window icon.")
 
 
-        self.tags_dir = tk.StringVar(self)
+        self.superhigh_lod_cutoff = tk.StringVar(self)
+        self.high_lod_cutoff = tk.StringVar(self)
+        self.medium_lod_cutoff = tk.StringVar(self)
+        self.low_lod_cutoff = tk.StringVar(self)
+        self.superlow_lod_cutoff = tk.StringVar(self)
+
+        tags_dir = getattr(app_root, "tags_dir", "")
+
+        self.optimize_level = tk.IntVar(self)
+        self.tags_dir = tk.StringVar(self, tags_dir if tags_dir else "")
         self.jms_dir = tk.StringVar(self)
         self.gbxmodel_path = tk.StringVar(self)
 
 
         # make the frames
         self.main_frame = tk.Frame(self)
+        self.dirs_frame = tk.LabelFrame(self.main_frame, text="Directories")
         self.settings_frame = tk.LabelFrame(self.main_frame, text="Settings")
+        self.lods_frame = tk.LabelFrame(self.main_frame, text="LOD Cutoffs")
         self.jms_info_frame = tk.LabelFrame(self.main_frame, text="Jms info")
         self.buttons_frame = tk.Frame(self.main_frame)
 
         self.jms_dir_frame = tk.LabelFrame(
-            self.settings_frame, text="Jms files folder")
+            self.dirs_frame, text="Jms files folder")
         self.tags_dir_frame = tk.LabelFrame(
-            self.settings_frame, text="Tags directory root folder")
+            self.dirs_frame, text="Tags directory root folder")
         self.gbxmodel_path_frame = tk.LabelFrame(
-            self.settings_frame, text="Gbxmodel output path")
+            self.dirs_frame, text="Gbxmodel output path")
 
+
+        self.superhigh_lod_label = tk.Label(self.lods_frame, text="Superhigh")
+        self.high_lod_label = tk.Label(self.lods_frame, text="High")
+        self.medium_lod_label = tk.Label(self.lods_frame, text="Medium")
+        self.low_lod_label = tk.Label(self.lods_frame, text="Low")
+        self.superlow_lod_label = tk.Label(self.lods_frame, text="Superlow")
+        self.superhigh_lod_cutoff_entry = tk.Entry(
+            self.lods_frame, textvariable=self.superhigh_lod_cutoff)
+        self.high_lod_cutoff_entry = tk.Entry(
+            self.lods_frame, textvariable=self.high_lod_cutoff)
+        self.medium_lod_cutoff_entry = tk.Entry(
+            self.lods_frame, textvariable=self.medium_lod_cutoff)
+        self.low_lod_cutoff_entry = tk.Entry(
+            self.lods_frame, textvariable=self.low_lod_cutoff)
+        self.superlow_lod_cutoff_entry = tk.Entry(
+            self.lods_frame, textvariable=self.superlow_lod_cutoff)
 
         self.jms_dir_entry = tk.Entry(
             self.jms_dir_frame, textvariable=self.jms_dir, state=tk.DISABLED)
@@ -91,6 +121,14 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             command=self.gbxmodel_path_browse)
 
 
+        self.optimize_label = tk.Label(
+            self.settings_frame, text="Vertex optimization")
+        self.optimize_menu = ScrollMenu(
+            self.settings_frame, menu_width=20,
+            options=("None", "Exact", "Loose"))
+        self.optimize_menu.sel_index = 0
+
+
         self.load_button = tk.Button(
             self.buttons_frame, text="Load JMS models",
             command=self.load_models)
@@ -101,10 +139,35 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         # pack everything
         self.main_frame.pack(fill='both')
 
-        self.settings_frame.grid(sticky='news', row=0, column=0)
-        self.jms_info_frame.grid(sticky='news', row=0, column=1)
-        self.buttons_frame.grid(sticky='news', columnspan=2,
-                                row=1, column=0, pady=3, padx=3)
+        self.dirs_frame.grid(sticky='news', row=0, column=0, columnspan=4)
+        self.settings_frame.grid(sticky='news', row=1, column=0, columnspan=4)
+        self.jms_info_frame.grid(sticky='news', row=2, column=1, columnspan=3)
+        self.buttons_frame.grid(sticky='news', row=3, column=0,
+                                columnspan=4, pady=3, padx=3)
+        self.lods_frame.grid(sticky='news', row=0, column=5)
+
+
+        self.superhigh_lod_label.grid(sticky='news', row=0, column=0,
+                                      pady=3, padx=3)
+        self.high_lod_label.grid(sticky='news', row=1, column=0,
+                                 pady=3, padx=3)
+        self.medium_lod_label.grid(sticky='news', row=2, column=0,
+                                   pady=3, padx=3)
+        self.low_lod_label.grid(sticky='news', row=3, column=0,
+                                pady=3, padx=3)
+        self.superlow_lod_label.grid(sticky='news', row=4, column=0,
+                                     pady=3, padx=3)
+        self.superhigh_lod_cutoff_entry.grid(sticky='news', row=0, column=1,
+                                             pady=3, padx=3)
+        self.high_lod_cutoff_entry.grid(sticky='news', row=1, column=1,
+                                        pady=3, padx=3)
+        self.medium_lod_cutoff_entry.grid(sticky='news', row=2, column=1,
+                                          pady=3, padx=3)
+        self.low_lod_cutoff_entry.grid(sticky='news', row=3, column=1,
+                                       pady=3, padx=3)
+        self.superlow_lod_cutoff_entry.grid(sticky='news', row=4, column=1,
+                                            pady=3, padx=3)
+
 
         self.jms_dir_frame.pack(expand=True, fill='x')
         self.tags_dir_frame.pack(expand=True, fill='x')
@@ -119,10 +182,16 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.tags_dir_entry.pack(side='left', expand=True, fill='x')
         self.tags_dir_browse_button.pack(side='left')
 
+        self.optimize_label.pack(side='left', expand=True)
+        self.optimize_menu.pack(side='left', expand=True)
+
         self.load_button.pack(side='left', expand=True, fill='both', padx=3)
         self.compile_button.pack(side='left', expand=True, fill='both', padx=3)
 
     def jms_dir_browse(self):
+        if self._compiling or self._loading:
+            return
+
         dirpath = askdirectory(
             initialdir=self.jms_dir.get(), parent=self,
             title="Select the folder of jms models to compile...")
@@ -146,6 +215,9 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.jms_dir.set(dirpath)
 
     def tags_dir_browse(self):
+        if self._compiling or self._loading:
+            return
+
         tags_dir = askdirectory(
             initialdir=self.tags_dir.get(), parent=self,
             title="Select the root of the tags directory")
@@ -157,7 +229,10 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.app_root.last_load_dir = dirname(tags_dir)
         self.tags_dir.set(tags_dir)
 
-    def gbxmodel_path_browse(self):
+    def gbxmodel_path_browse(self, force=False):
+        if not force and (self._compiling or self._loading):
+            return
+
         fp = asksaveasfilename(
             initialdir=dirname(self.gbxmodel_path.get()),
             title="Save gbxmodel to...", parent=self,
@@ -189,6 +264,24 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         model_compiler_base_class.destroy(self)
 
     def load_models(self):
+        if not self._compiling and not self._loading:
+            self._loading = True
+            try:
+                self._load_models()
+            except Exception:
+                print(format_exc())
+            self._loading = False
+
+    def compile_gbxmodel(self):
+        if not self._compiling and not self._loading:
+            self._compiling = True
+            try:
+                self._compile_gbxmodel()
+            except Exception:
+                print(format_exc())
+            self._compiling = False
+
+    def _load_models(self):
         models_dir = self.jms_dir.get()
         if not models_dir:
             return
@@ -208,6 +301,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             return
 
         self.mod2_tag = self.merged_jms = None
+        optimize_level = max(0, self.optimize_menu.sel_index)
 
         jms_datas = []
         print("Loading jms files...")
@@ -220,13 +314,15 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                     jms_datas.append(read_jms(f.read(), '',
                                               basename(fp).split('.')[0]))
                 jms_data = jms_datas[-1]
-                old_vert_ct = len(jms_data.verts)
-                print("        Optimizing geometry...")
-                jms_data.optimize_geometry()
-                vert_diff = old_vert_ct - len(jms_data.verts)
-                if vert_diff:
-                    print("        Optimized %s verts from '%s'" %
-                          (vert_diff, jms_data.name))
+                if optimize_level:
+                    old_vert_ct = len(jms_data.verts)
+                    print("        Optimizing geometry...")
+                    jms_data.optimize_geometry(optimize_level == 1)
+                    vert_diff = old_vert_ct - len(jms_data.verts)
+                    if vert_diff:
+                        print("        Optimized %s verts from '%s'" %
+                              (vert_diff, jms_data.name))
+
                 print("        Calculating vertex normals...")
                 jms_data.calculate_vertex_normals()
             except Exception:
@@ -261,22 +357,97 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
             self.app_root.update()
 
+        mod2_path = self.gbxmodel_path.get()
+        tags_dir = self.tags_dir.get()
         if errors_occurred:
             print("    Cannot load all jms files.")
-        else:
+        elif isfile(mod2_path):
             try:
-                if isfile(self.gbxmodel_path.get()):
-                    self.mod2_tag = mod2_def.build(filepath=self.gbxmodel_path.get())
+                self.mod2_tag = mod2_def.build(filepath=mod2_path)
+                    
+                tagdata = self.mod2_tag.data.tagdata
+                self.superhigh_lod_cutoff.set(str(tagdata.superhigh_lod_cutoff))
+                self.high_lod_cutoff.set(str(tagdata.high_lod_cutoff))
+                self.medium_lod_cutoff.set(str(tagdata.medium_lod_cutoff))
+                self.low_lod_cutoff.set(str(tagdata.low_lod_cutoff))
+                self.superlow_lod_cutoff.set(str(tagdata.superlow_lod_cutoff))
+
+                # get any shaders in the gbxmodel and set the shader_path
+                # and shader_type for any matching materials in the jms
+                shdr_refs = {}
+                for shdr_ref in tagdata.shaders.STEPTREE:
+                    shdr_name = shdr_ref.shader.filepath.split("\\")[-1].lower()
+                    shdr_refs.setdefault(shdr_name, []).append(shdr_ref)
+
+
+                for mat in merged_jms.materials:
+                    shdr_ref = shdr_refs.get(mat.name, [""]).pop(0)
+                    if shdr_ref:
+                        mat.shader_type = shdr_ref.shader.tag_class.enum_name
+                        mat.shader_path = shdr_ref.shader.filepath
+
+
+                local_shaders = {}
+                shaders_dir = join(dirname(mod2_path), "shaders", '')
+                tags_dir = self.tags_dir.get()
+                has_local_shaders = exists(shaders_dir) and exists(tags_dir)
+
+                if has_local_shaders and is_in_dir(shaders_dir, tags_dir):
+                    # fill in any missing shader paths with ones found nearby
+                    for _, __, files in os.walk(shaders_dir):
+                        for filename in files:
+                            name, ext = splitext(filename)
+                            if ext.lower().startswith(".shader"):
+                                local_shaders.setdefault(
+                                    name.split("\\")[-1].lower(), []).append(
+                                        join(shaders_dir, filename))
+                        break
+
+                    for mat in merged_jms.materials:
+                        shdr_path = local_shaders.get(mat.name, [""]).pop(0)
+                        if "shader" in mat.shader_type or not shdr_path:
+                            continue
+
+                        # shader type isnt set. Try to detect its location and
+                        # type if possible, or set it to a default value if not
+                        shdr_path = shdr_path.lower().replace("/", "\\")
+                        name, ext = splitext(shdr_path)
+                        mat.shader_path = relpath(name, tags_dir).strip("\\")
+                        mat.shader_type = ext.strip(".")
             except Exception:
                 pass
 
-            if not self.mod2_tag:
-                print("    Existing gbxmodel not detected. A new one will be created.")
+
+        if not self.mod2_tag:
+            print("    Existing gbxmodel not detected or could not be loaded. "
+                  "A new one will be created.")
 
         print("    Finished. Took %s seconds." % (time.time() - start))
 
-    def compile_gbxmodel(self):
+    def _compile_gbxmodel(self):
         if not self.merged_jms:
+            return
+
+        try:
+            superhigh_lod_cutoff = self.superhigh_lod_cutoff.get().strip(" ")
+            high_lod_cutoff = self.high_lod_cutoff.get().strip(" ")
+            medium_lod_cutoff = self.medium_lod_cutoff.get().strip(" ")
+            low_lod_cutoff = self.low_lod_cutoff.get().strip(" ")
+            superlow_lod_cutoff = self.superlow_lod_cutoff.get().strip(" ")
+
+            if not superhigh_lod_cutoff: superhigh_lod_cutoff = "0"
+            if not high_lod_cutoff: high_lod_cutoff = "0"
+            if not medium_lod_cutoff: medium_lod_cutoff = "0"
+            if not low_lod_cutoff: low_lod_cutoff = "0"
+            if not superlow_lod_cutoff: superlow_lod_cutoff = "0"
+
+            superhigh_lod_cutoff = float(superhigh_lod_cutoff)
+            high_lod_cutoff = float(high_lod_cutoff)
+            medium_lod_cutoff = float(medium_lod_cutoff)
+            low_lod_cutoff = float(low_lod_cutoff)
+            superlow_lod_cutoff = float(superlow_lod_cutoff)
+        except ValueError:
+            print("LOD cutoffs are invalid.")
             return
 
         updating = self.mod2_tag is not None
@@ -296,9 +467,16 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             print("Gbxmodel compilation failed.")
             return
 
+        tagdata = mod2_tag.data.tagdata
+        tagdata.superhigh_lod_cutoff = superhigh_lod_cutoff
+        tagdata.high_lod_cutoff = high_lod_cutoff
+        tagdata.medium_lod_cutoff = medium_lod_cutoff
+        tagdata.low_lod_cutoff = low_lod_cutoff
+        tagdata.superlow_lod_cutoff = superlow_lod_cutoff
+
         if not updating:
             while not self.gbxmodel_path.get():
-                self.gbxmodel_path_browse()
+                self.gbxmodel_path_browse(True)
                 if not self.gbxmodel_path.get():
                     if messagebox.askyesno(
                             "Unsaved gbxmodel",
