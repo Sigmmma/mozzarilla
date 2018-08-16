@@ -7,12 +7,11 @@ from tkinter import messagebox
 from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import sanitize_path, is_in_dir, get_cwd
+from binilla.util import sanitize_path, is_in_dir, get_cwd, PATHDIV
 from binilla.widgets import BinillaWidget, ScrollMenu
-from reclaimer.jms import read_jms, MergedJmsModel
 from reclaimer.hek.defs.mod2 import mod2_def
-from reclaimer.hek.defs.objs.matrices import quaternion_to_matrix, Matrix
-from reclaimer.hek.model_compilation import compile_gbxmodel
+from reclaimer.model.jms import read_jms, MergedJmsModel
+from reclaimer.model.model_compilation import compile_gbxmodel
 
 if __name__ == "__main__":
     model_compiler_base_class = tk.Tk
@@ -218,6 +217,11 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         self.app_root.last_load_dir = dirname(dirpath)
         self.jms_dir.set(dirpath)
+        if not self.tags_dir.get():
+            path_pieces = self.app_root.last_load_dir.split(
+                "%sdata%s" % (PATHDIV, PATHDIV))
+            if len(path_pieces) > 1:
+                self.tags_dir.set(join(path_pieces[0], "tags"))
 
     def tags_dir_browse(self):
         if self._compiling or self._loading:
@@ -253,9 +257,14 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         fp = sanitize_path(fp)
         if not splitext(fp)[-1]:
             fp += ".gbxmodel"
-
+ 
         self.app_root.last_load_dir = dirname(fp)
         self.gbxmodel_path.set(fp)
+        if not self.tags_dir.get():
+            path_pieces = self.app_root.last_load_dir.split(
+                "%stags%s" % (PATHDIV, PATHDIV))
+            if len(path_pieces) > 1:
+                self.tags_dir.set(join(path_pieces[0], "tags"))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
