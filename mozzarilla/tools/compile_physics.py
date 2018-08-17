@@ -3,7 +3,7 @@ import zlib
 from os.path import dirname, join, relpath, basename, isfile
 from tkinter.filedialog import askopenfilename
 
-from reclaimer.jms import read_jms
+from reclaimer.model.jms import read_jms
 from reclaimer.hek.defs.objs.matrices import quaternion_to_matrix, Matrix
 from supyr_struct.defs.util import sanitize_path
 from supyr_struct.defs.constants import PATHDIV

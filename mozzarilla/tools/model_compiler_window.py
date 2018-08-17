@@ -257,7 +257,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         fp = sanitize_path(fp)
         if not splitext(fp)[-1]:
             fp += ".gbxmodel"
- 
+
         self.app_root.last_load_dir = dirname(fp)
         self.gbxmodel_path.set(fp)
         if not self.tags_dir.get():
@@ -380,7 +380,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         elif isfile(mod2_path):
             try:
                 self.mod2_tag = mod2_def.build(filepath=mod2_path)
-                    
+
                 tagdata = self.mod2_tag.data.tagdata
                 self.superhigh_lod_cutoff.set(str(tagdata.superhigh_lod_cutoff))
                 self.high_lod_cutoff.set(str(tagdata.high_lod_cutoff))
