@@ -11,7 +11,7 @@ from binilla.util import sanitize_path, is_in_dir, get_cwd, PATHDIV
 from binilla.widgets import BinillaWidget, ScrollMenu
 from reclaimer.hek.defs.mod2 import mod2_def
 from reclaimer.model.jms import read_jms, MergedJmsModel
-from reclaimer.model.model_compilation import compile_gbxmodel
+from reclaimer.model.model_compilation import compile_gbxmodel, generate_shader
 
 if __name__ == "__main__":
     model_compiler_base_class = tk.Tk
@@ -375,6 +375,10 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         mod2_path = self.gbxmodel_path.get()
         tags_dir = self.tags_dir.get()
+
+        shaders_dir = join(dirname(mod2_path), "shaders", '')
+        tags_dir = self.tags_dir.get()
+        has_local_shaders = exists(shaders_dir) and exists(tags_dir)
         if errors_occurred:
             print("    Cannot load all jms files.")
         elif isfile(mod2_path):
@@ -402,12 +406,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                         mat.shader_type = shdr_ref.shader.tag_class.enum_name
                         mat.shader_path = shdr_ref.shader.filepath
 
-
                 local_shaders = {}
-                shaders_dir = join(dirname(mod2_path), "shaders", '')
-                tags_dir = self.tags_dir.get()
-                has_local_shaders = exists(shaders_dir) and exists(tags_dir)
-
                 if has_local_shaders and is_in_dir(shaders_dir, tags_dir):
                     # fill in any missing shader paths with ones found nearby
                     for _, __, files in os.walk(shaders_dir):
@@ -432,6 +431,11 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                         mat.shader_type = ext.strip(".")
             except Exception:
                 pass
+        else:
+            for mat in merged_jms.materials:
+                if mat.shader_type in ("shader", ""):
+                    mat.shader_path = join(shaders_dir, mat.name)
+                    mat.shader_type = "shader_model"
 
 
         if not self.mod2_tag:
@@ -483,6 +487,16 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 print(error)
             print("Gbxmodel compilation failed.")
             return
+
+        tags_dir = self.tags_dir.get()
+        if tags_dir:
+            try:
+                data_dir = join(dirname(dirname(tags_dir)), "data", "")
+                for mat in self.merged_jms.materials:
+                    generate_shader(mat, tags_dir, data_dir)
+            except Exception:
+                print(format_exc())
+                print("Failed to generate shader tags.")
 
         tagdata = mod2_tag.data.tagdata
         tagdata.superhigh_lod_cutoff = superhigh_lod_cutoff
