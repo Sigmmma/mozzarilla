@@ -164,7 +164,7 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
         self.sequence_menu.set_options(options)
         self.sequence_menu.sel_index = (self.sequence_menu.max_index >= 0) - 1
 
-    
+
 class HaloBitmapDisplayBase:
     def get_base_address(self, tag):
         if tag is None:
@@ -835,6 +835,9 @@ class DependencyFrame(ContainerFrame):
             f_widget_ids_map = self.f_widget_ids_map
             all_visible = self.all_visible
 
+            if hasattr(self, "preview_btn") and self.preview_btn:
+                self.preview_btn.display_frame = None
+
             # if any of the descriptors are different between
             # the sub-nodes of the previous and new sub-nodes,
             # then this widget will need to be repopulated.
@@ -858,7 +861,7 @@ class DependencyFrame(ContainerFrame):
                 if not hasattr(w, 'desc') or w.desc is not sub_desc:
                     self.populate()
                     return
-                
+
             for wid in self.f_widget_ids:
                 w = f_widgets[wid]
 
@@ -1148,7 +1151,7 @@ class ReflexiveFrame(DynamicArrayFrame):
                   self.delete_all_btn, self.delete_btn,
                   self.duplicate_btn, self.insert_btn, self.add_btn):
             w.forget()
-            
+
         # pack all the buttons(and new ones)
         for w in (self.export_all_btn, self.import_all_btn,
                   self.shift_down_btn, self.shift_up_btn,
@@ -1177,7 +1180,7 @@ class ReflexiveFrame(DynamicArrayFrame):
                         name = str(node[i].get_neighbor(dyn_name_path))
                         if name:
                             options[i] = name.split('\n')[0]
-                            
+
             except Exception:
                 print(format_exc())
                 print("Guess something got mistyped. Tell Moses about it.")
