@@ -926,6 +926,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         else:
             print("Converting bitmaps...")
             tags_dir = self.loaded_tags_dir
+            pruning = self.prune_tiff.get()
     
             for fp in sorted(self.bitmap_tag_infos):
                 try:
@@ -936,8 +937,8 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
                     bitmap_info = self.bitmap_tag_infos[fp]
                     conv_flags = self.conversion_flags[fp]
                     extracting = conv_flags.extract_to != 0
-                    pruning = self.prune_tiff.get()
                     converting = get_will_be_converted(conv_flags, bitmap_info)
+                    #print(pruning, converting, extracting)
                     if pruning or converting or extracting:
                         tag = bitm_def.build(filepath=join(tags_dir, fp))
                         if pruning:
@@ -999,7 +1000,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
                 w.enable()
 
     def populate_settings(self):
-        if self._populating_settings:
+        if self._populating_settings or self._processing:
             return
 
         self._populating_settings = True
@@ -1072,7 +1073,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         self._populating_settings = False
 
     def populate_bitmap_info(self):
-        if self._populating_bitmap_info:
+        if self._populating_bitmap_info or self._processing:
             return
 
         self._populating_bitmap_info = True
@@ -1143,7 +1144,10 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         if self._processing:
             return
 
-        dirpath = askdirectory(initialdir=self.scan_dir_path.get(),
+        load_dir = self.scan_dir_path.get()
+        if not load_dir:
+            load_dir = self.app_root.last_load_dir
+        dirpath = askdirectory(initialdir=load_dir,
                                parent=self, title="Select directory to scan")
         if not dirpath:
             return
@@ -1160,7 +1164,10 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         if self._processing:
             return
 
-        dirpath = askdirectory(initialdir=self.scan_dir_path.get(),
+        load_dir = self.data_dir_path.get()
+        if not load_dir:
+            load_dir = self.app_root.last_load_dir
+        dirpath = askdirectory(initialdir=self.data_dir_path.get(),
                                parent=self, title="Select directory to scan")
         if not dirpath:
             return
@@ -1183,9 +1190,11 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         if self._processing:
             return
 
+        load_dir = dirname(self.log_file_path.get())
+        if not load_dir:
+            load_dir = self.app_root.last_load_dir
         fp = asksaveasfilename(
-            initialdir=dirname(self.log_file_path.get()),
-            title="Save scan log to...", parent=self,
+            initialdir=load_dir, title="Save scan log to...", parent=self,
             filetypes=(("bitmap optimizer log", "*.log"), ('All', '*')))
 
         if not fp:
@@ -1680,6 +1689,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             displayed_paths.reverse()
 
     def populate_tag_list_boxes(self):
+        print(self._populating)
         if self._populating:
             return
 
