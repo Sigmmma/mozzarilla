@@ -20,6 +20,18 @@ else:
 
 curr_dir = get_cwd(__file__)
 
+shader_types = (
+    "model",
+    "environment",
+    "glass",
+    "meter",
+    "plasma",
+    "water",
+    "chicago_ext",
+    "chicago",
+    "trans_generic",
+    )
+
 class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
     app_root = None
     tags_dir = ''
@@ -47,7 +59,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         model_compiler_base_class.__init__(self, app_root, *args, **kwargs)
 
         self.title("Gbxmodel compiler")
-        self.resizable(0, 0)
+        self.resizable(1, 0)
         self.update()
         try:
             try:
@@ -74,13 +86,14 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         # make the frames
         self.main_frame = tk.Frame(self)
+        self.jms_info_frame = tk.LabelFrame(
+            self, text="Model info")
+
         self.dirs_frame = tk.LabelFrame(
             self.main_frame, text="Directories")
         self.buttons_frame = tk.Frame(self.main_frame)
         self.settings_frame = tk.LabelFrame(
             self.main_frame, text="Compilation settings")
-        self.shaders_frame = tk.LabelFrame(
-            self.main_frame, text="Shaders")
 
         self.jms_dir_frame = tk.LabelFrame(
             self.dirs_frame, text="Source models folder")
@@ -99,8 +112,6 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             self.settings_frame, menu_width=5,
             options=("None", "Exact", "Loose"))
         self.optimize_menu.sel_index = 0
-        self.jms_info_frame = tk.LabelFrame(
-            self.settings_frame, text="Model info")
 
         self.jms_info_tree = tk.ttk.Treeview(
             self.jms_info_frame, selectmode='browse', padding=(0, 0), height=4)
@@ -114,15 +125,16 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                                   xscrollcommand=self.jms_info_hsb.set)
 
 
-        self.shaders_label = tk.Label(
-            self.shaders_frame, text="Material")
-        self.shaders_menu = ScrollMenu(
-            self.shaders_frame, menu_width=20,
+        self.shader_name_label = tk.Label(self.settings_frame, text="Shader")
+        self.shader_type_label = tk.Label(self.settings_frame, text="Type")
+        self.shader_names_menu = ScrollMenu(
+            self.settings_frame, menu_width=10,
             option_getter=self.get_shader_names)
-        self.shader_path_entry = tk.Entry(
-            self.shaders_frame)
+        self.shader_types_menu = ScrollMenu(
+            self.settings_frame, menu_width=10,
+            options=shader_types)
         self.shader_path_browse_button = tk.Button(
-            self.shaders_frame, text="Browse",
+            self.settings_frame, text="Browse",
             command=None)
 
 
@@ -132,15 +144,20 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.low_lod_label = tk.Label(self.lods_frame, text="Low")
         self.superlow_lod_label = tk.Label(self.lods_frame, text="Superlow")
         self.superhigh_lod_cutoff_entry = tk.Entry(
-            self.lods_frame, textvariable=self.superhigh_lod_cutoff)
+            self.lods_frame, textvariable=self.superhigh_lod_cutoff,
+            width=10, justify='right')
         self.high_lod_cutoff_entry = tk.Entry(
-            self.lods_frame, textvariable=self.high_lod_cutoff)
+            self.lods_frame, textvariable=self.high_lod_cutoff,
+            width=10, justify='right')
         self.medium_lod_cutoff_entry = tk.Entry(
-            self.lods_frame, textvariable=self.medium_lod_cutoff)
+            self.lods_frame, textvariable=self.medium_lod_cutoff,
+            width=10, justify='right')
         self.low_lod_cutoff_entry = tk.Entry(
-            self.lods_frame, textvariable=self.low_lod_cutoff)
+            self.lods_frame, textvariable=self.low_lod_cutoff,
+            width=10, justify='right')
         self.superlow_lod_cutoff_entry = tk.Entry(
-            self.lods_frame, textvariable=self.superlow_lod_cutoff)
+            self.lods_frame, textvariable=self.superlow_lod_cutoff,
+            width=10, justify='right')
 
         self.jms_dir_entry = tk.Entry(
             self.jms_dir_frame, textvariable=self.jms_dir, state=tk.DISABLED)
@@ -175,32 +192,25 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.populate_model_info_tree()
 
         # pack everything
-        self.main_frame.pack(fill="both", pady=3, padx=3, expand=True)
+        self.main_frame.pack(fill="both", side='left', pady=3, padx=3)
+        self.jms_info_frame.pack(fill="both", side='left', pady=3, padx=3,
+                                 expand=True)
+
         self.dirs_frame.pack(fill="x")
         self.buttons_frame.pack(fill="x", pady=3, padx=3)
         self.settings_frame.pack(fill="both", expand=True)
 
 
-        self.superhigh_lod_label.grid(
-            sticky='e', row=0, column=0, pady=3, padx=3)
-        self.high_lod_label.grid(
-            sticky='e', row=1, column=0, pady=3, padx=3)
-        self.medium_lod_label.grid(
-            sticky='e', row=2, column=0, pady=3, padx=3)
-        self.low_lod_label.grid(
-            sticky='e', row=3, column=0, pady=3, padx=3)
-        self.superlow_lod_label.grid(
-            sticky='e', row=4, column=0, pady=3, padx=3)
-        self.superhigh_lod_cutoff_entry.grid(
-            sticky='ew', row=0, column=1, pady=3, padx=3)
-        self.high_lod_cutoff_entry.grid(
-            sticky='ew', row=1, column=1, pady=3, padx=3)
-        self.medium_lod_cutoff_entry.grid(
-            sticky='ew', row=2, column=1, pady=3, padx=3)
-        self.low_lod_cutoff_entry.grid(
-            sticky='ew', row=3, column=1, pady=3, padx=3)
-        self.superlow_lod_cutoff_entry.grid(
-            sticky='ew', row=4, column=1, pady=3, padx=3)
+        self.superhigh_lod_label.grid(sticky='e', row=0, column=0, padx=3)
+        self.high_lod_label.grid(sticky='e', row=1, column=0, padx=3)
+        self.medium_lod_label.grid(sticky='e', row=2, column=0, padx=3)
+        self.low_lod_label.grid(sticky='e', row=3, column=0, padx=3)
+        self.superlow_lod_label.grid(sticky='e', row=4, column=0, padx=3)
+        self.superhigh_lod_cutoff_entry.grid(sticky='ew', row=0, column=1, padx=3)
+        self.high_lod_cutoff_entry.grid(sticky='ew', row=1, column=1, padx=3)
+        self.medium_lod_cutoff_entry.grid(sticky='ew', row=2, column=1, padx=3)
+        self.low_lod_cutoff_entry.grid(sticky='ew', row=3, column=1, padx=3)
+        self.superlow_lod_cutoff_entry.grid(sticky='ew', row=4, column=1, padx=3)
 
 
         self.jms_dir_frame.pack(expand=True, fill='x')
@@ -217,11 +227,17 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.tags_dir_browse_button.pack(side='left')
 
         self.optimize_label.grid(
-            sticky='ne', row=0, column=0, pady=10, padx=3)
+            sticky='ne', row=0, column=0, pady=(10, 0), padx=3)
         self.optimize_menu.grid(
-            sticky='new', row=0, column=1, pady=10, padx=3)
-        self.lods_frame.grid(sticky='new', row=1, column=0, columnspan=2)
-        self.jms_info_frame.grid(sticky='news', row=0, column=2, rowspan=4)
+            sticky='new', row=0, column=1, pady=(10, 0), padx=3)
+        self.lods_frame.grid(sticky='ne', row=0, column=2, rowspan=4)
+
+        self.shader_name_label.grid(sticky='ne', row=1, column=0, padx=3)
+        self.shader_names_menu.grid(sticky='new', row=2, columnspan=2, padx=3)
+        self.shader_type_label.grid(sticky='ne', row=3, column=0, padx=3)
+        self.shader_types_menu.grid(sticky='new', row=3, column=1, padx=3)
+
+        #self.shader_path_browse_button
 
         self.jms_info_hsb.pack(side="bottom", fill='x')
         self.jms_info_vsb.pack(side="right",  fill='y')
@@ -239,11 +255,11 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             jms_tree['columns'] = ('data', )
             jms_tree.heading("#0")
             jms_tree.heading("data")
-            jms_tree.column("#0", minwidth=150, width=200)
-            jms_tree.column("data", minwidth=100, width=200, stretch=False)
+            jms_tree.column("#0", minwidth=100, width=100)
+            jms_tree.column("data", minwidth=50, width=50, stretch=False)
 
-        for jms_name in self._jms_tree_iids:
-            jms_tree.delete(jms_name)
+        for iid in self._jms_tree_iids:
+            jms_tree.delete(iid)
 
         self._jms_tree_iids = []
 
@@ -298,8 +314,6 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self._jms_tree_iids.append(geoms_iid)
         for jms_model in self.jms_models:
             iid = jms_tree.insert(geoms_iid, 'end', text=jms_model.name)
-            self._jms_tree_iids.append(iid)
-
             jms_tree.insert(iid, 'end', text="Vertex count",
                             values=(len(jms_model.verts), ))
             jms_tree.insert(iid, 'end', text="Triangle count",
@@ -414,11 +428,19 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.geometry("%sx%s" % (w, h))
         self.minsize(width=w, height=h)
 
-    def get_shader_names(self):
-        shader_names = []
-        if isinstance(self.merged_jms, MergedJms):
-            for mat in merged_jms.materials:
-                shader_names.append(mat.shader_path.split("\\")[-1])
+    def get_shader_names(self, opt_index=None):
+        if opt_index == "active":
+            opt_index = self.shader_names_menu.sel_index
+
+        if opt_index is not None:
+            return self.merged_jms.materials[opt_index].shader_path
+
+        shader_names = {}
+        if isinstance(self.merged_jms, MergedJmsModel):
+            i = 0
+            for mat in self.merged_jms.materials:
+                shader_names[i] = mat.shader_path.split("\\")[-1]
+                i += 1
 
         return shader_names
 
@@ -536,6 +558,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         mod2_path = self.gbxmodel_path.get()
         tags_dir = self.tags_dir.get()
+        self.shader_names_menu.max_index = len(merged_jms.materials) - 1
 
         shaders_dir = join(dirname(mod2_path), "shaders", '')
         tags_dir = self.tags_dir.get()
