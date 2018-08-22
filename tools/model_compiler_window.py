@@ -10,7 +10,7 @@ from traceback import format_exc
 from binilla.util import sanitize_path, is_in_dir, get_cwd, PATHDIV
 from binilla.widgets import BinillaWidget, ScrollMenu
 from reclaimer.hek.defs.mod2 import mod2_def
-from reclaimer.model.jms import read_jms, MergedJmsModel
+from reclaimer.model.jms import read_jms, write_jms, MergedJmsModel, JmsModel
 from reclaimer.model.model_compilation import compile_gbxmodel, generate_shader
 
 if __name__ == "__main__":
@@ -24,6 +24,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
     app_root = None
     tags_dir = ''
 
+    jms_models = ()
     merged_jms = None
     mod2_tag = None
 
@@ -32,6 +33,9 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
     _compiling = False
     _loading = False
+    _saving = False
+
+    _jms_tree_iids = ()
 
     def __init__(self, app_root, *args, **kwargs):
         if model_compiler_base_class == tk.Toplevel:
@@ -43,7 +47,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         model_compiler_base_class.__init__(self, app_root, *args, **kwargs)
 
         self.title("Gbxmodel compiler")
-        self.resizable(0, 1)
+        self.resizable(0, 0)
         self.update()
         try:
             try:
@@ -70,18 +74,56 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         # make the frames
         self.main_frame = tk.Frame(self)
-        self.dirs_frame = tk.LabelFrame(self.main_frame, text="Directories")
-        self.settings_frame = tk.LabelFrame(self.main_frame, text="Settings")
-        self.lods_frame = tk.LabelFrame(self.main_frame, text="LOD Cutoffs")
-        self.jms_info_frame = tk.LabelFrame(self.main_frame, text="Jms info")
+        self.dirs_frame = tk.LabelFrame(
+            self.main_frame, text="Directories")
         self.buttons_frame = tk.Frame(self.main_frame)
+        self.settings_frame = tk.LabelFrame(
+            self.main_frame, text="Compilation settings")
+        self.shaders_frame = tk.LabelFrame(
+            self.main_frame, text="Shaders")
 
         self.jms_dir_frame = tk.LabelFrame(
-            self.dirs_frame, text="Jms files folder")
+            self.dirs_frame, text="Source models folder")
         self.tags_dir_frame = tk.LabelFrame(
             self.dirs_frame, text="Tags directory root folder")
         self.gbxmodel_path_frame = tk.LabelFrame(
             self.dirs_frame, text="Gbxmodel output path")
+
+        self.lods_frame = tk.LabelFrame(
+            self.settings_frame, text="LOD cutoffs")
+
+
+        self.optimize_label = tk.Label(
+            self.settings_frame, text="Vertex optimization")
+        self.optimize_menu = ScrollMenu(
+            self.settings_frame, menu_width=5,
+            options=("None", "Exact", "Loose"))
+        self.optimize_menu.sel_index = 0
+        self.jms_info_frame = tk.LabelFrame(
+            self.settings_frame, text="Model info")
+
+        self.jms_info_tree = tk.ttk.Treeview(
+            self.jms_info_frame, selectmode='browse', padding=(0, 0), height=4)
+        self.jms_info_vsb = tk.Scrollbar(
+            self.jms_info_frame, orient='vertical',
+            command=self.jms_info_tree.yview)
+        self.jms_info_hsb = tk.Scrollbar(
+            self.jms_info_frame, orient='horizontal',
+            command=self.jms_info_tree.xview)
+        self.jms_info_tree.config(yscrollcommand=self.jms_info_vsb.set,
+                                  xscrollcommand=self.jms_info_hsb.set)
+
+
+        self.shaders_label = tk.Label(
+            self.shaders_frame, text="Material")
+        self.shaders_menu = ScrollMenu(
+            self.shaders_frame, menu_width=20,
+            option_getter=self.get_shader_names)
+        self.shader_path_entry = tk.Entry(
+            self.shaders_frame)
+        self.shader_path_browse_button = tk.Button(
+            self.shaders_frame, text="Browse",
+            command=None)
 
 
         self.superhigh_lod_label = tk.Label(self.lods_frame, text="Superhigh")
@@ -120,52 +162,45 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             command=self.gbxmodel_path_browse)
 
 
-        self.optimize_label = tk.Label(
-            self.settings_frame, text="Vertex optimization")
-        self.optimize_menu = ScrollMenu(
-            self.settings_frame, menu_width=20,
-            options=("None", "Exact", "Loose"))
-        self.optimize_menu.sel_index = 0
-
-
         self.load_button = tk.Button(
-            self.buttons_frame, text="Load JMS models",
+            self.buttons_frame, text="Load models",
             command=self.load_models)
+        self.save_button = tk.Button(
+            self.buttons_frame, text="Save models as JMS",
+            command=self.save_models)
         self.compile_button = tk.Button(
             self.buttons_frame, text="Compile Gbxmodel",
             command=self.compile_gbxmodel)
 
-        # pack everything
-        self.main_frame.pack(fill='both')
+        self.populate_model_info_tree()
 
-        self.dirs_frame.grid(sticky='news', row=0, column=0, columnspan=4)
-        self.settings_frame.grid(sticky='news', row=1, column=0, columnspan=4)
-        self.jms_info_frame.grid(sticky='news', row=2, column=1, columnspan=3)
-        self.buttons_frame.grid(sticky='news', row=3, column=0,
-                                columnspan=4, pady=3, padx=3)
-        self.lods_frame.grid(sticky='news', row=0, column=5)
+        # pack everything
+        self.main_frame.pack(fill="both", pady=3, padx=3, expand=True)
+        self.dirs_frame.pack(fill="x")
+        self.buttons_frame.pack(fill="x", pady=3, padx=3)
+        self.settings_frame.pack(fill="both", expand=True)
 
 
         self.superhigh_lod_label.grid(
-            sticky='nes', row=0, column=0, pady=3, padx=3)
+            sticky='e', row=0, column=0, pady=3, padx=3)
         self.high_lod_label.grid(
-            sticky='nes', row=1, column=0, pady=3, padx=3)
+            sticky='e', row=1, column=0, pady=3, padx=3)
         self.medium_lod_label.grid(
-            sticky='nes', row=2, column=0, pady=3, padx=3)
+            sticky='e', row=2, column=0, pady=3, padx=3)
         self.low_lod_label.grid(
-            sticky='nes', row=3, column=0, pady=3, padx=3)
+            sticky='e', row=3, column=0, pady=3, padx=3)
         self.superlow_lod_label.grid(
-            sticky='nes', row=4, column=0, pady=3, padx=3)
+            sticky='e', row=4, column=0, pady=3, padx=3)
         self.superhigh_lod_cutoff_entry.grid(
-            sticky='news', row=0, column=1, pady=3, padx=3)
+            sticky='ew', row=0, column=1, pady=3, padx=3)
         self.high_lod_cutoff_entry.grid(
-            sticky='news', row=1, column=1, pady=3, padx=3)
+            sticky='ew', row=1, column=1, pady=3, padx=3)
         self.medium_lod_cutoff_entry.grid(
-            sticky='news', row=2, column=1, pady=3, padx=3)
+            sticky='ew', row=2, column=1, pady=3, padx=3)
         self.low_lod_cutoff_entry.grid(
-            sticky='news', row=3, column=1, pady=3, padx=3)
+            sticky='ew', row=3, column=1, pady=3, padx=3)
         self.superlow_lod_cutoff_entry.grid(
-            sticky='news', row=4, column=1, pady=3, padx=3)
+            sticky='ew', row=4, column=1, pady=3, padx=3)
 
 
         self.jms_dir_frame.pack(expand=True, fill='x')
@@ -181,16 +216,122 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.tags_dir_entry.pack(side='left', expand=True, fill='x')
         self.tags_dir_browse_button.pack(side='left')
 
-        self.optimize_label.pack(side='left', expand=True)
-        self.optimize_menu.pack(side='left', expand=True)
+        self.optimize_label.grid(
+            sticky='ne', row=0, column=0, pady=10, padx=3)
+        self.optimize_menu.grid(
+            sticky='new', row=0, column=1, pady=10, padx=3)
+        self.lods_frame.grid(sticky='new', row=1, column=0, columnspan=2)
+        self.jms_info_frame.grid(sticky='news', row=0, column=2, rowspan=4)
+
+        self.jms_info_hsb.pack(side="bottom", fill='x')
+        self.jms_info_vsb.pack(side="right",  fill='y')
+        self.jms_info_tree.pack(side='left', fill='both', expand=True)
 
         self.load_button.pack(side='left', expand=True, fill='both', padx=3)
-        self.compile_button.pack(side='left', expand=True, fill='both', padx=3)
+        self.save_button.pack(side='left', expand=True, fill='both', padx=3)
+        self.compile_button.pack(side='right', expand=True, fill='both', padx=3)
 
         self.apply_style()
 
+    def populate_model_info_tree(self):
+        jms_tree = self.jms_info_tree
+        if not jms_tree['columns']:
+            jms_tree['columns'] = ('data', )
+            jms_tree.heading("#0")
+            jms_tree.heading("data")
+            jms_tree.column("#0", minwidth=150, width=200)
+            jms_tree.column("data", minwidth=100, width=200, stretch=False)
+
+        for jms_name in self._jms_tree_iids:
+            jms_tree.delete(jms_name)
+
+        self._jms_tree_iids = []
+
+        if not self.jms_models or not self.merged_jms:
+            return
+
+        nodes_iid = jms_tree.insert('', 'end', text="Nodes",
+                                    values=(len(self.merged_jms.nodes),))
+        self._jms_tree_iids.append(nodes_iid)
+        nodes = self.merged_jms.nodes
+        for node in nodes:
+            iid = jms_tree.insert(nodes_iid, 'end', text=node.name)
+            parent_name = child_name = sibling_name = "NONE"
+            if node.parent_index >= 0:
+                parent_name = nodes[node.parent_index].name
+            if node.sibling_index >= 0:
+                child_name = nodes[node.sibling_index].name
+            if node.first_child >= 0:
+                sibling_name = nodes[node.first_child].name
+
+            jms_tree.insert(iid, 'end', text="Parent", values=(parent_name, ))
+            jms_tree.insert(iid, 'end', text="First child", values=(child_name, ))
+            jms_tree.insert(iid, 'end', text="Next sibling", values=(sibling_name, ))
+
+            jms_tree.insert(iid, 'end', text="i", values=(node.rot_i, ))
+            jms_tree.insert(iid, 'end', text="j", values=(node.rot_j, ))
+            jms_tree.insert(iid, 'end', text="k", values=(node.rot_k, ))
+            jms_tree.insert(iid, 'end', text="w", values=(node.rot_w, ))
+
+            jms_tree.insert(iid, 'end', text="x", values=(node.pos_x, ))
+            jms_tree.insert(iid, 'end', text="y", values=(node.pos_y, ))
+            jms_tree.insert(iid, 'end', text="z", values=(node.pos_z, ))
+
+
+        mats_iid = jms_tree.insert('', 'end', text="Materials",
+                                   values=(len(self.merged_jms.materials),))
+        self._jms_tree_iids.append(mats_iid)
+        for mat in self.merged_jms.materials:
+            jms_tree.insert(mats_iid, 'end', text=mat.name,
+                            values=(mat.tiff_path, ))
+
+
+        regions_iid = jms_tree.insert('', 'end', text="Regions",
+                                      values=(len(self.merged_jms.regions),))
+        self._jms_tree_iids.append(regions_iid)
+        for region in sorted(self.merged_jms.regions):
+            jms_tree.insert(regions_iid, 'end', text=region)
+
+
+        geoms_iid = jms_tree.insert('', 'end', text="Geometries",
+                                    values=(len(self.jms_models),))
+        self._jms_tree_iids.append(geoms_iid)
+        for jms_model in self.jms_models:
+            iid = jms_tree.insert(geoms_iid, 'end', text=jms_model.name)
+            self._jms_tree_iids.append(iid)
+
+            jms_tree.insert(iid, 'end', text="Vertex count",
+                            values=(len(jms_model.verts), ))
+            jms_tree.insert(iid, 'end', text="Triangle count",
+                            values=(len(jms_model.tris), ))
+
+            markers_iid = jms_tree.insert(iid, 'end', text="Markers",
+                                          values=(len(jms_model.markers),))
+            for marker in jms_model.markers:
+                iid = jms_tree.insert(markers_iid, 'end', text=marker.name)
+                perm_name = marker.permutation
+                region_name = jms_model.regions[marker.region]
+                parent_name = ""
+                if marker.parent >= 0:
+                    parent_name = nodes[marker.parent].name
+
+                jms_tree.insert(iid, 'end', text="Permutation", values=(perm_name, ))
+                jms_tree.insert(iid, 'end', text="Region", values=(region_name, ))
+                jms_tree.insert(iid, 'end', text="Parent", values=(parent_name, ))
+                jms_tree.insert(iid, 'end', text="Radius", values=(marker.radius, ))
+
+                jms_tree.insert(iid, 'end', text="i", values=(marker.rot_i, ))
+                jms_tree.insert(iid, 'end', text="j", values=(marker.rot_j, ))
+                jms_tree.insert(iid, 'end', text="k", values=(marker.rot_k, ))
+                jms_tree.insert(iid, 'end', text="w", values=(marker.rot_w, ))
+
+                jms_tree.insert(iid, 'end', text="x", values=(marker.pos_x, ))
+                jms_tree.insert(iid, 'end', text="y", values=(marker.pos_y, ))
+                jms_tree.insert(iid, 'end', text="z", values=(marker.pos_z, ))
+
+
     def jms_dir_browse(self):
-        if self._compiling or self._loading:
+        if self._compiling or self._loading or self._saving:
             return
 
         tags_dir = self.tags_dir.get()
@@ -224,7 +365,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 self.tags_dir.set(join(path_pieces[0], "tags"))
 
     def tags_dir_browse(self):
-        if self._compiling or self._loading:
+        if self._compiling or self._loading or self._saving:
             return
 
         tags_dir = askdirectory(
@@ -239,7 +380,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.tags_dir.set(tags_dir)
 
     def gbxmodel_path_browse(self, force=False):
-        if not force and (self._compiling or self._loading):
+        if not force and (self._compiling or self._loading or self._saving):
             return
 
         mod2_dir = dirname(self.gbxmodel_path.get())
@@ -247,8 +388,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             mod2_dir = self.tags_dir.get()
 
         fp = asksaveasfilename(
-            initialdir=mod2_dir,
-            title="Save gbxmodel to...", parent=self,
+            initialdir=mod2_dir, title="Save gbxmodel to...", parent=self,
             filetypes=(("Gearbox model", "*.gbxmodel"), ('All', '*')))
 
         if not fp:
@@ -274,6 +414,14 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.geometry("%sx%s" % (w, h))
         self.minsize(width=w, height=h)
 
+    def get_shader_names(self):
+        shader_names = []
+        if isinstance(self.merged_jms, MergedJms):
+            for mat in merged_jms.materials:
+                shader_names.append(mat.shader_path.split("\\")[-1])
+
+        return shader_names
+
     def destroy(self):
         try:
             self.app_root.tool_windows.pop(self.window_name, None)
@@ -282,16 +430,29 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         model_compiler_base_class.destroy(self)
 
     def load_models(self):
-        if not self._compiling and not self._loading:
+        if not self._compiling and not self._loading and not self._saving:
             self._loading = True
             try:
                 self._load_models()
             except Exception:
                 print(format_exc())
+            try:
+                self.populate_model_info_tree()
+            except Exception:
+                print(format_exc())
             self._loading = False
 
+    def save_models(self):
+        if not self._compiling and not self._loading and not self._saving:
+            self._saving = True
+            try:
+                self._save_models()
+            except Exception:
+                print(format_exc())
+            self._saving = False
+
     def compile_gbxmodel(self):
-        if not self._compiling and not self._loading:
+        if not self._compiling and not self._loading and not self._saving:
             self._compiling = True
             try:
                 self._compile_gbxmodel()
@@ -321,7 +482,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.mod2_tag = self.merged_jms = None
         optimize_level = max(0, self.optimize_menu.sel_index)
 
-        jms_datas = []
+        jms_models = self.jms_models = []
         print("Loading jms files...")
         self.app_root.update()
         for fp in fps:
@@ -329,32 +490,32 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 print("    %s" % fp.replace('/', '\\').split("\\")[-1])
                 self.app_root.update()
                 with open(fp, "r") as f:
-                    jms_datas.append(read_jms(f.read(), '',
+                    jms_models.append(read_jms(f.read(), '',
                                               basename(fp).split('.')[0]))
-                jms_data = jms_datas[-1]
+                jms_model = jms_models[-1]
                 if optimize_level:
-                    old_vert_ct = len(jms_data.verts)
+                    old_vert_ct = len(jms_model.verts)
                     print("        Optimizing...", end='')
-                    jms_data.optimize_geometry(optimize_level == 1)
+                    jms_model.optimize_geometry(optimize_level == 1)
                     print(" Removed %s verts" %
-                          (old_vert_ct - len(jms_data.verts)))
+                          (old_vert_ct - len(jms_model.verts)))
 
                 print("        Calculating normals...")
-                jms_data.calculate_vertex_normals()
+                jms_model.calculate_vertex_normals()
             except Exception:
                 print(format_exc())
                 print("    Could not parse jms file.")
                 self.app_root.update()
 
-        if not jms_datas:
+        if not jms_models:
             print("    No valid jms files found.")
             return
 
         first_crc = None
-        for jms_data in jms_datas:
+        for jms_model in jms_models:
             if first_crc is None:
-                first_crc = jms_data.node_list_checksum
-            elif first_crc != jms_data.node_list_checksum:
+                first_crc = jms_model.node_list_checksum
+            elif first_crc != jms_model.node_list_checksum:
                 print("    Warning, not all node list checksums match.")
                 break
 
@@ -363,11 +524,11 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.app_root.update()
         self.merged_jms = merged_jms = MergedJmsModel()
         errors_occurred = False
-        for jms_data in jms_datas:
-            errors = merged_jms.merge_jms_model(jms_data)
+        for jms_model in jms_models:
+            errors = merged_jms.merge_jms_model(jms_model)
             errors_occurred |= bool(errors)
             if errors:
-                print("    Errors in '%s'" % jms_data.name)
+                print("    Errors in '%s'" % jms_model.name)
                 for error in errors:
                     print("        ", error, sep='')
 
@@ -380,12 +541,13 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         tags_dir = self.tags_dir.get()
         has_local_shaders = exists(shaders_dir) and exists(tags_dir)
         if errors_occurred:
-            print("    Cannot load all jms files.")
+            print("    Errors occurred while loading jms files.")
         elif isfile(mod2_path):
             try:
                 self.mod2_tag = mod2_def.build(filepath=mod2_path)
 
                 tagdata = self.mod2_tag.data.tagdata
+                self.merged_jms.node_list_checksum = tagdata.node_list_checksum
                 self.superhigh_lod_cutoff.set(str(tagdata.superhigh_lod_cutoff))
                 self.high_lod_cutoff.set(str(tagdata.high_lod_cutoff))
                 self.medium_lod_cutoff.set(str(tagdata.medium_lod_cutoff))
@@ -430,8 +592,13 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                         mat.shader_path = relpath(name, tags_dir).strip("\\")
                         mat.shader_type = ext.strip(".")
             except Exception:
-                pass
+                print(format_exc())
         else:
+            self.superhigh_lod_cutoff.set("0.0")
+            self.high_lod_cutoff.set("0.0")
+            self.medium_lod_cutoff.set("0.0")
+            self.low_lod_cutoff.set("0.0")
+            self.superlow_lod_cutoff.set("0.0")
             for mat in merged_jms.materials:
                 if mat.shader_type in ("shader", ""):
                     mat.shader_path = join(shaders_dir, mat.name)
@@ -439,10 +606,28 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
 
         if not self.mod2_tag:
-            print("    Existing gbxmodel not detected or could not be loaded. "
-                  "A new one will be created.")
+            print("    Existing gbxmodel not detected or could not be loaded.\n"
+                  "        A new gbxmodel will be created.")
 
         print("Finished loading models. Took %s seconds.\n" %
+              str(time.time() - start).split('.')[0])
+
+    def _save_models(self):
+        models_dir = self.jms_dir.get()
+        if not models_dir:
+            return
+
+        start = time.time()
+        print("Saving jms models...")
+        for jms_model in self.jms_models:
+            if isinstance(jms_model, JmsModel):
+                fname = "%s %s.jms" % (jms_model.perm_name, jms_model.lod_level)
+                if not jms_model.is_random_perm:
+                    fname = "~" + fname
+
+                write_jms(join(models_dir, fname), jms_model)
+
+        print("Finished saving models. Took %s seconds.\n" %
               str(time.time() - start).split('.')[0])
 
     def _compile_gbxmodel(self):
