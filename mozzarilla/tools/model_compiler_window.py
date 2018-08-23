@@ -428,6 +428,12 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         if not tags_dir:
             return
 
+        mod2_path = self.gbxmodel_path.get()
+        if tags_dir and mod2_path and not is_in_dir(mod2_path, tags_dir):
+            # adjust mod2 filepath to be relative to the new tags directory
+            mod2_path = join(tags_dir, relpath(mod2_path, self.tags_dir.get()))
+            self.gbxmodel_path.set(mod2_path)
+
         self.app_root.last_load_dir = dirname(tags_dir)
         self.tags_dir.set(tags_dir)
 
@@ -452,11 +458,11 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         self.app_root.last_load_dir = dirname(fp)
         self.gbxmodel_path.set(fp)
-        if not self.tags_dir.get():
-            path_pieces = self.app_root.last_load_dir.split(
-                "%stags%s" % (PATHDIV, PATHDIV))
-            if len(path_pieces) > 1:
-                self.tags_dir.set(join(path_pieces[0], "tags"))
+
+        path_pieces = join(self.app_root.last_load_dir, '').split(
+            "%stags%s" % (PATHDIV, PATHDIV))
+        if len(path_pieces) > 1:
+            self.tags_dir.set(join(path_pieces[0], "tags"))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
@@ -676,15 +682,8 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             self.app_root.update()
 
         mod2_path = self.gbxmodel_path.get()
-        tags_dir = self.tags_dir.get()
+        tags_dir = self.tags_dir.get().replace('/', '\\')
         self.shader_names_menu.max_index = len(merged_jms.materials) - 1
-
-
-
-
-        # TODO: Fix this so it calculates default shaders folder properly
-
-
 
 
         shaders_dir = join(dirname(mod2_path), "shaders", '')
@@ -731,16 +730,17 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                         break
 
                     for mat in merged_jms.materials:
-                        shdr_path = local_shaders.get(mat.name, [""]).pop(0)
-                        if "shader" in mat.shader_type or not shdr_path:
+                        shader_path = local_shaders.get(mat.name, [""]).pop(0)
+                        if "shader_" in mat.shader_type or not shader_path:
                             continue
 
                         # shader type isnt set. Try to detect its location and
                         # type if possible, or set it to a default value if not
-                        shdr_path = shdr_path.lower().replace("/", "\\")
-                        name, ext = splitext(shdr_path)
+                        shader_path = shader_path.lower().replace("/", "\\")
+                        name, ext = splitext(shader_path)
                         mat.shader_path = relpath(name, tags_dir).strip("\\")
                         mat.shader_type = ext.strip(".")
+
             except Exception:
                 print(format_exc())
         else:
@@ -749,10 +749,16 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             self.medium_lod_cutoff.set("0.0")
             self.low_lod_cutoff.set("0.0")
             self.superlow_lod_cutoff.set("0.0")
-            for mat in merged_jms.materials:
-                if mat.shader_type in ("shader", ""):
-                    mat.shader_path = join(shaders_dir, mat.name)
-                    mat.shader_type = "shader_model"
+
+        for mat in merged_jms.materials:
+            if mat.shader_type in ("shader", ""):
+                try:
+                    shader_path = relpath(
+                        join(shaders_dir, mat.name), tags_dir).strip("\\")
+                    mat.shader_path = shader_path
+                except ValueError:
+                    print(format_exc())
+                mat.shader_type = "shader_model"
 
 
         if not self.mod2_tag:
@@ -826,13 +832,13 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         tags_dir = self.tags_dir.get()
         if tags_dir:
-            try:
-                data_dir = join(dirname(dirname(tags_dir)), "data", "")
-                for mat in self.merged_jms.materials:
+            data_dir = join(dirname(dirname(tags_dir)), "data", "")
+            for mat in self.merged_jms.materials:
+                try:
                     generate_shader(mat, tags_dir, data_dir)
-            except Exception:
-                print(format_exc())
-                print("Failed to generate shader tags.")
+                except Exception:
+                    print(format_exc())
+                    print("Failed to generate shader tag.")
 
         tagdata = mod2_tag.data.tagdata
         tagdata.superhigh_lod_cutoff = superhigh_lod_cutoff
