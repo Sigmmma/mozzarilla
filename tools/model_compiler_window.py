@@ -686,7 +686,9 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.shader_names_menu.max_index = len(merged_jms.materials) - 1
 
 
-        shaders_dir = join(dirname(mod2_path), "shaders", '')
+        shaders_dir = ""
+        if mod2_path:
+            shaders_dir = join(dirname(mod2_path), "shaders", '')
         tags_dir = self.tags_dir.get()
         has_local_shaders = exists(shaders_dir) and exists(tags_dir)
         if errors_occurred:
@@ -753,9 +755,11 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         for mat in merged_jms.materials:
             if mat.shader_type in ("shader", ""):
                 try:
-                    shader_path = relpath(
-                        join(shaders_dir, mat.name), tags_dir).strip("\\")
-                    mat.shader_path = shader_path
+                    shader_path = mat.name
+                    if shaders_dir:
+                        shader_path = relpath(
+                            join(shaders_dir, shader_path), tags_dir)
+                    mat.shader_path = shader_path.strip("\\")
                 except ValueError:
                     print(format_exc())
                 mat.shader_type = "shader_model"
