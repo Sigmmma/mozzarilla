@@ -133,7 +133,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         self.shader_names_menu = ScrollMenu(
             self.shaders_frame, menu_width=10, callback=self.select_shader,
-            option_getter=self.get_shader_names)
+            option_getter=self.get_shader_names, options_volatile=True)
         self.shader_types_menu = ScrollMenu(
             self.shaders_frame, menu_width=20, options=shader_types,
             callback=self.select_shader_type)
@@ -420,8 +420,9 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         if self._compiling or self._loading or self._saving:
             return
 
+        old_tags_dir = self.tags_dir.get()
         tags_dir = askdirectory(
-            initialdir=self.tags_dir.get(), parent=self,
+            initialdir=old_tags_dir, parent=self,
             title="Select the root of the tags directory")
 
         tags_dir = sanitize_path(join(tags_dir, ""))
@@ -429,9 +430,9 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             return
 
         mod2_path = self.gbxmodel_path.get()
-        if tags_dir and mod2_path and not is_in_dir(mod2_path, tags_dir):
+        if old_tags_dir and mod2_path and not is_in_dir(mod2_path, tags_dir):
             # adjust mod2 filepath to be relative to the new tags directory
-            mod2_path = join(tags_dir, relpath(mod2_path, self.tags_dir.get()))
+            mod2_path = join(tags_dir, relpath(mod2_path, old_tags_dir))
             self.gbxmodel_path.set(mod2_path)
 
         self.app_root.last_load_dir = dirname(tags_dir)
@@ -546,9 +547,9 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
             ext = ext.strip(".").lower()
             self.shader_path_string_var.set(relpath(fp, tags_dir))
-            self.shader_types_menu.sel_index = shader_type_map.get(ext, -1)
             mat = self.get_material(self.shader_names_menu.sel_index)
-            if mat:
+            if mat and ext in shader_type_map:
+                self.shader_types_menu.sel_index = shader_type_map[ext]
                 mat.shader_type = ext
 
 
@@ -754,14 +755,14 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         for mat in merged_jms.materials:
             if mat.shader_type in ("shader", ""):
+                shader_path = mat.name
                 try:
-                    shader_path = mat.name
                     if shaders_dir:
                         shader_path = relpath(
                             join(shaders_dir, shader_path), tags_dir)
                     mat.shader_path = shader_path.strip("\\")
                 except ValueError:
-                    print(format_exc())
+                    mat.shader_path = "shaders\\" + shader_path.strip("\\")
                 mat.shader_type = "shader_model"
 
 
