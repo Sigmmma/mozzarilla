@@ -29,6 +29,9 @@ new_method_enums = (
     {GUI_NAME:"make bitmap from bitmap source", NAME:"bitmap_from_bitmap_source"},
     {GUI_NAME:"launch pool", NAME:"create_hek_pool_window"},
     {GUI_NAME:"open tag data extractor", NAME:"show_data_extraction_window"},
+    {GUI_NAME:"make physics from jms", NAME:"physics_from_jms"},
+    {GUI_NAME:"make gbxmodel from jms", NAME:"model_from_jms"},
+    {GUI_NAME:"make hud_message_text from hmt", NAME:"hud_message_text_from_hmt"},
     )
 
 method_enums += new_method_enums

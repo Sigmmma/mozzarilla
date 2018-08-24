@@ -224,12 +224,11 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
     def scan(self):
         handler = self.handler
-        sani = sanitize_path
         self.stop_scanning = False
 
         tags_dir = self.tags_dir = self.handler.tagsdir
-        dirpath = sani(self.directory_path.get())
-        logpath = sani(self.logfile_path.get())
+        dirpath = sanitize_path(self.directory_path.get())
+        logpath = sanitize_path(self.logfile_path.get())
 
         if not (is_in_dir(dirpath, tags_dir, 0) or
                 join(dirpath.lower()) == join(tags_dir.lower())):
@@ -260,13 +259,12 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         print("Locating tags...")
 
         for root, directories, files in os.walk(dirpath):
-            if not root.endswith(PATHDIV):
-                root += PATHDIV
+            root = join(root, "")
 
             rel_root = relpath(root, tags_dir)
 
             for filename in files:
-                filepath = join(sani(rel_root), filename)
+                filepath = join(sanitize_path(rel_root), filename)
 
                 if time() - c_time > p_int:
                     c_time = time()

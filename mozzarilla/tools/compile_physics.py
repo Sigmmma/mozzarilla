@@ -3,10 +3,11 @@ import zlib
 from os.path import dirname, join, relpath, basename, isfile
 from tkinter.filedialog import askopenfilename
 
+from reclaimer.model.jms import read_jms
+from reclaimer.hek.defs.objs.matrices import quaternion_to_matrix, Matrix
 from supyr_struct.defs.util import sanitize_path
 from supyr_struct.defs.constants import PATHDIV
-from reclaimer.jms import read_jms
-from reclaimer.hek.defs.objs.matrices import quaternion_to_matrix, Matrix
+from traceback import format_exc
 
 
 def physics_from_jms(app, fp=None):
@@ -37,10 +38,11 @@ def physics_from_jms(app, fp=None):
         print("Creating physics from this jms file:")
         print("    %s" % fp)
         with open(fp, "r") as f:
-            jms_data = read_jms(f.read(), "regions")
+            jms_model = read_jms(f.read(), "regions")
 
-        markers = jms_data[4]
+        markers = jms_model.markers
     except Exception:
+        print(format_exc())
         print("    Could not load jms file")
         return
 
