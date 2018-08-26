@@ -11,6 +11,8 @@ from binilla.util import sanitize_path, is_in_dir, get_cwd, PATHDIV
 from binilla.widgets import BinillaWidget, ScrollMenu
 from reclaimer.hek.defs.mod2 import mod2_def
 from reclaimer.model.jms import read_jms, write_jms, MergedJmsModel, JmsModel
+from reclaimer.model.dae import jms_model_from_dae
+from reclaimer.model.obj import jms_model_from_obj
 from reclaimer.model.model_compilation import compile_gbxmodel, generate_shader
 
 if __name__ == "__main__":
@@ -114,11 +116,12 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
 
         self.optimize_label = tk.Label(
-            self.settings_frame, text="Vertex optimization")
+            self.settings_frame, justify="right",
+            text=("Vertex optimization\n(Set before loading)"))
         self.optimize_menu = ScrollMenu(
             self.settings_frame, menu_width=5,
             options=("None", "Exact", "Loose"))
-        self.optimize_menu.sel_index = 0
+        self.optimize_menu.sel_index = 1
 
         self.jms_info_tree = tk.ttk.Treeview(
             self.jms_info_frame, selectmode='browse', padding=(0, 0), height=4)
@@ -236,9 +239,9 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.tags_dir_browse_button.pack(side='left')
 
         self.optimize_label.grid(
-            sticky='ne', row=3, column=1, padx=3, pady=3)
+            sticky='ne', row=3, column=1, padx=3)
         self.optimize_menu.grid(
-            sticky='new', row=3, column=2, padx=3, pady=3)
+            sticky='new', row=3, column=2, padx=3, pady=(3, 0))
         self.lods_frame.grid(sticky='ne', row=0, column=3, rowspan=4)
         self.shaders_frame.grid(sticky='nsew', row=0, column=0,
                                 columnspan=3, rowspan=3, pady=(0, 3))
@@ -394,7 +397,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         dirpath = askdirectory(
             initialdir=jms_dir, parent=self,
-            title="Select the folder of jms models to compile...")
+            title="Select the folder of jms/obj models to compile...")
 
         dirpath = join(sanitize_path(dirpath), "")
         if not dirpath:
@@ -618,7 +621,8 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         fps = []
         for _, __, files in os.walk(models_dir):
             for fname in files:
-                if fname.lower().endswith(".jms"):
+                ext = splitext(fname)[-1].lower()
+                if ext in ".jms.obj.dae":
                     fps.append(join(models_dir, fname))
 
             break
@@ -637,10 +641,25 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             try:
                 print("    %s" % fp.replace('/', '\\').split("\\")[-1])
                 self.app_root.update()
-                with open(fp, "r") as f:
-                    jms_models.append(read_jms(f.read(), '',
-                                              basename(fp).split('.')[0]))
-                jms_model = jms_models[-1]
+
+                model_name = basename(fp).split('.')[0]
+                ext = splitext(fp)[-1].lower()
+
+                jms_model = None
+                if ext == ".jms":
+                    with open(fp, "r") as f:
+                        jms_model = read_jms(f.read(), '', model_name)
+                elif ext == ".obj":
+                    with open(fp, "r") as f:
+                        jms_model = jms_model_from_obj(f.read(), model_name)
+                elif ext == ".dae":
+                    jms_model = jms_model_from_dae(fp, model_name)
+
+                if not jms_model:
+                    continue
+
+                jms_models.append(jms_model)
+
                 if optimize_level:
                     old_vert_ct = len(jms_model.verts)
                     print("        Optimizing...", end='')
@@ -720,13 +739,15 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                         mat.shader_type = shdr_ref.shader.tag_class.enum_name
                         mat.shader_path = shdr_ref.shader.filepath
 
+
                 local_shaders = {}
                 if has_local_shaders and is_in_dir(shaders_dir, tags_dir):
                     # fill in any missing shader paths with ones found nearby
                     for _, __, files in os.walk(shaders_dir):
                         for filename in files:
                             name, ext = splitext(filename)
-                            if ext.lower().startswith(".shader"):
+                            ext = ext.lower()
+                            if ext.startswith(".shader"):
                                 local_shaders.setdefault(
                                     name.split("\\")[-1].lower(), []).append(
                                         join(shaders_dir, filename))
@@ -753,17 +774,28 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             self.low_lod_cutoff.set("0.0")
             self.superlow_lod_cutoff.set("0.0")
 
+
         for mat in merged_jms.materials:
+            shader_path = mat.shader_path
             if mat.shader_type in ("shader", ""):
-                shader_path = mat.name
-                try:
-                    if shaders_dir:
+                assume_shaders_dir = not shaders_dir
+
+                if not assume_shaders_dir:
+                    try:
                         shader_path = relpath(
                             join(shaders_dir, shader_path), tags_dir)
-                    mat.shader_path = shader_path.strip("\\")
-                except ValueError:
-                    mat.shader_path = "shaders\\" + shader_path.strip("\\")
+                        shader_path = shader_path.strip("\\")
+                    except ValueError:
+                        assume_shaders_dir = True
+
                 mat.shader_type = "shader_model"
+            else:
+                assume_shaders_dir = False
+
+            if assume_shaders_dir or shader_path.startswith("..\\"):
+                shader_path = "shaders\\" + basename(shader_path)
+
+            mat.shader_path = shader_path.lstrip("..\\")
 
 
         if not self.mod2_tag:
@@ -826,6 +858,18 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             print("Creating new gbxmodel tag.")
             mod2_tag = mod2_def.build()
 
+            while not self.gbxmodel_path.get():
+                self.gbxmodel_path_browse(True)
+                if not self.gbxmodel_path.get():
+                    if messagebox.askyesno(
+                            "Unsaved gbxmodel",
+                            "Are you sure you wish to cancel saving?",
+                            icon='warning', parent=self):
+                        print("    Gbxmodel compilation cancelled.")
+                        return
+
+            mod2_tag.filepath = self.gbxmodel_path.get()
+
         self.app_root.update()
 
         errors = compile_gbxmodel(mod2_tag, self.merged_jms)
@@ -851,19 +895,6 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         tagdata.medium_lod_cutoff = medium_lod_cutoff
         tagdata.low_lod_cutoff = low_lod_cutoff
         tagdata.superlow_lod_cutoff = superlow_lod_cutoff
-
-        if not updating:
-            while not self.gbxmodel_path.get():
-                self.gbxmodel_path_browse(True)
-                if not self.gbxmodel_path.get():
-                    if messagebox.askyesno(
-                            "Unsaved gbxmodel",
-                            "Are you sure you wish to cancel saving?",
-                            icon='warning', parent=self):
-                        print("    Gbxmodel compilation cancelled.")
-                        return
-
-            mod2_tag.filepath = self.gbxmodel_path.get()
 
         try:
             mod2_tag.calc_internal_data()
