@@ -622,7 +622,8 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         for _, __, files in os.walk(models_dir):
             for fname in files:
                 ext = splitext(fname)[-1].lower()
-                if ext in ".jms.obj.dae":
+                #if ext in ".jms.obj.dae":
+                if ext in ".jms.obj":
                     fps.append(join(models_dir, fname))
 
             break
