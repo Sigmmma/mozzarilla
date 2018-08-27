@@ -28,7 +28,7 @@ from mozzarilla.tools import \
      SearchAndReplaceWindow, SauceRemovalWindow, BitmapConverterWindow,\
      DependencyWindow, TagScannerWindow, DataExtractionWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
-     bitmap_from_dds, bitmap_from_bitmap_source, \
+     bitmap_from_dds, bitmap_from_multiple_dds, bitmap_from_bitmap_source, \
      ModelCompilerWindow, physics_from_jms,\
      hud_message_text_from_hmt
 
@@ -47,7 +47,7 @@ default_hotkeys.update({
     '<F9>': "bitmap_from_dds",
     '<F10>': "bitmap_from_bitmap_source",
     '<F11>': "create_hek_pool_window",
-    #'<F12>': "???",
+    '<F12>': "bitmap_from_multiple_dds",
     })
 
 this_curr_dir = get_cwd(__file__)
@@ -186,6 +186,8 @@ class Mozzarilla(Binilla):
 
         self.compile_menu.add_command(
             label="Bitmap from dds texture", command=self.bitmap_from_dds)
+        self.compile_menu.add_command(
+            label="Bitmap from dds textures", command=self.bitmap_from_multiple_dds)
         self.compile_menu.add_command(
             label="Bitmap from bitmap source", command=self.bitmap_from_bitmap_source)
         self.compile_menu.add_separator()
@@ -870,6 +872,9 @@ class Mozzarilla(Binilla):
 
     def bitmap_from_bitmap_source(self, e=None):
         bitmap_from_bitmap_source(self)
+
+    def bitmap_from_multiple_dds(self, e=None):
+        bitmap_from_multiple_dds(self)
 
     def physics_from_jms(self, e=None):
         physics_from_jms(self)
