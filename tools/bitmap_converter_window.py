@@ -938,7 +938,6 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
                     conv_flags = self.conversion_flags[fp]
                     extracting = conv_flags.extract_to != 0
                     converting = get_will_be_converted(conv_flags, bitmap_info)
-                    #print(pruning, converting, extracting)
                     if pruning or converting or extracting:
                         tag = bitm_def.build(filepath=join(tags_dir, fp))
                         if pruning:

@@ -225,6 +225,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
     def _dir_extract(self):
         self._extracting = True
+        self.stop_extracting = False
         try:
             self.do_dir_extract()
         except Exception:
@@ -233,6 +234,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
     def _tag_extract(self):
         self._extracting = True
+        self.stop_extracting = False
         try:
             self.do_tag_extract()
         except Exception:
