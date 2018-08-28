@@ -55,7 +55,7 @@ this_curr_dir = get_cwd(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.3.2'
+    version = '1.3.3'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -185,11 +185,11 @@ class Mozzarilla(Binilla):
             command=self.show_data_extraction_window)
 
         self.compile_menu.add_command(
-            label="Bitmap from dds texture", command=self.bitmap_from_dds)
+            label="Bitmap from dds texture(s)", command=self.bitmap_from_multiple_dds)
         self.compile_menu.add_command(
-            label="Bitmap from dds textures", command=self.bitmap_from_multiple_dds)
+            label="Bitmap(s) from dds texture", command=self.bitmap_from_dds)
         self.compile_menu.add_command(
-            label="Bitmap from bitmap source", command=self.bitmap_from_bitmap_source)
+            label="Bitmap(s) from bitmap source", command=self.bitmap_from_bitmap_source)
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
             label="Gbxmodel from jms", command=self.show_model_compiler_window)
