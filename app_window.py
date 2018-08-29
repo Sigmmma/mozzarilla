@@ -46,8 +46,8 @@ default_hotkeys.update({
 
     '<F9>': "bitmap_from_dds",
     '<F10>': "bitmap_from_bitmap_source",
-    '<F11>': "create_hek_pool_window",
-    '<F12>': "bitmap_from_multiple_dds",
+    '<F11>': "bitmap_from_multiple_dds",
+    #'<F12>': "create_hek_pool_window",
     })
 
 this_curr_dir = get_cwd(__file__)
@@ -55,7 +55,7 @@ this_curr_dir = get_cwd(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.3.3'
+    version = '1.3.5'
     log_filename = 'mozzarilla.log'
     debug = 0
 
