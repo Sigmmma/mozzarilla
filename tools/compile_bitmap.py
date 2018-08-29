@@ -1,7 +1,7 @@
 import zlib
 from traceback import format_exc
 
-from os.path import dirname, join
+from os.path import basename, dirname, join, splitext
 from struct import unpack
 from tkinter.filedialog import askopenfilenames
 
@@ -51,7 +51,12 @@ def bitmap_from_dds(app, fps=()):
         window.update_title(fp.split(PATHDIV)[-1])
 
         try:
-            add_bitmap_to_bitmap_tag(bitm_tag, w, h, d, typ, fmt, mips, pixels)
+            seq_name = basename(splitext(fp)[0].lower())
+            if "#" in seq_name:
+                seq_name, _ = seq_name.split("#", 1)
+
+            add_bitmap_to_bitmap_tag(bitm_tag, w, h, d, typ, fmt,
+                                     mips, pixels, seq_name)
         except Exception:
             print(format_exc())
             print("Could not add bitmap data to bitmap tag.")
@@ -107,7 +112,12 @@ def bitmap_from_multiple_dds(app, fps=()):
             title_set = True
 
         try:
-            add_bitmap_to_bitmap_tag(bitm_tag, w, h, d, typ, fmt, mips, pixels)
+            seq_name = basename(splitext(fp)[0].lower())
+            if "#" in seq_name:
+                seq_name, _ = seq_name.split("#", 1)
+
+            add_bitmap_to_bitmap_tag(bitm_tag, w, h, d, typ, fmt,
+                                     mips, pixels, seq_name)
         except Exception:
             print(format_exc())
             print("Could not add bitmap data to bitmap tag.")
@@ -119,11 +129,27 @@ def bitmap_from_multiple_dds(app, fps=()):
 
 
 def add_bitmap_to_bitmap_tag(bitm_tag, width, height, depth, typ, fmt,
-                             mip_count, new_pixels):
+                             mip_count, new_pixels, seq_name=""):
     bitm_data = bitm_tag.data.tagdata
+    sequences = bitm_data.sequences.STEPTREE
     bitmaps = bitm_data.bitmaps.STEPTREE
+
+    if len(bitmaps) >= 2048:
+        raise ValueError("Cannot add more bitmaps(max of 2048 per tag).")
+
     bitmaps.append()
+    if not sequences or sequences[-1].sequence_name != seq_name:
+        if len(sequences) >= 256:
+            print("Cannot add more sequences(max of 256 per tag).")
+        else:
+            sequences.append()
+            sequences[-1].sequence_name = seq_name[: 31]
+            sequences[-1].first_bitmap_index = len(bitmaps) - 1
+
+    seq_block = sequences[-1]
     bitm_block = bitmaps[-1]
+    if seq_block == seq_name:
+        seq_block.bitmap_count += 1
 
     if len(bitmaps) == 1:
         if typ == "texture_2d":
