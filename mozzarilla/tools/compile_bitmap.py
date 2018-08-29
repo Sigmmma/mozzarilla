@@ -148,7 +148,7 @@ def add_bitmap_to_bitmap_tag(bitm_tag, width, height, depth, typ, fmt,
 
     seq_block = sequences[-1]
     bitm_block = bitmaps[-1]
-    if seq_block == seq_name:
+    if seq_block.sequence_name == seq_name:
         seq_block.bitmap_count += 1
 
     if len(bitmaps) == 1:
