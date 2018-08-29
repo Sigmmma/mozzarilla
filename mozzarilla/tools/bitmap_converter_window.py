@@ -1688,7 +1688,6 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             displayed_paths.reverse()
 
     def populate_tag_list_boxes(self):
-        print(self._populating)
         if self._populating:
             return
 
