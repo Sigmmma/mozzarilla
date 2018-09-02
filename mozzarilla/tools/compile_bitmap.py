@@ -46,6 +46,7 @@ def bitmap_from_dds(app, fps=()):
             return
 
         window = window[0]
+        window.is_new_tag = True
         bitm_tag = window.tag
 
         window.update_title(fp.split(PATHDIV)[-1])
@@ -93,6 +94,7 @@ def bitmap_from_multiple_dds(app, fps=()):
 
     print("Creating bitmap from dds files")
     window = window[0]
+    window.is_new_tag = True
     bitm_tag = window.tag
     title_set = False
 
@@ -422,6 +424,7 @@ def bitmap_from_bitmap_source(app, e=None):
         if not window:
             continue
         window = window[0]
+        window.is_new_tag = True
 
         # get the bitmap tag and make a new bitmap block
         new_bitm_tag = window.tag
