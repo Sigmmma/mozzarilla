@@ -135,6 +135,7 @@ def add_bitmap_to_bitmap_tag(bitm_tag, width, height, depth, typ, fmt,
     bitm_data = bitm_tag.data.tagdata
     sequences = bitm_data.sequences.STEPTREE
     bitmaps = bitm_data.bitmaps.STEPTREE
+    seq_name = seq_name[: 31]
 
     if len(bitmaps) >= 2048:
         raise ValueError("Cannot add more bitmaps(max of 2048 per tag).")
@@ -145,7 +146,7 @@ def add_bitmap_to_bitmap_tag(bitm_tag, width, height, depth, typ, fmt,
             print("Cannot add more sequences(max of 256 per tag).")
         else:
             sequences.append()
-            sequences[-1].sequence_name = seq_name[: 31]
+            sequences[-1].sequence_name = seq_name
             sequences[-1].first_bitmap_index = len(bitmaps) - 1
 
     seq_block = sequences[-1]
