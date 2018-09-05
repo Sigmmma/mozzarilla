@@ -194,6 +194,7 @@ def get_channel_mappings(conv_flags, bitmap_info):
                 chan_merge_map = ab.M_ARGB_TO_L
             elif fmt_t == ab.FORMAT_A8 or chan_to_keep == 0:
                 chan_map = ab.ANYTHING_TO_A
+                chan_merge_map = ab.M_ARGB_TO_A
             else:
                 chan_merge_map = ab.M_ARGB_TO_L
 
