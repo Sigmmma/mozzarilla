@@ -743,6 +743,9 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         self.populate_bitmap_info()
         self.populate_settings()
 
+        if self.app_root is not self:
+            self.transient(self.app_root)
+
     def update_all_path_colors(self):
         update_color = self.tag_list_frame.update_path_listbox_entry_color
         for i in range(self.tag_list_frame.path_listbox.size()):
