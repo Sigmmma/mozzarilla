@@ -265,6 +265,8 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.compile_button.pack(side='right', expand=True, fill='both', padx=3)
 
         self.apply_style()
+        if self.app_root is not self:
+            self.transient(self.app_root)
 
     def populate_model_info_tree(self):
         jms_tree = self.jms_info_tree

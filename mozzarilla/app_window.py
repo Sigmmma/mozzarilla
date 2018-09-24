@@ -296,7 +296,7 @@ class Mozzarilla(Binilla):
     def set_tags_dir(self, e=None, tags_dir=None, manual=True):
         if tags_dir is None:
             tags_dir = askdirectory(initialdir=self.tags_dir, parent=self,
-                                    title="Select the tags directory to add")
+                                    title="Select the tags directory")
 
         if not tags_dir:
             return
