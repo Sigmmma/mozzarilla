@@ -1,7 +1,8 @@
 import zlib
 
-from os.path import dirname, join, relpath, basename, isfile
+from os.path import dirname, join, relpath, isfile
 from tkinter.filedialog import askopenfilename
+from traceback import format_exc
 
 from supyr_struct.defs.util import sanitize_path
 from supyr_struct.defs.constants import PATHDIV
@@ -13,7 +14,7 @@ MAX_ICON_NAME_LENGTH = max(*(len(name) for name in icon_types))
 
 
 def hud_message_text_from_hmt(app, fp=None):
-    load_dir = app.jms_load_dir
+    load_dir = app.last_data_load_dir
     tags_dir = app.tags_dir
     data_dir = app.data_dir
     if not tags_dir:
@@ -36,8 +37,8 @@ def hud_message_text_from_hmt(app, fp=None):
     message_strings = {}
     message_names = []
     try:
-        app.jms_load_dir = dirname(fp)
         fp = sanitize_path(fp)
+        app.last_data_load_dir = dirname(fp)
 
         print("Creating hud_message_text from this hmt file:")
         print("    %s" % fp)
@@ -204,9 +205,10 @@ def hud_message_text_from_hmt(app, fp=None):
     # reload the window to display the newly entered info
     window.reload()
     app.update_tag_window_title(window)
-    if not error:
-        app.save_tag()
-    else:
+    if error:
         print("    Errors occurred while compiling. " +
               "Tag will not be automatically saved.")
         window.is_new_tag = True
+    elif not isfile(tag_path):
+        # save the tag if it doesnt already exist
+        app.save_tag()
