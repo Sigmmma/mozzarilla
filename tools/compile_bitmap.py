@@ -1,9 +1,9 @@
 import zlib
-from traceback import format_exc
 
 from os.path import basename, dirname, join, splitext
 from struct import unpack
 from tkinter.filedialog import askopenfilenames
+from traceback import format_exc
 
 from supyr_struct.defs.util import sanitize_path
 from supyr_struct.defs.constants import PATHDIV
@@ -352,7 +352,7 @@ def parse_dds_file(filepath):
 def bitmap_from_bitmap_source(app, e=None):
     load_dir = app.bitmap_load_dir
     if not load_dir:
-        load_dir = app.last_load_dir
+        load_dir = app.last_data_load_dir
     
     fps = askopenfilenames(initialdir=load_dir, parent=app,
                            filetypes=(("bitmap", "*.bitmap"), ("All", "*")),
