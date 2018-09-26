@@ -33,6 +33,7 @@ new_method_enums = (
     {GUI_NAME:"make gbxmodel from jms", NAME:"model_from_jms"},
     {GUI_NAME:"make hud_message_text from hmt", NAME:"hud_message_text_from_hmt"},
     {GUI_NAME:"make bitmap from dds", NAME:"bitmap_from_multiple_dds"},
+    {GUI_NAME:"make strings from txt", NAME:"strings_from_txt"},
     )
 
 method_enums += new_method_enums
@@ -81,10 +82,15 @@ mozzarilla = Container("mozzarilla",
     UInt32("last_tool_path", VISIBLE=False, EDITABLE=False),
     Pad(64 - 2*4 - 4*1),
 
-    UInt16("tags_dirs_count",  VISIBLE=False, EDITABLE=False, MIN=1),
-    Pad(64 - 2*1),
+    UInt16("tags_dirs_count",  VISIBLE=False, EDITABLE=False),
+    UInt16("load_dirs_count",  VISIBLE=False, EDITABLE=False),
+    Pad(64 - 2*2),
 
-    Array("tags_dirs",  SUB_STRUCT=filepath, SIZE=".tags_dirs_count", MIN=1),
+    Array("tags_dirs", SUB_STRUCT=filepath, SIZE=".tags_dirs_count", MIN=1),
+    Array("load_dirs", SUB_STRUCT=filepath, SIZE=".load_dirs_count",
+        NAME_MAP=("last_data_load_dir", "jms_load_dir", "bitmap_load_dir"),
+        MIN=3
+        ),
     COMMENT="\nThese are settings specific to Mozzarilla.\n"
     )
 
