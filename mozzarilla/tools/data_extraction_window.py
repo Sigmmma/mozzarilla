@@ -73,7 +73,11 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         self.def_ids_scrollbar.config(command=self.def_ids_listbox.yview)
 
         for def_id in self.listbox_index_to_def_id:
-            tag_ext = self.handler.id_ext_map[def_id].split('.')[-1]
+            try:
+                tag_ext = self.handler.id_ext_map[def_id].split('.')[-1]
+            except KeyError:
+                # not available with the current tag set
+                continue
             self.def_ids_listbox.insert('end', tag_ext)
             self.def_ids_listbox.select_set('end')
 
