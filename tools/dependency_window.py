@@ -74,6 +74,10 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
 
         self.transient(app_root)
         self.apply_style()
+        self.update()
+        w, h = self.winfo_reqwidth(), self.winfo_reqheight()
+        self.geometry("%sx%s" % (w, h))
+        self.minsize(width=w, height=h)
 
     def browse(self):
         if self._zipping:

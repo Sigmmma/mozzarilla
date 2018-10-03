@@ -761,8 +761,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
         self.update()
-        w = self.winfo_reqwidth()
-        h = self.winfo_reqheight()
+        w, h = self.winfo_reqwidth(), self.winfo_reqheight()
         self.geometry("%sx%s" % (w, h))
         self.minsize(width=w, height=h)
 
