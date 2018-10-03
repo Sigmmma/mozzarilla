@@ -129,6 +129,10 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         self.directory_path.set(handler.tagsdir)
         self.logfile_path.set(join(handler.tagsdir, "tag_scanner.log"))
         self.apply_style()
+        self.update()
+        w, h = self.winfo_reqwidth(), self.winfo_reqheight()
+        self.geometry("%sx%s" % (w, h))
+        self.minsize(width=w, height=h)
 
     def deselect_all(self):
         if self._scanning:

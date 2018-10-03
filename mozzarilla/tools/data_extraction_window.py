@@ -35,7 +35,6 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
 
         self.title("Tag Data Extractor")
-        self.geometry("400x360+0+0")
         self.resizable(0, 0)
         self.update()
         try:
@@ -135,6 +134,10 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
         self.transient(app_root)
         self.apply_style()
+        self.update()
+        w, h = self.winfo_reqwidth(), self.winfo_reqheight()
+        self.geometry("%sx%s" % (w, h))
+        self.minsize(width=w, height=h)
 
     def dir_browse(self):
         if self._extracting:
@@ -320,7 +323,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
             tags_dir += PATHDIV
 
         def_id = tag_class_ext_to_fcc_os.get(splitext(tag_path)[-1].lower()[1:])
-        if def_id is None:
+        if def_id is None or def_id not in h1_data_extractors:
             print("Cannot extract data from this kind of tag.")
             return
         elif not is_in_dir(tag_path, tags_dir, 0):
