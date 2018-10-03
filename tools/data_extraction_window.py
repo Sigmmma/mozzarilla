@@ -263,8 +263,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
         settings = dict(out_dir=data_path, overwrite=self.overwrite.get(),
                         decode_adpcm=self.decode_adpcm.get(), engine="yelo")
-        print(tags_dir)
-        print(dirname(tags_dir))
+        print("Beginning tag data extracton in:\t%s" % tags_dir)
 
         s_time = time()
         c_time = s_time
