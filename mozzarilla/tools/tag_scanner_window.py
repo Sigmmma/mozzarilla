@@ -1,7 +1,10 @@
+import ctypes
 import os
+import sys
 import tkinter as tk
 
 from os.path import dirname, join, splitext, relpath
+
 from time import time
 from threading import Thread
 from tkinter.filedialog import askdirectory, asksaveasfilename
@@ -12,6 +15,28 @@ from binilla.widgets import BinillaWidget
 from supyr_struct.defs.constants import *
 
 curr_dir = get_cwd(__file__)
+
+
+platform = sys.platform.lower()
+if "linux" in platform:
+    platform = "linux"
+
+
+SetFileAttributesW = None
+if platform == "win32":
+    TEXT_EDITOR_NAME = "notepad"
+    SetFileAttributesW = ctypes.windll.kernel32.SetFileAttributesW
+elif platform == "darwin":
+    # I don't actually think this will work since mac seems to require
+    # the "open" argument and the -a argument before the application name.
+    # leaving this here just in case it somehow works though.
+    TEXT_EDITOR_NAME = "TextEdit"
+elif platform == "linux":
+    TEXT_EDITOR_NAME = "nano"
+else:
+    # idfk
+    TEXT_EDITOR_NAME = "vim"
+
 
 class TagScannerWindow(tk.Toplevel, BinillaWidget):
     app_root = None
@@ -150,13 +175,14 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         def_id = handler.get_def_id(filepath)
 
         try:
-            tag = handler.get_tag(filepath, def_id)
+            tag = handler.get_tag(sanitize_path(filepath), def_id)
         except KeyError:
             tag = None
         try:
             if tag is None:
                 return handler.build_tag(
-                    filepath=join(self.tags_dir, filepath))
+                    filepath=sanitize_path(join(self.tags_dir, filepath))
+                    )
         except Exception:
             pass
         return tag
@@ -230,7 +256,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         handler = self.handler
         self.stop_scanning = False
 
-        tags_dir = self.tags_dir = self.handler.tagsdir
+        tags_dir = self.tags_dir = sanitize_path(self.handler.tagsdir)
         dirpath = sanitize_path(self.directory_path.get())
         logpath = sanitize_path(self.logfile_path.get())
 
@@ -263,12 +289,12 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         print("Locating tags...")
 
         for root, directories, files in os.walk(dirpath):
-            root = join(root, "")
+            root = sanitize_path(join(root, ""))
 
             rel_root = relpath(root, tags_dir)
 
             for filename in files:
-                filepath = join(sanitize_path(rel_root), filename)
+                filepath = join(rel_root, sanitize_path(filename))
 
                 if time() - c_time > p_int:
                     c_time = time()
@@ -294,7 +320,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             tags_coll = all_tag_paths[def_id]
 
             # always display the first tag's filepath
-            c_time = time() - p_int + 1
+            c_time = time() - (p_int + 100)
 
             for filepath in sorted(tags_coll):
                 if self.stop_scanning:
@@ -362,7 +388,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             try:
                 print("Scan completed.\n")
                 if self.open_logfile.get():
-                    do_subprocess("notepad.exe", exec_args=(logpath,),
+                    do_subprocess(TEXT_EDITOR_NAME, exec_args=(logpath,),
                                   proc_controller=ProcController(abandon=True))
             except Exception:
                 print("Could not open written log.")

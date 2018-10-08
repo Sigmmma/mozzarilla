@@ -269,7 +269,7 @@ class DependencyFrame(HierarchyFrame):
         dir_tree = self.tags_tree
         self.tags_dir = self.app_root.tags_dir
         if not dir_tree['columns']:
-            dir_tree["columns"]=("dependency")
+            dir_tree["columns"]=("dependency", )
             dir_tree.heading("#0", text='Filepath')
             dir_tree.heading("dependency", text='Dependency path')
 
@@ -336,7 +336,7 @@ class DependencyFrame(HierarchyFrame):
             self.destroy_subitems(iid)
 
     def generate_subitems(self, parent_iid):
-        tags_dir = self.tags_dir
+        tags_dir = sanitize_path(self.tags_dir)
         dir_tree = self.tags_tree
         parent_tag_path = dir_tree.item(parent_iid)['values'][-1]
 
@@ -346,13 +346,13 @@ class DependencyFrame(HierarchyFrame):
         for tag_ref_block in self.get_dependencies(parent_tag_path):
             try:
                 ext = '.' + tag_ref_block.tag_class.enum_name
-                if (self.handler.treat_mode_as_mod2 and (
-                    ext == '.model' and not exists(
-                        join(tags_dir, tag_ref_block.filepath + ext)))):
+                if (self.handler.treat_mode_as_mod2 and ext == '.model' and
+                    (not exists(sanitize_path(
+                        join(tags_dir, tag_ref_block.filepath + '.model'))))):
                     ext = '.gbxmodel'
             except Exception:
                 ext = ''
-            tag_path = tag_ref_block.filepath + ext
+            tag_path = sanitize_path(tag_ref_block.filepath + ext)
 
             dependency_name = tag_ref_block.NAME
             last_block = tag_ref_block

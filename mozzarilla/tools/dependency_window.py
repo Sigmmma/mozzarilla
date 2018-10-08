@@ -88,9 +88,9 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         defs = self.app_root.handler.defs
         for def_id in sorted(defs.keys()):
             filetypes.append((def_id, defs[def_id].ext))
-        fp = askopenfilename(initialdir=self.app_root.last_load_dir,
-                             filetypes=filetypes,
-                             parent=self, title="Select a tag")
+        fp = askopenfilename(
+            title="Select a tag", filetypes=filetypes, parent=self,
+            initialdir=self.app_root.last_load_dir)
 
         if not fp:
             return
@@ -142,9 +142,9 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
                 continue
             try:
                 ext = '.' + node.tag_class.enum_name
-                if (handler.treat_mode_as_mod2 and (
-                    ext == '.model' and not exists(
-                        join(tags_dir, node.filepath) + ext))):
+                if (handler.treat_mode_as_mod2 and ext == '.model' and
+                    (not exists(sanitize_path(
+                        join(tags_dir, node.filepath + '.model'))))):
                     ext = '.gbxmodel'
             except Exception:
                 ext = ''
@@ -158,22 +158,20 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
 
         app = self.app_root
         handler = self.handler = app.handler
-        sani = sanitize_path
-
         handler_name = app.handler_names[app._curr_handler_index]
         if handler_name not in app.tags_dir_relative:
             print("Change the current tag set.")
             return
         else:
-            tags_dir = handler.tagsdir
+            tags_dir = sanitize_path(handler.tagsdir)
 
-        filepath = sani(filepath)
-        rel_filepath = relpath(filepath, tags_dir)
+        filepath = sanitize_path(filepath)
 
         if not is_in_dir(filepath, tags_dir, 0):
             print("Specified tag is not located within the tags directory")
             return
 
+        rel_filepath = relpath(filepath, tags_dir)
         tag = self.get_tag(rel_filepath)
         if tag is None:
             print("Could not load tag:\n    %s" % filepath)
@@ -210,16 +208,14 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
 
         app = self.app_root
         handler = self.handler = app.handler
-        sani = sanitize_path
-
         handler_name = app.handler_names[app._curr_handler_index]
         if handler_name not in app.tags_dir_relative:
             print("Change the current tag set.")
             return
         else:
-            tags_dir = handler.tagsdir
+            tags_dir = sanitize_path(handler.tagsdir)
 
-        tag_path = sani(tag_path)
+        tag_path = sanitize_path(tag_path)
         if not is_in_dir(tag_path, tags_dir, 0):
             print("Specified tag is not located within the tags directory")
             return

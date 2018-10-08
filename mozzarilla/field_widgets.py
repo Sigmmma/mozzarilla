@@ -2,7 +2,7 @@ import tkinter as tk
 import reclaimer
 
 from array import array
-from os.path import dirname, exists, splitext
+from os.path import dirname, exists, splitext, join
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
 
@@ -596,12 +596,19 @@ class DependencyFrame(ContainerFrame):
                 tags_dir = self.tag_window.tag.tags_dir
             except AttributeError as e:
                 return
+
             if not tags_dir.endswith(PATHDIV):
                 tags_dir += PATHDIV
 
-            init_dir = tags_dir
-            try: init_dir = tags_dir + dirname(self.node.filepath)
-            except Exception: pass
+            init_dir = sanitize_path(tags_dir)
+            try:
+                init_dir = dirname(
+                    join(tags_dir, sanitize_path(self.node.filepath))
+                    )
+            except Exception:
+                pass
+
+            init_dir = sanitize_path(init_dir)
 
             filetypes = []
             for ext in sorted(self.node.tag_class.NAME_MAP):
@@ -620,8 +627,11 @@ class DependencyFrame(ContainerFrame):
             if not filepath:
                 return
 
-            filepath = sanitize_path(filepath)
-            tag_path, ext = splitext(filepath.lower().split(tags_dir.lower())[-1])
+            # ALWAYS store the path with \ as the separator. Halo tools expect
+            # the windows style '\' separator, not the unix/linux '/' separator
+            filepath = filepath.replace('/', '\\')
+            tag_path, ext = splitext(filepath.lower().split(
+                tags_dir.lower().replace('/', '\\'))[-1])
             orig_tag_class = self.node.tag_class.__copy__()
             try:
                 self.node.tag_class.set_to(ext[1:])
