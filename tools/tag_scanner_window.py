@@ -176,7 +176,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
         try:
             tag = handler.get_tag(sanitize_path(filepath), def_id)
-        except KeyError:
+        except (KeyError, LookupError):
             tag = None
         try:
             if tag is None:
@@ -329,10 +329,10 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
                 if time() - c_time > p_int:
                     c_time = time()
-                    print(' '*4 + filepath)
+                    print(' '*4 + filepath.lstrip("." + PATHDIV))
                     self.app_root.update_idletasks()
 
-                tag = self.get_tag(filepath)
+                tag = self.get_tag(join(tags_dir, filepath))
                 if tag is None:
                     print("    Could not load '%s'" % filepath)
                     continue
