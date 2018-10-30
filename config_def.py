@@ -86,10 +86,11 @@ mozzarilla = Container("mozzarilla",
     UInt16("load_dirs_count",  VISIBLE=False, EDITABLE=False),
     Pad(64 - 2*2),
 
-    Array("tags_dirs", SUB_STRUCT=filepath, SIZE=".tags_dirs_count", MIN=1),
+    Array("tags_dirs", SUB_STRUCT=filepath, SIZE=".tags_dirs_count",
+        MIN=1,  VISIBLE=False),
     Array("load_dirs", SUB_STRUCT=filepath, SIZE=".load_dirs_count",
         NAME_MAP=("last_data_load_dir", "jms_load_dir", "bitmap_load_dir"),
-        MIN=3
+        MIN=3, VISIBLE=False
         ),
     COMMENT="\nThese are settings specific to Mozzarilla.\n"
     )
@@ -151,11 +152,10 @@ reflexive_counts = {
 
 window_header = Struct("window_header",
     UInt32("struct_size", DEFAULT=44),
-    Pad(24),
-    #UInt32("unknown1"),
-    #UInt32("unknown2", DEFAULT=1),
+    UInt32("unknown1"),
+    UInt32("unknown2", DEFAULT=1),
     # These raw bytes seem to be some sort of window coordinates, but idc
-    #BytesRaw("unknown3", DEFAULT=b'\xff'*16, SIZE=16),
+    BytesRaw("unknown3", DEFAULT=b'\xff'*16, SIZE=16),
 
     QStruct("t_l_corner", SInt32("x"), SInt32("y"), ORIENT="h"),
     QStruct("b_r_corner", SInt32("x"), SInt32("y"), ORIENT="h"),
@@ -185,3 +185,7 @@ guerilla_workspace_def = TagDef("guerilla_workspace",
 
     ENDIAN='<', ext=".cfg"
     )
+
+
+def get():
+    return (config_def, guerilla_workspace_def)
