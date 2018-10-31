@@ -194,6 +194,7 @@ def get_channel_mappings(conv_flags, bitmap_info):
                 chan_merge_map = ab.M_ARGB_TO_L
             elif fmt_t == ab.FORMAT_A8 or chan_to_keep == 0:
                 chan_map = ab.ANYTHING_TO_A
+                chan_merge_map = ab.M_ARGB_TO_A
             else:
                 chan_merge_map = ab.M_ARGB_TO_L
 
@@ -742,6 +743,9 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         self.populate_bitmap_info()
         self.populate_settings()
 
+        if self.app_root is not self:
+            self.transient(self.app_root)
+
     def update_all_path_colors(self):
         update_color = self.tag_list_frame.update_path_listbox_entry_color
         for i in range(self.tag_list_frame.path_listbox.size()):
@@ -757,8 +761,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
         self.update()
-        w = self.winfo_reqwidth()
-        h = self.winfo_reqheight()
+        w, h = self.winfo_reqwidth(), self.winfo_reqheight()
         self.geometry("%sx%s" % (w, h))
         self.minsize(width=w, height=h)
 
@@ -938,7 +941,6 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
                     conv_flags = self.conversion_flags[fp]
                     extracting = conv_flags.extract_to != 0
                     converting = get_will_be_converted(conv_flags, bitmap_info)
-                    #print(pruning, converting, extracting)
                     if pruning or converting or extracting:
                         tag = bitm_def.build(filepath=join(tags_dir, fp))
                         if pruning:
@@ -1689,7 +1691,6 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             displayed_paths.reverse()
 
     def populate_tag_list_boxes(self):
-        print(self._populating)
         if self._populating:
             return
 

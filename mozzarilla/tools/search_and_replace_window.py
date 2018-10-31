@@ -70,8 +70,12 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
         self.replace_entry.pack(fill="x", expand=True, padx=5, pady=2)
         self.replace_button.pack(fill="x", anchor='center', padx=5, pady=(0,4))
 
+        self.transient(self.app_root)
         self.apply_style()
-        self.transient(app_root)
+        self.update()
+        w, h = self.winfo_reqwidth(), self.winfo_reqheight()
+        self.geometry("%sx%s" % (w, h))
+        self.minsize(width=w, height=h)
 
     def destroy(self):
         try:

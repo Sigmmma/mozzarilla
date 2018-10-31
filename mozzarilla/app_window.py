@@ -28,9 +28,9 @@ from mozzarilla.tools import \
      SearchAndReplaceWindow, SauceRemovalWindow, BitmapConverterWindow,\
      DependencyWindow, TagScannerWindow, DataExtractionWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
-     bitmap_from_dds, bitmap_from_bitmap_source, \
+     bitmap_from_dds, bitmap_from_multiple_dds, bitmap_from_bitmap_source, \
      ModelCompilerWindow, physics_from_jms,\
-     hud_message_text_from_hmt
+     hud_message_text_from_hmt, strings_from_txt
 
 
 default_hotkeys.update({
@@ -46,8 +46,8 @@ default_hotkeys.update({
 
     '<F9>': "bitmap_from_dds",
     '<F10>': "bitmap_from_bitmap_source",
-    '<F11>': "create_hek_pool_window",
-    #'<F12>': "???",
+    '<F11>': "bitmap_from_multiple_dds",
+    #'<F12>': "create_hek_pool_window",
     })
 
 this_curr_dir = get_cwd(__file__)
@@ -55,7 +55,7 @@ this_curr_dir = get_cwd(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.3.1'
+    version = '1.4.0'
     log_filename = 'mozzarilla.log'
     debug = 0
 
@@ -103,8 +103,9 @@ class Mozzarilla(Binilla):
     window_panes = None
     directory_frame = None
     directory_frame_width = 200
-    bitmap_load_dir = ""
+    last_data_load_dir = ""
     jms_load_dir = ""
+    bitmap_load_dir = ""
 
     def __init__(self, *args, **kwargs):
         self.debug = kwargs.pop('debug', self.debug)
@@ -185,9 +186,11 @@ class Mozzarilla(Binilla):
             command=self.show_data_extraction_window)
 
         self.compile_menu.add_command(
-            label="Bitmap from dds texture", command=self.bitmap_from_dds)
+            label="Bitmap from dds texture(s)", command=self.bitmap_from_multiple_dds)
         self.compile_menu.add_command(
-            label="Bitmap from bitmap source", command=self.bitmap_from_bitmap_source)
+            label="Bitmap(s) from dds texture", command=self.bitmap_from_dds)
+        self.compile_menu.add_command(
+            label="Bitmap(s) from bitmap source", command=self.bitmap_from_bitmap_source)
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
             label="Gbxmodel from jms", command=self.show_model_compiler_window)
@@ -196,6 +199,8 @@ class Mozzarilla(Binilla):
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
             label="Hud_message_text from hmt", command=self.hud_message_text_from_hmt)
+        self.compile_menu.add_command(
+            label="String_list / unicode_string_list from txt", command=self.strings_from_txt)
 
         self.defs_menu.add_separator()
         self.handlers = list(self.handlers)
@@ -294,7 +299,7 @@ class Mozzarilla(Binilla):
     def set_tags_dir(self, e=None, tags_dir=None, manual=True):
         if tags_dir is None:
             tags_dir = askdirectory(initialdir=self.tags_dir, parent=self,
-                                    title="Select the tags directory to add")
+                                    title="Select the tags directory")
 
         if not tags_dir:
             return
@@ -338,6 +343,7 @@ class Mozzarilla(Binilla):
         mozz = config_data.mozzarilla
         self._curr_handler_index = mozz.selected_handler.data
         tags_dirs = mozz.tags_dirs
+        load_dirs = mozz.load_dirs
 
         try:
             self.select_defs()
@@ -347,12 +353,16 @@ class Mozzarilla(Binilla):
         for i in range(len(self.tags_dirs)):
             self.remove_tags_dir(i, manual=False)
 
-        
         self._curr_tags_dir_index = 0
         for tags_dir in tags_dirs:
             self.add_tags_dir(tags_dir=tags_dir.path, manual=False)
         self.switch_tags_dir(
             index=min(mozz.last_tags_dir, len(self.tags_dirs)), manual=False)
+
+        for s in ("last_data_load_dir", "jms_load_dir",
+                  "bitmap_load_dir")[:len(load_dirs)]:
+            try: setattr(self, s, load_dirs[s].path)
+            except IndexError: pass
 
         if not self.tags_dir:
             self.tags_dir = self.curr_dir + "%stags%s" % (PATHDIV, PATHDIV)
@@ -772,6 +782,7 @@ class Mozzarilla(Binilla):
         config_data = config_file.data
         mozz = config_data.mozzarilla
         tags_dirs = mozz.tags_dirs
+        load_dirs = mozz.load_dirs
 
         mozz.selected_handler.data = self._curr_handler_index
         mozz.last_tags_dir = self._curr_tags_dir_index
@@ -781,6 +792,13 @@ class Mozzarilla(Binilla):
         for tags_dir in self.tags_dirs:
             tags_dirs.append()
             tags_dirs[-1].path = sani(tags_dir)
+
+        if len(load_dirs.NAME_MAP) > len(load_dirs):
+            load_dirs.extend(len(load_dirs.NAME_MAP) - len(load_dirs))
+
+        for s in ("last_data_load_dir", "jms_load_dir", "bitmap_load_dir"):
+            try: load_dirs[s].path = getattr(self, s)
+            except IndexError: pass
 
         if mozz.flags.show_hierarchy_window and mozz.flags.show_console_window:
             try:
@@ -871,8 +889,14 @@ class Mozzarilla(Binilla):
     def bitmap_from_bitmap_source(self, e=None):
         bitmap_from_bitmap_source(self)
 
+    def bitmap_from_multiple_dds(self, e=None):
+        bitmap_from_multiple_dds(self)
+
     def physics_from_jms(self, e=None):
         physics_from_jms(self)
 
     def hud_message_text_from_hmt(self, e=None):
         hud_message_text_from_hmt(self)
+
+    def strings_from_txt(self, e=None):
+        strings_from_txt(self)
