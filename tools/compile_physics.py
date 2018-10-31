@@ -2,12 +2,12 @@ import zlib
 
 from os.path import dirname, join, relpath, basename, isfile
 from tkinter.filedialog import askopenfilename
+from traceback import format_exc
 
 from reclaimer.model.jms import read_jms
 from reclaimer.hek.defs.objs.matrices import quaternion_to_matrix, Matrix
 from supyr_struct.defs.util import sanitize_path
 from supyr_struct.defs.constants import PATHDIV
-from traceback import format_exc
 
 
 def physics_from_jms(app, fp=None):
@@ -32,8 +32,8 @@ def physics_from_jms(app, fp=None):
         return
 
     try:
-        app.jms_load_dir = dirname(fp)
         fp = sanitize_path(fp)
+        app.jms_load_dir = dirname(fp)
 
         print("Creating physics from this jms file:")
         print("    %s" % fp)
@@ -139,4 +139,6 @@ def physics_from_jms(app, fp=None):
     # reload the window to display the newly entered info
     window.reload()
     app.update_tag_window_title(window)
-    app.save_tag()
+    if not isfile(tag_path):
+        # save the tag if it doesnt already exist
+        app.save_tag()

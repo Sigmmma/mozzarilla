@@ -35,7 +35,6 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
 
         self.title("Tag Data Extractor")
-        self.geometry("400x360+0+0")
         self.resizable(0, 0)
         self.update()
         try:
@@ -73,7 +72,11 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         self.def_ids_scrollbar.config(command=self.def_ids_listbox.yview)
 
         for def_id in self.listbox_index_to_def_id:
-            tag_ext = self.handler.id_ext_map[def_id].split('.')[-1]
+            try:
+                tag_ext = self.handler.id_ext_map[def_id].split('.')[-1]
+            except KeyError:
+                # not available with the current tag set
+                continue
             self.def_ids_listbox.insert('end', tag_ext)
             self.def_ids_listbox.select_set('end')
 
@@ -131,6 +134,10 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
         self.transient(app_root)
         self.apply_style()
+        self.update()
+        w, h = self.winfo_reqwidth(), self.winfo_reqheight()
+        self.geometry("%sx%s" % (w, h))
+        self.minsize(width=w, height=h)
 
     def dir_browse(self):
         if self._extracting:
@@ -225,6 +232,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
     def _dir_extract(self):
         self._extracting = True
+        self.stop_extracting = False
         try:
             self.do_dir_extract()
         except Exception:
@@ -233,6 +241,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
     def _tag_extract(self):
         self._extracting = True
+        self.stop_extracting = False
         try:
             self.do_tag_extract()
         except Exception:
@@ -254,8 +263,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
         settings = dict(out_dir=data_path, overwrite=self.overwrite.get(),
                         decode_adpcm=self.decode_adpcm.get(), engine="yelo")
-        print(tags_dir)
-        print(dirname(tags_dir))
+        print("Beginning tag data extracton in:\t%s" % tags_dir)
 
         s_time = time()
         c_time = s_time
@@ -314,7 +322,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
             tags_dir += PATHDIV
 
         def_id = tag_class_ext_to_fcc_os.get(splitext(tag_path)[-1].lower()[1:])
-        if def_id is None:
+        if def_id is None or def_id not in h1_data_extractors:
             print("Cannot extract data from this kind of tag.")
             return
         elif not is_in_dir(tag_path, tags_dir, 0):
