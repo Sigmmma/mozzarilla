@@ -288,7 +288,9 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
         # we want to preserve the color key transparency of
         # the original image if converting to the same format
         if fmt_s == fmt_t and fmt_t in (ab.FORMAT_P8, ab.FORMAT_DXT1):
-            ck_trans = True
+            # also need to make sure channels aren't being swapped around
+            if not conv_flags.multi_swap:
+                ck_trans = True
 
         if ab.CHANNEL_COUNTS[fmt_s] == 4:
             if fmt_s == ab.FORMAT_P8:
