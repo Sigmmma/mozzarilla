@@ -5,10 +5,6 @@ from binilla.widget_picker import *
 from binilla.widgets import BinillaWidget
 from .field_widgets import *
 from reclaimer.field_types import *
-try:
-    from reclaimer.h2.field_types import *
-except Exception:
-    print(format_exc())
 
 e_c.TITLE_WIDTH = 28
 e_c.DEF_STRING_ENTRY_WIDTH = 30
@@ -25,6 +21,7 @@ class MozzarillaWidgetPicker(WidgetPicker):
 
 def_halo_widget_picker = dhwp = MozzarillaWidgetPicker()
 
+dhwp.copy_widget(StringID, Struct)
 dhwp.add_widget(StrTagRef, EntryFrame)
 dhwp.add_widget(TagRef, DependencyFrame)
 
@@ -56,10 +53,21 @@ dhwp.copy_widget(StrLatin1Enum, SEnum32)
 #           Halo 2
 #############################
 try:
-    dhwp.copy_widget(StringID, QStruct)
-
+    from reclaimer.h2.field_types import *
     dhwp.copy_widget(H2TagRef, TagRef)
     dhwp.copy_widget(H2RawdataRef, RawdataRef)
     dhwp.copy_widget(H2Reflexive, Reflexive)
+except Exception:
+    print(format_exc())
+
+
+#############################
+#           Halo 3
+#############################
+try:
+    from reclaimer.h3.field_types import *
+    dhwp.copy_widget(H3TagRef, TagRef)
+    dhwp.copy_widget(H3RawdataRef, RawdataRef)
+    dhwp.copy_widget(H3Reflexive, Reflexive)
 except Exception:
     print(format_exc())
