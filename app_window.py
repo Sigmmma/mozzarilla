@@ -16,6 +16,7 @@ inject_halo_constants()
 from binilla.app_window import *
 from binilla.util import do_subprocess, is_main_frozen, get_cwd
 from reclaimer.hek.handler import HaloHandler
+from reclaimer.h3.handler import Halo3Handler
 from reclaimer.os_v3_hek.handler import OsV3HaloHandler
 from reclaimer.os_v4_hek.handler import OsV4HaloHandler
 from reclaimer.misc.handler import MiscHaloLoader
@@ -73,6 +74,7 @@ class Mozzarilla(Binilla):
         OsV4HaloHandler,
         MiscHaloLoader,
         StubbsHandler,
+        Halo3Handler,
         )
 
     handler_names = (
@@ -81,6 +83,7 @@ class Mozzarilla(Binilla):
         "Halo 1 OS v4",
         "Halo 1 Misc",
         "Stubbs the Zombie",
+        "Halo 3"
         )
 
     # names of the handlers that MUST load tags from within their tags_dir
@@ -89,6 +92,7 @@ class Mozzarilla(Binilla):
         "Halo 1 OS v3",
         "Halo 1 OS v4",
         "Stubbs the Zombie",
+        "Halo 3"
         ))
 
     tags_dirs = ()
