@@ -816,7 +816,8 @@ class DependencyFrame(ContainerFrame):
         for wid in self.f_widget_ids:
             w = self.f_widgets[wid]
             sub_desc = w.desc
-            if w.attr_index == 0 and sub_desc['ENTRIES'] <= 2:
+            if not self.all_visible and (w.attr_index == 0 and
+                                         sub_desc['ENTRIES'] <= 2):
                 w.pack_forget()
             elif sub_desc.get('NAME') == 'filepath':
                 self.write_trace(w.entry_string, self.validate_filepath)
