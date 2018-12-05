@@ -21,7 +21,6 @@ class MozzarillaWidgetPicker(WidgetPicker):
 
 def_halo_widget_picker = dhwp = MozzarillaWidgetPicker()
 
-dhwp.copy_widget(StringID, Struct)
 dhwp.add_widget(StrTagRef, EntryFrame)
 dhwp.add_widget(TagRef, DependencyFrame)
 
@@ -41,11 +40,12 @@ dhwp.copy_widget(FlSEnum32, SEnum32)
 
 dhwp.copy_widget(FlFloat, Float)
 
+dhwp.copy_widget(ZoneAsset, Struct)
+dhwp.copy_widget(StringID, Struct)
+dhwp.copy_widget(TagIndex, Array)
 dhwp.copy_widget(RawdataRef, Struct)
 dhwp.copy_widget(Reflexive, Struct)
 dhwp.copy_widget(RawReflexive, Struct)
-
-dhwp.copy_widget(TagIndex, Array)
 dhwp.copy_widget(StrLatin1Enum, SEnum32)
 
 
