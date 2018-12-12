@@ -2,6 +2,7 @@ import tkinter as tk
 import reclaimer
 
 from array import array
+from math import log
 from os.path import dirname, exists, splitext, join
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
@@ -16,6 +17,7 @@ from binilla.field_widgets import *
 from binilla.widgets import *
 
 from reclaimer.h2.constants import *
+from reclaimer.h3.util import get_virtual_dimension
 
 try:
     import arbytmap
@@ -166,6 +168,8 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
 
 
 class HaloBitmapDisplayBase:
+    cubemap_padding = CUBEMAP_PADDING
+
     def get_base_address(self, tag):
         if tag is None:
             return 0
@@ -181,74 +185,78 @@ class HaloBitmapDisplayBase:
         except AttributeError:
             return False
 
+    def get_bitmap_pixels(self, bitmap_index, tag):
+        bitmap = tag.data.tagdata.bitmaps.STEPTREE[bitmap_index]
+        is_xbox = self.is_xbox_bitmap(bitmap)
+        is_meta_tag = not hasattr(tag, "tags_dir")
+
+        pixel_data = tag.data.tagdata.processed_pixel_data.data
+        w, h, d = bitmap.width, bitmap.height, bitmap.depth
+        fmt = FORMAT_NAME_MAP[bitmap.format.data]
+
+        off = bitmap.pixels_offset
+        if is_meta_tag:
+            off -= self.get_base_address(tag)
+
+        # xbox bitmaps are stored all mip level faces first, then
+        # the next mip level, whereas pc is the other way. Xbox
+        # bitmaps also have padding between each mipmap and bitmap.
+        mipmap_count = bitmap.mipmaps + 1
+        bitmap_count = 6 if bitmap.type.enum_name == "cubemap" else 1
+        i_max = bitmap_count if is_xbox else mipmap_count
+        j_max = mipmap_count if is_xbox else bitmap_count
+        tex_block = []
+        for i in range(i_max):
+            if not is_xbox: mw, mh, md = arbytmap.get_mipmap_dimensions(w, h, d, i)
+
+            for j in range(j_max):
+                if is_xbox: mw, mh, md = arbytmap.get_mipmap_dimensions(w, h, d, j)
+
+                if fmt == arbytmap.FORMAT_P8:
+                    tex_block.append(array('B', pixel_data[off: off + mw*mh]))
+                    off += len(tex_block[-1])
+                else:
+                    off = arbytmap.bitmap_io.bitmap_bytes_to_array(
+                        pixel_data, off, tex_block, fmt, mw, mh, md)
+
+            # skip the xbox alignment padding to get to the next texture
+            if is_xbox:
+                size, mod = off, self.cubemap_padding
+                off += (mod - (size % mod)) % mod
+
+        return tex_block
+
     def get_textures(self, tag):
         if tag is None: return ()
 
+        bitmaps = tag.data.tagdata.bitmaps.STEPTREE
         textures = []
-        is_meta_tag = not hasattr(tag, "tags_dir")
-
-        get_mip_dims = arbytmap.get_mipmap_dimensions
-        pixels_base  = self.get_base_address(tag)
-        pixel_data = tag.data.tagdata.processed_pixel_data.data
-        bitmaps    = tag.data.tagdata.bitmaps.STEPTREE
-
         for i in range(len(bitmaps)):
             b = bitmaps[i]
-            is_xbox = self.is_xbox_bitmap(b)
-            tex_block = []
-            w, h, d = b.width, b.height, b.depth
             typ = TYPE_NAME_MAP[b.type.data]
             fmt = FORMAT_NAME_MAP[b.format.data]
             tex_info = dict(
-                width=w, height=h, depth=d, format=fmt, texture_type=typ,
+                width=b.width, height=b.height, depth=b.depth,
+                format=fmt, texture_type=typ,
                 swizzled=b.flags.swizzled, mipmap_count=b.mipmaps,
                 reswizzler="MORTON", deswizzler="MORTON")
 
             mipmap_count = b.mipmaps + 1
-            bitmap_count = 6 if typ == "CUBE" else 1
             if fmt == arbytmap.FORMAT_P8:
                 tex_info.update(
                     palette=[P8_PALETTE.p8_palette_32bit_packed]*mipmap_count,
                     palette_packed=True, indexing_size=8)
 
-            # xbox bitmaps are stored all mip level faces first, then
-            # the next mip level, whereas pc is the other way. Xbox
-            # bitmaps also have padding between each mipmap and bitmap.
-            j_max = bitmap_count if is_xbox else mipmap_count
-            k_max = mipmap_count if is_xbox else bitmap_count
-            off   = b.pixels_offset
-            if is_meta_tag:
-                off -= pixels_base
-
-            for j in range(j_max):
-                start_off = 0
-                if not is_xbox: mw, mh, md = get_mip_dims(w, h, d, j)
-
-                for k in range(k_max):
-                    if is_xbox: mw, mh, md = get_mip_dims(w, h, d, k)
-
-                    if fmt == arbytmap.FORMAT_P8:
-                        tex_block.append(
-                            array('B', pixel_data[off: off + mw*mh]))
-                        off += len(tex_block[-1])
-                    else:
-                        off = arbytmap.bitmap_io.bitmap_bytes_to_array(
-                            pixel_data, off, tex_block, fmt, mw, mh, md)
-
-                # skip the xbox alignment padding to get to the next texture
-                if is_xbox:
-                    size, mod = off - start_off, CUBEMAP_PADDING
-                    off += (mod - (size % mod))%mod
-
-            if is_xbox and b.type.enum_name == "cubemap":
+            tex_block = self.get_bitmap_pixels(i, tag)
+            if self.is_xbox_bitmap(b) and typ == "CUBE":
                 template = tuple(tex_block)
-                j = 0
+                i = 0
                 for f in (0, 2, 1, 3, 4, 5):
                     for m in range(0, (b.mipmaps + 1)*6, 6):
-                        tex_block[m + f] = template[j]
-                        j += 1
+                        tex_block[m + f] = template[i]
+                        i += 1
 
-            tex_info['sub_bitmap_count'] = bitmap_count
+            tex_info['sub_bitmap_count'] = 6 if typ == "CUBE" else 1
             textures.append((tex_block, tex_info))
 
         return textures
@@ -286,6 +294,78 @@ class Halo2BitmapDisplayButton(HaloBitmapDisplayButton):
         return 0
 
 
+class Halo3BitmapDisplayFrame(HaloBitmapDisplayFrame):
+    cubemap_cross_mapping = BitmapDisplayFrame.cubemap_cross_mapping
+
+
+class Halo3BitmapDisplayButton(HaloBitmapDisplayButton):
+    display_frame_class = Halo3BitmapDisplayFrame
+
+    def get_base_address(self, tag):
+        return 0
+
+    def get_bitmap_pixels(self, bitmap_index, tag):
+        # This function will need a LOT of work
+        bitmap = tag.data.tagdata.bitmaps.STEPTREE[bitmap_index]
+        is_meta_tag = not hasattr(tag, "tags_dir")
+
+        n_assets = tag.data.tagdata.zone_assets_normal.STEPTREE
+        i_assets = tag.data.tagdata.zone_assets_interleaved.STEPTREE
+        if bitmap.interleaved_index in range(len(i_assets)):
+            pixel_data = i_assets[bitmap.interleaved_index].data
+        else:
+            pixel_data = n_assets[bitmap_index].data
+            
+        w, h, d = bitmap.width, bitmap.height, bitmap.depth
+        fmt = FORMAT_NAME_MAP[bitmap.format.data]
+
+        # xbox bitmaps are stored all mip level faces first, then
+        # the next mip level, whereas pc is the other way. Xbox
+        # bitmaps also have padding between each mipmap and bitmap.
+        mipmap_count = bitmap.mipmaps + 1
+        bitmap_count = 6 if bitmap.type.enum_name == "cubemap" else 1
+        tex_block = []
+        off = 0
+        for i in range(mipmap_count):
+            mw, mh, md = arbytmap.get_mipmap_dimensions(w, h, d, i)
+            mw = get_virtual_dimension(fmt, mw)
+            mh = get_virtual_dimension(fmt, mh)
+
+            for j in range(bitmap_count):
+                if fmt == arbytmap.FORMAT_P8:
+                    tex_block.append(array('B', pixel_data[off: off + mw*mh]))
+                    off += len(tex_block[-1])
+                else:
+                    off = arbytmap.bitmap_io.bitmap_bytes_to_array(
+                        pixel_data, off, tex_block, fmt, mw, mh, md)
+
+            # skip the xbox alignment padding to get to the next texture
+            mod = self.cubemap_padding
+            off += (mod - (off % mod)) % mod
+
+        return tex_block
+
+    def get_textures(self, tag):
+        textures = HaloBitmapDisplayButton.get_textures(self, tag)
+
+        bitmaps = tag.data.tagdata.bitmaps.STEPTREE
+        for i in range(len(bitmaps)):
+            bitmap = bitmaps[i]
+            tex_info = textures[i][1]
+
+            # update the texture info
+            tex_info.update(
+                packed_width_calc=get_virtual_dimension,
+                packed_height_calc=get_virtual_dimension,
+                target_packed_width_calc=get_virtual_dimension,
+                target_packed_height_calc=get_virtual_dimension,
+                big_endian=True, target_big_endian=True,
+                tiled=bitmap.format_flags.tiled,
+                tile_mode=False, tile_method="DXGI")
+
+        return textures
+
+
 class HaloBitmapTagFrame(ContainerFrame):
     bitmap_display_button_class = HaloBitmapDisplayButton
 
@@ -319,6 +399,10 @@ class HaloBitmapTagFrame(ContainerFrame):
 
 class Halo2BitmapTagFrame(HaloBitmapTagFrame):
     bitmap_display_button_class = Halo2BitmapDisplayButton
+
+
+class Halo3BitmapTagFrame(HaloBitmapTagFrame):
+    bitmap_display_button_class = Halo3BitmapDisplayButton
 
 
 class HaloColorEntry(NumberEntryFrame):
