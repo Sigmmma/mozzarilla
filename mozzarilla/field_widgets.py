@@ -37,7 +37,7 @@ def extract_color(chan_char, node):
 def inject_color(chan_char, new_val, parent, attr_index):
     off = channel_offset_map[chan_char]
     node = parent[attr_index]
-    node = (node & (0xFFFFFFFF - (0xFF << off))) + ((new_val & 0xFF) << off)
+    node = (node & (0xFFFFFFFF - (0xFF << off))) | ((new_val & 0xFF) << off)
     parent[attr_index] = node
 
 
@@ -338,10 +338,6 @@ class Halo3BitmapDisplayButton(HaloBitmapDisplayButton):
                 else:
                     off = arbytmap.bitmap_io.bitmap_bytes_to_array(
                         pixel_data, off, tex_block, fmt, mw, mh, md)
-
-            # skip the xbox alignment padding to get to the next texture
-            mod = self.cubemap_padding
-            off += (mod - (off % mod)) % mod
 
         return tex_block
 
