@@ -1331,11 +1331,14 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
     _populating = False
 
+    format_count = 18
+    type_count = 4
+
     def __init__(self, master, **options):
         tk.Frame.__init__(self, master, **options)
 
-        self.formats_shown = [True] * len(BITMAP_FORMATS)
-        self.types_shown   = [True] * len(BITMAP_TYPES)
+        self.formats_shown = [True] * self.format_count
+        self.types_shown   = [True] * self.type_count
         self.displayed_paths = []
         self.selected_paths = set()
         self.build_tag_sort_mappings()
@@ -1506,9 +1509,9 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             sort_menu_strs[6] += u' \u2713'
         elif self.sort_method == 'size':
             sort_menu_strs[7] += u' \u2713'
-        elif self.sort_method == 'format':
-            sort_menu_strs[8] += u' \u2713'
         elif self.sort_method == 'type':
+            sort_menu_strs[8] += u' \u2713'
+        elif self.sort_method == 'format':
             sort_menu_strs[9] += u' \u2713'
 
         for i in range(len(sort_menu_strs)):
@@ -1580,7 +1583,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
     def toggle_types_allowed(self, menu_idx, typ):
         if typ == -1:
-            for typ in range(len(BITMAP_TYPES)):
+            for typ in range(self.type_count):
                 self.types_shown[typ] = not self.types_shown[typ]
                 typ_str = BITMAP_TYPES[typ]
                 if self.types_shown[typ]: typ_str += u' \u2713'
@@ -1599,7 +1602,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
     def toggle_formats_allowed(self, menu_idx, fmt):
         if fmt == -1:
             i = 1 if menu_idx == 0 else 0
-            for fmt in range(len(BITMAP_FORMATS)):
+            for fmt in range(self.format_count):
                 if fmt in VALID_FORMAT_ENUMS:
                     self.formats_shown[fmt] = not self.formats_shown[fmt]
                     fmt_str = BITMAP_FORMATS[fmt]
@@ -1677,16 +1680,22 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
                         displayed_paths.append(path)
 
         elif sort_by == 'format':
-            for typ in range(len(self.types_shown)):
-                for fmt in range(len(self.formats_shown)):
-                    if self.formats_shown[fmt] and self.types_shown[typ]:
-                        displayed_paths.extend(self.type_format_map[typ][fmt])
-
-        elif sort_by == 'type':
             for fmt in range(len(self.formats_shown)):
                 for typ in range(len(self.types_shown)):
                     if self.formats_shown[fmt] and self.types_shown[typ]:
                         displayed_paths.extend(self.type_format_map[typ][fmt])
+
+        elif sort_by == 'type':
+            for typ in range(len(self.types_shown)):
+                for fmt in range(len(self.formats_shown)):
+                    if self.formats_shown[fmt] and self.types_shown[typ]:
+                        displayed_paths.extend(self.type_format_map[typ][fmt])
+        else:
+            for path in self.master.bitmap_tag_infos.keys():
+                info = self.master.bitmap_tag_infos[path]
+                if (self.formats_shown[info.format] and
+                    self.types_shown[info.type]):
+                    displayed_paths.append(path)
 
         self.sort_method = sort_by
         if self.reverse_listbox:
