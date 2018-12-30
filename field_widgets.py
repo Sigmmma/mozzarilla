@@ -2,7 +2,7 @@ import tkinter as tk
 import reclaimer
 
 from array import array
-from math import log
+from math import log, ceil
 from os.path import dirname, exists, splitext, join
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
@@ -17,7 +17,7 @@ from binilla.field_widgets import *
 from binilla.widgets import *
 
 from reclaimer.h2.constants import *
-from reclaimer.h3.util import get_virtual_dimension
+from reclaimer.h3.util import get_virtual_dimension, get_h3_pixel_bytes_size
 
 try:
     import arbytmap
@@ -233,11 +233,18 @@ class HaloBitmapDisplayBase:
         textures = []
         for i in range(len(bitmaps)):
             b = bitmaps[i]
-            typ = TYPE_NAME_MAP[b.type.data]
-            fmt = FORMAT_NAME_MAP[b.format.data]
+            typ = TYPE_NAME_MAP[0]
+            fmt = FORMAT_NAME_MAP[0]
+            if b.type.data in range(len(TYPE_NAME_MAP)):
+                typ = TYPE_NAME_MAP[b.type.data]
+
+            if b.format.data in range(len(FORMAT_NAME_MAP)):
+                fmt = FORMAT_NAME_MAP[b.format.data]
+
             tex_info = dict(
                 width=b.width, height=b.height, depth=b.depth,
                 format=fmt, texture_type=typ,
+                sub_bitmap_count=6 if typ == "CUBE" else 1,
                 swizzled=b.flags.swizzled, mipmap_count=b.mipmaps,
                 reswizzler="MORTON", deswizzler="MORTON")
 
@@ -256,7 +263,6 @@ class HaloBitmapDisplayBase:
                         tex_block[m + f] = template[i]
                         i += 1
 
-            tex_info['sub_bitmap_count'] = 6 if typ == "CUBE" else 1
             textures.append((tex_block, tex_info))
 
         return textures
@@ -297,6 +303,18 @@ class Halo2BitmapDisplayButton(HaloBitmapDisplayButton):
 class Halo3BitmapDisplayFrame(HaloBitmapDisplayFrame):
     cubemap_cross_mapping = BitmapDisplayFrame.cubemap_cross_mapping
 
+    lightmap_mapping = (
+        (0, 1),
+        (2, 3),
+        (4, 5),
+        (6, 7),
+        )
+
+    def _display_2d_bitmap(self, force=False, bitmap_mapping=None):
+        if bitmap_mapping is None and len(self.get_images()) in (2, 8):
+            bitmap_mapping = self.lightmap_mapping
+        HaloBitmapDisplayFrame._display_2d_bitmap(self, force, bitmap_mapping)
+
 
 class Halo3BitmapDisplayButton(HaloBitmapDisplayButton):
     display_frame_class = Halo3BitmapDisplayFrame
@@ -305,39 +323,36 @@ class Halo3BitmapDisplayButton(HaloBitmapDisplayButton):
         return 0
 
     def get_bitmap_pixels(self, bitmap_index, tag):
-        # This function will need a LOT of work
         bitmap = tag.data.tagdata.bitmaps.STEPTREE[bitmap_index]
         is_meta_tag = not hasattr(tag, "tags_dir")
 
-        n_assets = tag.data.tagdata.zone_assets_normal.STEPTREE
-        i_assets = tag.data.tagdata.zone_assets_interleaved.STEPTREE
-        if bitmap.interleaved_index in range(len(i_assets)):
-            pixel_data = i_assets[bitmap.interleaved_index].data
-        else:
-            pixel_data = n_assets[bitmap_index].data
-            
+        off = bitmap.pixels_offset
+        pixel_data = tag.data.tagdata.processed_pixel_data.data
+
         w, h, d = bitmap.width, bitmap.height, bitmap.depth
+        tiled = bitmap.format_flags.tiled
         fmt = FORMAT_NAME_MAP[bitmap.format.data]
 
         # xbox bitmaps are stored all mip level faces first, then
         # the next mip level, whereas pc is the other way. Xbox
         # bitmaps also have padding between each mipmap and bitmap.
-        mipmap_count = bitmap.mipmaps + 1
-        bitmap_count = 6 if bitmap.type.enum_name == "cubemap" else 1
-        tex_block = []
-        off = 0
-        for i in range(mipmap_count):
-            mw, mh, md = arbytmap.get_mipmap_dimensions(w, h, d, i)
-            mw = get_virtual_dimension(fmt, mw)
-            mh = get_virtual_dimension(fmt, mh)
+        bitmap_count = 1
+        if bitmap.type.enum_name == "cubemap":
+            bitmap_count = 6
+        elif bitmap.type.enum_name == "lightmap":
+            bitmap_count = d
+            d = 1
 
+        tex_block = []
+        if fmt == arbytmap.FORMAT_P8:
+            fmt = arbytmap.FORMAT_A8
+
+        for i in range(bitmap.mipmaps + 1):
+            pixel_data_size = get_h3_pixel_bytes_size(fmt, w, h, d, i, tiled)
             for j in range(bitmap_count):
-                if fmt == arbytmap.FORMAT_P8:
-                    tex_block.append(array('B', pixel_data[off: off + mw*mh]))
-                    off += len(tex_block[-1])
-                else:
-                    off = arbytmap.bitmap_io.bitmap_bytes_to_array(
-                        pixel_data, off, tex_block, fmt, mw, mh, md)
+                off = arbytmap.bitmap_io.bitmap_bytes_to_array(
+                    pixel_data, off, tex_block, fmt,
+                    1, 1, 1, pixel_data_size)
 
         return tex_block
 
@@ -348,6 +363,11 @@ class Halo3BitmapDisplayButton(HaloBitmapDisplayButton):
         for i in range(len(bitmaps)):
             bitmap = bitmaps[i]
             tex_info = textures[i][1]
+
+            if bitmap.type.enum_name == "lightmap":
+                tex_info.update(depth=1, texture_type=TYPE_NAME_MAP[0],
+                                format=arbytmap.FORMAT_DXT5LM,
+                                sub_bitmap_count=tex_info["depth"])
 
             # update the texture info
             tex_info.update(

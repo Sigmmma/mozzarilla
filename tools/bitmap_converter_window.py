@@ -1368,11 +1368,11 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             label="Sort by Bitmap data size", command=lambda:
             self.display_sorted_tags('size'))
         self.sort_menu.add_command(
-            label="Sort by Bitmap type", command=lambda:
-            self.display_sorted_tags('type'))
-        self.sort_menu.add_command(
             label="Sort by Bitmap format", command=lambda:
             self.display_sorted_tags('format'))
+        self.sort_menu.add_command(
+            label="Sort by Bitmap type", command=lambda:
+            self.display_sorted_tags('type'))
 
         self.types_menu.add_command(
             label="Toggle all", command=lambda:
@@ -1509,9 +1509,9 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             sort_menu_strs[6] += u' \u2713'
         elif self.sort_method == 'size':
             sort_menu_strs[7] += u' \u2713'
-        elif self.sort_method == 'type':
-            sort_menu_strs[8] += u' \u2713'
         elif self.sort_method == 'format':
+            sort_menu_strs[8] += u' \u2713'
+        elif self.sort_method == 'type':
             sort_menu_strs[9] += u' \u2713'
 
         for i in range(len(sort_menu_strs)):
