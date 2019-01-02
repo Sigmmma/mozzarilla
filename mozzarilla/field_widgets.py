@@ -303,16 +303,18 @@ class Halo2BitmapDisplayButton(HaloBitmapDisplayButton):
 class Halo3BitmapDisplayFrame(HaloBitmapDisplayFrame):
     cubemap_cross_mapping = BitmapDisplayFrame.cubemap_cross_mapping
 
-    lightmap_mapping = (
-        (0, 1),
-        (2, 3),
-        (4, 5),
-        (6, 7),
-        )
-
     def _display_2d_bitmap(self, force=False, bitmap_mapping=None):
-        if bitmap_mapping is None and len(self.get_images()) in (2, 8):
-            bitmap_mapping = self.lightmap_mapping
+        image_ct = len(self.get_images())
+        if bitmap_mapping is None and self.active_image_handler.tex_type == "2D":
+            bitmap_mapping = []
+            column_ct = image_ct // 4
+            for i in range(4 * (column_ct > 1)):
+                bitmap_mapping.append(list(i * column_ct + j for
+                                           j in range(column_ct)))
+
+            if column_ct * 4 < image_ct:
+                bitmap_mapping.append(list(range(column_ct * 4, image_ct)))
+
         HaloBitmapDisplayFrame._display_2d_bitmap(self, force, bitmap_mapping)
 
 
@@ -337,9 +339,10 @@ class Halo3BitmapDisplayButton(HaloBitmapDisplayButton):
         # the next mip level, whereas pc is the other way. Xbox
         # bitmaps also have padding between each mipmap and bitmap.
         bitmap_count = 1
+        mipmap_count = bitmap.mipmaps + 1
         if bitmap.type.enum_name == "cubemap":
             bitmap_count = 6
-        elif bitmap.type.enum_name == "lightmap":
+        elif bitmap.type.enum_name == "multipage_2d":
             bitmap_count = d
             d = 1
 
@@ -347,7 +350,7 @@ class Halo3BitmapDisplayButton(HaloBitmapDisplayButton):
         if fmt == arbytmap.FORMAT_P8:
             fmt = arbytmap.FORMAT_A8
 
-        for i in range(bitmap.mipmaps + 1):
+        for i in range(mipmap_count):
             pixel_data_size = get_h3_pixel_bytes_size(fmt, w, h, d, i, tiled)
             for j in range(bitmap_count):
                 off = arbytmap.bitmap_io.bitmap_bytes_to_array(
@@ -364,9 +367,8 @@ class Halo3BitmapDisplayButton(HaloBitmapDisplayButton):
             bitmap = bitmaps[i]
             tex_info = textures[i][1]
 
-            if bitmap.type.enum_name == "lightmap":
+            if bitmap.type.enum_name == "multipage_2d":
                 tex_info.update(depth=1, texture_type=TYPE_NAME_MAP[0],
-                                format=arbytmap.FORMAT_DXT5LM,
                                 sub_bitmap_count=tex_info["depth"])
 
             # update the texture info
