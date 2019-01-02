@@ -9,8 +9,6 @@ from os.path import dirname, exists, join, splitext, relpath
 
 from binilla.widgets import BinillaWidget
 from binilla.util import get_cwd
-from reclaimer.data_extraction import h1_data_extractors
-from reclaimer.constants import tag_class_fcc_to_ext_os, tag_class_ext_to_fcc_os
 from supyr_struct.defs.constants import *
 from supyr_struct.defs.util import *
 
@@ -25,14 +23,25 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
     _extracting = False
     stop_extracting = False
+    tag_data_extractors = ()
 
     listbox_index_to_def_id = ()
+    tag_class_fcc_to_ext = ()
+    tag_class_ext_to_fcc = ()
 
     def __init__(self, app_root, *args, **kwargs): 
         self.handler = app_root.handler
         self.app_root = app_root
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
+
+        self.tag_data_extractors = getattr(
+            self.handler, "tag_data_extractors", None)
+        self.tag_class_fcc_to_ext = {k: self.handler.id_ext_map[k].strip(".")
+                                     for k in self.handler.id_ext_map}
+        self.tag_class_ext_to_fcc = {self.tag_class_fcc_to_ext[k]: k
+                                     for k in self.tag_class_fcc_to_ext}
+        
 
         self.title("Tag Data Extractor")
         self.resizable(0, 0)
@@ -45,7 +54,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         except Exception:
             print("Could not load window icon.")
 
-        self.listbox_index_to_def_id = list(sorted(h1_data_extractors.keys()))
+        self.listbox_index_to_def_id = list(sorted(self.tag_data_extractors.keys()))
 
         # make the tkinter variables
         self.dir_path = tk.StringVar(self, self.handler.tagsdir)
@@ -168,8 +177,8 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
             return
         filetypes = [('All', '*')]
 
-        for def_id in sorted(h1_data_extractors.keys()):
-            filetypes.append((def_id, "." + tag_class_fcc_to_ext_os[def_id]))
+        for def_id in sorted(self.tag_data_extractors.keys()):
+            filetypes.append((def_id, "." + self.tag_class_fcc_to_ext[def_id]))
 
         fp = askopenfilename(
             initialdir=self.app_root.last_load_dir, filetypes=filetypes,
@@ -201,10 +210,10 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
     def get_tag(self, tag_path):
         handler = self.handler
-        def_id = handler.get_def_id(tag_path)
+        def_id = handler.get_def_id(tag_path.lstrip("./\\"))
         try:
             tag = handler.get_tag(tag_path, def_id)
-        except KeyError:
+        except (KeyError, LookupError):
             tag = None
 
         try:
@@ -292,14 +301,14 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
                     return
 
                 tag_paths = all_tag_paths.get(
-                    tag_class_ext_to_fcc_os.get(
+                    self.tag_class_ext_to_fcc.get(
                         splitext(filename)[-1].lower()[1: ]))
 
                 if tag_paths is not None:
                     tag_paths.append(filepath)
 
         for def_id in sorted(all_tag_paths):
-            extractor = h1_data_extractors[def_id]
+            extractor = self.tag_data_extractors[def_id]
             if self.stop_extracting:
                 print('Tag data extraction cancelled.\n')
                 return
@@ -321,8 +330,8 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         if not tags_dir.endswith(PATHDIV):
             tags_dir += PATHDIV
 
-        def_id = tag_class_ext_to_fcc_os.get(splitext(tag_path)[-1].lower()[1:])
-        if def_id is None or def_id not in h1_data_extractors:
+        def_id = self.tag_class_ext_to_fcc.get(splitext(tag_path)[-1].lower()[1:])
+        if def_id is None or def_id not in self.tag_data_extractors:
             print("Cannot extract data from this kind of tag.")
             return
         elif not is_in_dir(tag_path, tags_dir, 0):
@@ -331,7 +340,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
         print("Extracting %s" % tag_path)
         self.extract(relpath(tag_path, tags_dir),
-                     h1_data_extractors[def_id],
+                     self.tag_data_extractors[def_id],
                      out_dir=join(dirname(dirname(tags_dir)), "data"),
                      overwrite=self.overwrite.get(), engine="yelo",
                      decode_adpcm=self.decode_adpcm.get()
