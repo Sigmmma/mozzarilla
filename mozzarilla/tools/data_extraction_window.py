@@ -178,7 +178,9 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         filetypes = [('All', '*')]
 
         for def_id in sorted(self.tag_data_extractors.keys()):
-            filetypes.append((def_id, "." + self.tag_class_fcc_to_ext[def_id]))
+            if def_id in self.tag_class_fcc_to_ext:
+                filetypes.append(
+                    (def_id, "." + self.tag_class_fcc_to_ext[def_id]))
 
         fp = askopenfilename(
             initialdir=self.app_root.last_load_dir, filetypes=filetypes,
