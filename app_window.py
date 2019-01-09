@@ -594,6 +594,7 @@ class Mozzarilla(Binilla):
             tag = None
         if tag is None:
             if self.selected_tag is None:
+                print("Cannot save(no tag is selected).")
                 return
             tag = self.selected_tag
 
@@ -611,6 +612,7 @@ class Mozzarilla(Binilla):
             tag = None
         if tag is None:
             if self.selected_tag is None:
+                print("Cannot save(no tag is selected).")
                 return
             tag = self.selected_tag
 
