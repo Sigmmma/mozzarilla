@@ -426,8 +426,6 @@ class Mozzarilla(Binilla):
         if tags_dir is None:
             return Binilla.load_tags(self, filepaths, def_id)
 
-        if isinstance(filepaths, tk.Event):
-            filepaths = None
         if filepaths is None:
             filetypes = [('All', '*')]
             defs = self.handler.defs
@@ -590,8 +588,6 @@ class Mozzarilla(Binilla):
         self.place_window_relative(self.def_selector_window, 30, 50)
 
     def save_tag(self, tag=None):
-        if isinstance(tag, tk.Event):
-            tag = None
         if tag is None:
             if self.selected_tag is None:
                 print("Cannot save(no tag is selected).")
@@ -608,8 +604,6 @@ class Mozzarilla(Binilla):
         return Binilla.save_tag(self, tag)
 
     def save_tag_as(self, tag=None, filepath=None):
-        if isinstance(tag, tk.Event):
-            tag = None
         if tag is None:
             if self.selected_tag is None:
                 print("Cannot save(no tag is selected).")
