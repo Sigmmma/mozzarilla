@@ -1350,45 +1350,45 @@ class ReflexiveFrame(DynamicArrayFrame):
 
 
 # replace the DynamicEnumFrame with one that has a specialized option generator
-class DynamicEnumFrame(DynamicEnumFrame):
+def halo_dynamic_enum_cache_options(self):
+    desc = self.desc
+    options = {0: "-1: NONE"}
 
-    def cache_options(self):
-        desc = self.desc
-        options = {0: "-1: NONE"}
-
-        dyn_name_path = desc.get(DYN_NAME_PATH)
-        if not dyn_name_path:
-            print("Missing DYN_NAME_PATH path in dynamic enumerator.")
-            print(self.parent.get_root().def_id, self.name)
-            print("Tell Moses about this.")
-            self.option_cache = options
-            return
-
-        try:
-            p_out, p_in = dyn_name_path.split(DYN_I)
-
-            # We are ALWAYS going to go to the parent, so we need to slice
-            if p_out.startswith('..'): p_out = p_out.split('.', 1)[-1]
-            array = self.parent.get_neighbor(p_out)
-            for i in range(len(array)):
-                name = array[i].get_neighbor(p_in)
-                if isinstance(name, list):
-                    name = repr(name).strip("[").strip("]")
-                else:
-                    name = str(name)
-
-                if p_in.endswith('.filepath'):
-                    # if it is a dependency filepath
-                    options[i + 1] = '%s. %s' % (
-                        i, name.replace('/', '\\').split('\\')[-1])
-                options[i + 1] = '%s. %s' % (i, name)
-        except Exception:
-            print(format_exc())
-            print("Guess something got mistyped. Tell Moses about this.")
-            dyn_name_path = False
-
-        try:
-            self.sel_menu.max_index = len(options) - 1
-        except Exception:
-            pass
+    dyn_name_path = desc.get(DYN_NAME_PATH)
+    if not dyn_name_path:
+        print("Missing DYN_NAME_PATH path in dynamic enumerator.")
+        print(self.parent.get_root().def_id, self.name)
+        print("Tell Moses about this.")
         self.option_cache = options
+        return
+
+    try:
+        p_out, p_in = dyn_name_path.split(DYN_I)
+
+        # We are ALWAYS going to go to the parent, so we need to slice
+        if p_out.startswith('..'): p_out = p_out.split('.', 1)[-1]
+        array = self.parent.get_neighbor(p_out)
+        for i in range(len(array)):
+            name = array[i].get_neighbor(p_in)
+            if isinstance(name, list):
+                name = repr(name).strip("[").strip("]")
+            else:
+                name = str(name)
+
+            if p_in.endswith('.filepath'):
+                # if it is a dependency filepath
+                options[i + 1] = '%s. %s' % (
+                    i, name.replace('/', '\\').split('\\')[-1])
+            options[i + 1] = '%s. %s' % (i, name)
+    except Exception:
+        print(format_exc())
+        print("Guess something got mistyped. Tell Moses about this.")
+        dyn_name_path = False
+
+    try:
+        self.sel_menu.max_index = len(options) - 1
+    except Exception:
+        pass
+    self.option_cache = options
+
+DynamicEnumFrame.cache_options = halo_dynamic_enum_cache_options
