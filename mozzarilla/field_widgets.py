@@ -426,7 +426,9 @@ class Halo3BitmapTagFrame(HaloBitmapTagFrame):
 class HaloColorEntry(NumberEntryFrame):
 
     def flush(self, *args):
-        if self._flushing or not self.needs_flushing:
+        if None in (self.parent, self.node):
+            return
+        elif self._flushing or not self.needs_flushing:
             return
 
         try:
@@ -691,8 +693,14 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
 
 
 class DependencyFrame(ContainerFrame):
+    open_btn = None
+    browse_btn = None
+    preview_btn = None
 
     def browse_tag(self):
+        if None in (self.parent, self.node):
+            return
+
         try:
             try:
                 tags_dir = self.tag_window.tag.tags_dir
@@ -759,6 +767,9 @@ class DependencyFrame(ContainerFrame):
             print(format_exc())
 
     def open_tag(self):
+        if None in (self.parent, self.node):
+            return
+
         t_w = self.tag_window
         try:
             tag, app = t_w.tag, t_w.app_root
@@ -846,6 +857,9 @@ class DependencyFrame(ContainerFrame):
         self.preview_btn.show_window(None, self.tag_window.app_root)
 
     def validate_filepath(self, *args):
+        if None in (self.parent, self.node):
+            return
+
         desc = self.desc
         wid = self.f_widget_ids_map.get(desc['NAME_MAP']['filepath'])
         widget = self.f_widgets.get(wid)
@@ -984,6 +998,17 @@ class DependencyFrame(ContainerFrame):
             self.validate_filepath()
         except Exception:
             print(format_exc())
+
+    def set_disabled(self, disable=True):
+        if self.node is None and not disable:
+            return
+
+        if bool(disable) != self.disabled:
+            for w in (self.open_btn, self.browse_btn, self.preview_btn):
+                if w:
+                    w.config(state=tk.DISABLED if disable else tk.NORMAL)
+
+        ContainerFrame.set_disabled(self, disable)
 
 
 class HaloRawdataFrame(RawdataFrame):
@@ -1272,6 +1297,18 @@ class ReflexiveFrame(DynamicArrayFrame):
                   self.delete_all_btn, self.delete_btn,
                   self.duplicate_btn, self.insert_btn, self.add_btn):
             w.pack(side="right", padx=(0, 4), pady=(2, 2))
+
+    def set_disabled(self, disable=True):
+        if self.node is None and not disable:
+            return
+
+        if bool(disable) != self.disabled:
+            new_state = tk.DISABLED if disable else tk.NORMAL
+            for w in (self.export_all_btn, self.import_all_btn):
+                if w:
+                    w.config(state=new_state)
+
+        DynamicArrayFrame.set_disabled(self, disable)
 
     def cache_options(self):
         node, desc = self.node, self.desc
