@@ -217,16 +217,16 @@ class Mozzarilla(Binilla):
         self.make_window_panes()
         self.make_directory_frame(self.window_panes)
         self.make_io_text(self.window_panes)
+        self.apply_style()
+
+        if self.directory_frame is not None:
+            self.directory_frame.highlight_tags_dir(self.tags_dir)
 
         try:
             if self.config_file.data.header.flags.load_last_workspace:
                 self.load_last_workspace()
         except AttributeError:
             pass
-
-        if self.directory_frame is not None:
-            self.directory_frame.highlight_tags_dir(self.tags_dir)
-        self.apply_style()
 
     @property
     def tags_dir(self):
