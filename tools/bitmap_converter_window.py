@@ -270,7 +270,7 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
         tex_block = list(pixel_data[i])
         tex_info = tag.tex_infos[i]
 
-        if fmt_t == ab.FORMAT_P8 and typ in (ab.TYPE_CUBEMAP, ab.TYPE_3D):
+        if fmt_t == ab.FORMAT_P8_BUMP and typ in (ab.TYPE_CUBEMAP, ab.TYPE_3D):
             print("Cannot convert cubemaps or 3d textures to P8.")
             fmt_t = fmt_s
         elif fmt_t in ab.DDS_FORMATS and typ == ab.TYPE_3D:
@@ -283,17 +283,17 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
 
         chan_map, chan_merge_map = get_channel_mappings(conv_flags, bitmap_info)
         palette_picker = None
-        palettize = fmt_t == ab.FORMAT_P8
+        palettize = fmt_t == ab.FORMAT_P8_BUMP
 
         # we want to preserve the color key transparency of
         # the original image if converting to the same format
-        if fmt_s == fmt_t and fmt_t in (ab.FORMAT_P8, ab.FORMAT_DXT1):
+        if fmt_s == fmt_t and fmt_t in (ab.FORMAT_P8_BUMP, ab.FORMAT_DXT1):
             # also need to make sure channels aren't being swapped around
             if not conv_flags.multi_swap:
                 ck_trans = True
 
         if ab.CHANNEL_COUNTS[fmt_s] == 4:
-            if fmt_s == ab.FORMAT_P8:
+            if fmt_s == ab.FORMAT_P8_BUMP:
                 palette_picker = P8_PALETTE.argb_array_to_p8_array_auto
             elif ck_trans and fmt_s not in (ab.FORMAT_X8R8G8B8, ab.FORMAT_R5G6B5):
                 if conv_flags.p8_mode == 0:
