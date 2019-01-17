@@ -212,7 +212,7 @@ class HaloBitmapDisplayBase:
             for j in range(j_max):
                 if is_xbox: mw, mh, md = arbytmap.get_mipmap_dimensions(w, h, d, j)
 
-                if fmt == arbytmap.FORMAT_P8:
+                if fmt == arbytmap.FORMAT_P8_BUMP:
                     tex_block.append(array('B', pixel_data[off: off + mw*mh]))
                     off += len(tex_block[-1])
                 else:
@@ -249,7 +249,7 @@ class HaloBitmapDisplayBase:
                 reswizzler="MORTON", deswizzler="MORTON")
 
             mipmap_count = b.mipmaps + 1
-            if fmt == arbytmap.FORMAT_P8:
+            if fmt == arbytmap.FORMAT_P8_BUMP:
                 tex_info.update(
                     palette=[P8_PALETTE.p8_palette_32bit_packed]*mipmap_count,
                     palette_packed=True, indexing_size=8)
@@ -347,7 +347,7 @@ class Halo3BitmapDisplayButton(HaloBitmapDisplayButton):
             d = 1
 
         tex_block = []
-        if fmt == arbytmap.FORMAT_P8:
+        if fmt == arbytmap.FORMAT_P8_BUMP:
             fmt = arbytmap.FORMAT_A8
 
         for i in range(mipmap_count):
