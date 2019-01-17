@@ -565,6 +565,9 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
                 print(format_exc())
 
     def reload(self):
+        if self.parent is None:
+            return
+
         self.node = self.parent[self.attr_index]
         if hasattr(self, 'color_btn'):
             if self.disabled:
@@ -653,40 +656,48 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
 
     @property
     def alpha(self):
+        if self.node is None: return 0.0
         return extract_color('a', self.node) / 255.0
 
     @alpha.setter
     def alpha(self, new_val):
+        if self.node is None: return
         inject_color('a', int(new_val * 255.0 + 0.5),
                      self.parent, self.attr_index)
         self.node = self.parent[self.attr_index]
 
     @property
     def red(self):
+        if self.node is None: return 0.0
         return extract_color('r', self.node) / 255.0
 
     @red.setter
     def red(self, new_val):
+        if self.node is None: return
         inject_color('r', int(new_val * 255.0 + 0.5),
                      self.parent, self.attr_index)
         self.node = self.parent[self.attr_index]
 
     @property
     def green(self):
+        if self.node is None: return 0.0
         return extract_color('g', self.node) / 255.0
 
     @green.setter
     def green(self, new_val):
+        if self.node is None: return
         inject_color('g', int(new_val * 255.0 + 0.5),
                      self.parent, self.attr_index)
         self.node = self.parent[self.attr_index]
 
     @property
     def blue(self):
+        if self.node is None: return 0.0
         return extract_color('b', self.node) / 255.0
 
     @blue.setter
     def blue(self, new_val):
+        if self.node is None: return
         inject_color('b', int(new_val * 255.0 + 0.5),
                      self.parent, self.attr_index)
         self.node = self.parent[self.attr_index]
@@ -698,7 +709,7 @@ class DependencyFrame(ContainerFrame):
     preview_btn = None
 
     def browse_tag(self):
-        if None in (self.parent, self.node):
+        if self.node is None:
             return
 
         try:
@@ -767,7 +778,7 @@ class DependencyFrame(ContainerFrame):
             print(format_exc())
 
     def open_tag(self):
-        if None in (self.parent, self.node):
+        if self.node is None:
             return
 
         t_w = self.tag_window
@@ -805,6 +816,9 @@ class DependencyFrame(ContainerFrame):
             app.set_handler(cur_handler)
 
     def get_dependency_tag(self):
+        if self.node is None:
+            return
+
         t_w = self.tag_window
         try:
             tags_dir, app, handler = t_w.tag.tags_dir,\
@@ -857,7 +871,7 @@ class DependencyFrame(ContainerFrame):
         self.preview_btn.show_window(None, self.tag_window.app_root)
 
     def validate_filepath(self, *args):
-        if None in (self.parent, self.node):
+        if self.node is None:
             return
 
         desc = self.desc
@@ -892,9 +906,6 @@ class DependencyFrame(ContainerFrame):
 
     def pose_fields(self):
         ContainerFrame.pose_fields(self)
-
-        node = self.node
-        desc = node.desc
         picker = self.widget_picker
         tag_window = self.tag_window
 
@@ -909,7 +920,7 @@ class DependencyFrame(ContainerFrame):
             self, width=5, text='Open', command=self.open_tag, **btn_kwargs)
         self.preview_btn = None
         try:
-            names = node.tag_class.NAME_MAP.keys()
+            names = self.desc['NAME_MAP'].keys()
             is_bitmap_dependency = len(names) == 2 and "bitmap" in names
         except Exception:
             is_bitmap_dependency = False
@@ -950,13 +961,11 @@ class DependencyFrame(ContainerFrame):
     def reload(self):
         '''Resupplies the nodes to the widgets which display them.'''
         try:
-            node = self.node
-            desc = self.desc
             f_widgets = self.f_widgets
 
-            field_indices = range(len(node))
+            field_indices = range(self.desc['ENTRIES'])
             # if the node has a steptree node, include its index in the indices
-            if hasattr(node, 'STEPTREE'):
+            if 'STEPTREE' in self.desc:
                 field_indices = tuple(field_indices) + ('STEPTREE',)
 
             f_widget_ids_map = self.f_widget_ids_map
@@ -968,9 +977,12 @@ class DependencyFrame(ContainerFrame):
             # if any of the descriptors are different between
             # the sub-nodes of the previous and new sub-nodes,
             # then this widget will need to be repopulated.
+            sub_node = None
             for i in field_indices:
-                sub_node = node[i]
-                sub_desc = desc[i]
+                sub_desc = self.desc[i]
+                if hasattr(self.node, "__getitem__"):
+                    sub_node = self.node[i]
+
                 if hasattr(sub_node, 'desc'):
                     sub_desc = sub_node.desc
 
@@ -989,11 +1001,12 @@ class DependencyFrame(ContainerFrame):
                     self.populate()
                     return
 
-            for wid in self.f_widget_ids:
-                w = f_widgets[wid]
+            if self.node is not None:
+                for wid in self.f_widget_ids:
+                    w = f_widgets[wid]
 
-                w.parent, w.node = node, node[w.attr_index]
-                w.reload()
+                    w.parent, w.node = self.node, self.node[w.attr_index]
+                    w.reload()
 
             self.validate_filepath()
         except Exception:
@@ -1014,6 +1027,9 @@ class DependencyFrame(ContainerFrame):
 class HaloRawdataFrame(RawdataFrame):
 
     def delete_node(self):
+        if None in (self.parent, self.node):
+            return
+
         undo_node = self.node
         self.node = self.parent[self.attr_index] = self.node[0:0]
         self.edit_create(undo_node=undo_node, redo_node=self.node)
@@ -1077,6 +1093,9 @@ class HaloScriptTextFrame(TextFrame):
     def set_needs_flushing(self, *a, **kw): pass
 
     def reload(self):
+        if None in (self.parent, self.node):
+            return
+
         try:
             if None in (self.strings, self.syntax):
                 return
@@ -1267,6 +1286,9 @@ class SoundSampleFrame(HaloRawdataFrame):
 
 
 class ReflexiveFrame(DynamicArrayFrame):
+    export_all_btn = None
+    import_all_btn = None
+
     def __init__(self, *args, **kwargs):
         DynamicArrayFrame.__init__(self, *args, **kwargs)
 
@@ -1274,6 +1296,7 @@ class ReflexiveFrame(DynamicArrayFrame):
             bg=self.button_color, fg=self.text_normal_color,
             disabledforeground=self.text_disabled_color,
             bd=self.button_depth,
+            state=tk.DISABLED if self.disabled else tk.NORMAL
             )
 
         self.import_all_btn = tk.Button(
@@ -1313,6 +1336,8 @@ class ReflexiveFrame(DynamicArrayFrame):
     def cache_options(self):
         node, desc = self.node, self.desc
         dyn_name_path = desc.get(DYN_NAME_PATH)
+        if node is None:
+            dyn_name_path = ""
 
         options = {}
         if dyn_name_path:
@@ -1392,7 +1417,9 @@ def halo_dynamic_enum_cache_options(self):
     options = {0: "-1: NONE"}
 
     dyn_name_path = desc.get(DYN_NAME_PATH)
-    if not dyn_name_path:
+    if self.node is None:
+        return
+    elif not dyn_name_path:
         print("Missing DYN_NAME_PATH path in dynamic enumerator.")
         print(self.parent.get_root().def_id, self.name)
         print("Tell Moses about this.")
