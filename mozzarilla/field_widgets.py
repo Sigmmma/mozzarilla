@@ -1077,14 +1077,6 @@ class HaloScriptTextFrame(TextFrame):
     syntax  = None
     strings = None
 
-    def __init__(self, *args, **kwargs):
-        TextFrame.__init__(self, *args, **kwargs)
-        tag_data = self.parent.parent.parent.parent
-        self.syntax  = reclaimer.hsc.get_hsc_data_block(
-            tag_data.script_syntax_data.data)
-        self.strings = tag_data.script_string_data.data.decode("latin-1")
-        self.reload()
-
     def export_node(self): pass
     def import_node(self): pass
     def build_replace_map(self): pass
@@ -1093,10 +1085,16 @@ class HaloScriptTextFrame(TextFrame):
     def set_needs_flushing(self, *a, **kw): pass
 
     def reload(self):
-        if None in (self.parent, self.node):
+        if self.parent is None:
             return
 
         try:
+            if None in (self.strings, self.syntax):
+                tag_data = self.parent.parent.parent.parent
+                self.syntax  = reclaimer.hsc.get_hsc_data_block(
+                    tag_data.script_syntax_data.data)
+                self.strings = tag_data.script_string_data.data.decode("latin-1")
+
             if None in (self.strings, self.syntax):
                 return
 
