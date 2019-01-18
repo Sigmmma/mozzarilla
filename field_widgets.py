@@ -37,8 +37,8 @@ def extract_color(chan_char, node):
 def inject_color(chan_char, new_val, parent, attr_index):
     off = channel_offset_map[chan_char]
     node = parent[attr_index]
-    node = (node & (0xFFFFFFFF - (0xFF << off))) | ((new_val & 0xFF) << off)
-    parent[attr_index] = node
+    chan_mask = 0xFFFFFFFF - (0xFF << off)
+    parent[attr_index] = (node & chan_mask) | ((new_val & 0xFF) << off)
 
 
 class HaloBitmapDisplayFrame(BitmapDisplayFrame):
@@ -425,10 +425,15 @@ class Halo3BitmapTagFrame(HaloBitmapTagFrame):
 
 class HaloColorEntry(NumberEntryFrame):
 
-    def flush(self, *args):
-        if None in (self.parent, self.node):
+    def set_modified(self, *args):
+        if self.node is None or self.needs_flushing:
             return
-        elif self._flushing or not self.needs_flushing:
+        elif self.entry_string.get() != self.last_flushed_val:
+            self.set_needs_flushing()
+            self.set_edited()
+
+    def flush(self, *args):
+        if self.node is None or self._flushing or not self.needs_flushing:
             return
 
         try:
@@ -522,6 +527,15 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
         self._initialized = True
         self.populate()
 
+    def load_child_node_data(self):
+        for chan_char in self.desc['COLOR_CHANNELS']:
+            chan = channel_name_map[chan_char]
+            node_val = int(getattr(self, chan) * 255.0 + 0.5)
+            w = self.f_widgets.get(self.f_widget_ids_map.get(chan, None), None)
+            if w:
+                w.load_node_data(self.node, node_val, chan_char,
+                                 self.color_descs[chan_char])
+
     @property
     def visible_field_count(self):
         try:
@@ -547,14 +561,12 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
         if undo:
             nodes = state.undo_node
 
-        inject_color('a', int(nodes['a'] * 255.0 + 0.5), parent, attr_index)
-        inject_color('r', int(nodes['r'] * 255.0 + 0.5), parent, attr_index)
-        inject_color('g', int(nodes['g'] * 255.0 + 0.5), parent, attr_index)
-        inject_color('b', int(nodes['b'] * 255.0 + 0.5), parent, attr_index)
+        for c in 'argb':
+            inject_color(c, nodes[c], parent, attr_index)
 
         if w is not None:
             try:
-                if w.desc is not state.desc:
+                if w.desc != state.desc:
                     return
 
                 w.node = parent[attr_index]
@@ -563,27 +575,6 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
                 w.set_edited()
             except Exception:
                 print(format_exc())
-
-    def reload(self):
-        if self.parent is None:
-            return
-
-        self.node = self.parent[self.attr_index]
-        if hasattr(self, 'color_btn'):
-            if self.disabled:
-                self.color_btn.config(state=tk.DISABLED)
-            else:
-                self.color_btn.config(state=tk.NORMAL)
-
-            self.color_btn.config(bg=self.get_color()[1])
-
-        f_widgets = self.f_widgets
-        f_widget_ids_map = self.f_widget_ids_map
-        for chan_char in self.desc['COLOR_CHANNELS']:
-            chan = channel_name_map[chan_char]
-            w = f_widgets[f_widget_ids_map[chan]]
-            w.node = int(getattr(self, chan) * 255.0 + 0.5)
-            w.reload()
 
     def populate(self):
         content = self
@@ -594,14 +585,9 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
                                highlightthickness=0, bg=self.default_bg_color)
 
         self.content = content
-        # clear the f_widget_ids list
-        del self.f_widget_ids[:]
-        del self.f_widget_ids_map
-        del self.f_widget_ids_map_inv
-
-        f_widget_ids = self.f_widget_ids
-        f_widget_ids_map = self.f_widget_ids_map = {}
-        f_widget_ids_map_inv = self.f_widget_ids_map_inv = {}
+        self.f_widget_ids = []
+        self.f_widget_ids_map = {}
+        self.f_widget_ids_map_inv = {}
 
         # destroy all the child widgets of the content
         if isinstance(self.f_widgets, dict):
@@ -627,28 +613,41 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
             node_val = int(getattr(self, chan) * 255.0 + 0.5)
             # make an entry widget for each color channel
             w = HaloColorEntry(self.content, f_widget_parent=self,
-                               desc=self.color_descs[chan_char],
-                               node=node_val, vert_oriented=False,
+                               desc=self.color_descs[chan_char], node=node_val,
+                               parent=self.node, vert_oriented=False,
                                tag_window=self.tag_window, attr_index=chan_char)
 
             wid = id(w)
-            f_widget_ids.append(wid)
-            f_widget_ids_map[chan] = wid
-            f_widget_ids_map_inv[wid] = chan
+            self.f_widget_ids.append(wid)
+            self.f_widget_ids_map[chan] = wid
+            self.f_widget_ids_map_inv[wid] = chan
             if self.tooltip_string:
                 w.tooltip_string = self.tooltip_string
 
         self.color_btn = tk.Button(
             self.content, width=4, command=self.select_color,
-            bd=self.button_depth, bg=self.get_color()[1])
-
-        if self.disabled:
-            self.color_btn.config(state=tk.DISABLED)
-        else:
-            self.color_btn.config(state=tk.NORMAL)
+            bd=self.button_depth, bg=self.get_color()[1],
+            state=tk.DISABLED if self.disabled else tk.NORMAL)
 
         self.build_f_widget_cache()
         self.pose_fields()
+
+    def reload(self):
+        if self.parent is None:
+            return
+
+        self.node = self.parent[self.attr_index]
+        if hasattr(self, 'color_btn'):
+            if self.disabled:
+                self.color_btn.config(state=tk.DISABLED)
+            else:
+                self.color_btn.config(state=tk.NORMAL)
+
+            self.color_btn.config(bg=self.get_color()[1])
+
+        self.load_child_node_data()
+        for wid in self.f_widget_ids:
+            self.f_widgets[wid].reload()
 
     def pose_fields(self):
         ContainerFrame.pose_fields(self)
@@ -772,8 +771,8 @@ class DependencyFrame(ContainerFrame):
                     tag_class=orig_tag_class, filepath=self.node.filepath))
 
             self.node.filepath = tag_path
-            self.set_edited()
             self.reload()
+            self.set_edited()
         except Exception:
             print(format_exc())
 
@@ -920,7 +919,7 @@ class DependencyFrame(ContainerFrame):
             self, width=5, text='Open', command=self.open_tag, **btn_kwargs)
         self.preview_btn = None
         try:
-            names = self.desc['NAME_MAP'].keys()
+            names = self.desc[0]['NAME_MAP'].keys()
             is_bitmap_dependency = len(names) == 2 and "bitmap" in names
         except Exception:
             is_bitmap_dependency = False
@@ -1013,6 +1012,7 @@ class DependencyFrame(ContainerFrame):
             print(format_exc())
 
     def set_disabled(self, disable=True):
+        disable = disable or not self.editable
         if self.node is None and not disable:
             return
 
@@ -1032,13 +1032,12 @@ class HaloRawdataFrame(RawdataFrame):
 
         undo_node = self.node
         self.node = self.parent[self.attr_index] = self.node[0:0]
+        self.set_edited()
         self.edit_create(undo_node=undo_node, redo_node=self.node)
 
-        # until i come up with a better method, i'll have to rely on
-        # reloading the root field widget so sizes will be updated
+        # reload the parent field widget so sizes will be updated
         try:
             self.f_widget_parent.reload()
-            self.set_edited()
         except Exception:
             print(format_exc())
             print("Could not reload after deleting data.")
@@ -1195,13 +1194,12 @@ class SoundSampleFrame(HaloRawdataFrame):
             self.parent.parse(rawdata=rawdata, attr_index=index)
             self.node = self.parent[index]
 
+            self.set_edited()
             self.edit_create(undo_node=undo_node, redo_node=self.node)
 
-            # until i come up with a better method, i'll have to rely on
-            # reloading the root field widget so sizes will be updated
+            # reload the parent field widget so sizes will be updated
             try:
                 self.f_widget_parent.reload()
-                self.set_edited()
             except Exception:
                 print(format_exc())
                 print("Could not reload after importing sound data.")
@@ -1320,6 +1318,7 @@ class ReflexiveFrame(DynamicArrayFrame):
             w.pack(side="right", padx=(0, 4), pady=(2, 2))
 
     def set_disabled(self, disable=True):
+        disable = disable or not self.editable
         if self.node is None and not disable:
             return
 
@@ -1406,7 +1405,6 @@ class ReflexiveFrame(DynamicArrayFrame):
         except Exception:
             return
         w.import_node()
-        self.set_edited()
 
 
 # replace the DynamicEnumFrame with one that has a specialized option generator
