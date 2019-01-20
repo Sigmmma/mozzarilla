@@ -18,6 +18,7 @@ from binilla.widgets import *
 
 from reclaimer.h2.constants import *
 from reclaimer.h3.util import get_virtual_dimension, get_h3_pixel_bytes_size
+from reclaimer.hmt import parse_hmt_message
 from reclaimer.meter_image import meter_image_def
 
 try:
@@ -67,6 +68,39 @@ class SimpleImageFrame(ContainerFrame):
         if self.image_frame:
             self.image_frame().pack(side=side, fill='x')
         ContainerFrame.pose_fields(self)
+
+
+class ComputedTextFrame(TextFrame):
+    def export_node(self): pass
+    def import_node(self): pass
+    def build_replace_map(self): pass
+    def flush(self, *a, **kw): pass
+    def set_edited(self, *a, **kw): pass
+    def set_needs_flushing(self, *a, **kw): pass
+    def populate(self): self.reload()
+
+    def reload(self):
+        if self.parent is None:
+            return
+
+        try:
+            try:
+                new_text = self.get_text()
+            except Exception:
+                return
+
+            self.data_text.delete(1.0, tk.END)
+            self.data_text.insert(1.0, new_text)
+        except Exception:
+            print(format_exc())
+        finally:
+            if self.disabled:
+                self.data_text.config(state=tk.DISABLED)
+            else:
+                self.data_text.config(state=tk.NORMAL)
+
+    def get_text(self):
+        raise NotImplementedError()
 
 
 class HaloBitmapDisplayFrame(BitmapDisplayFrame):
@@ -301,7 +335,7 @@ class FontCharacterFrame(SimpleImageFrame):
                 char_int = node.character
                 char = bytes([char_int & 0xFF, char_int >> 8]).decode("utf-16-le")
                 width = max(node.bitmap_width, node.character_width, 1)
-                height = max(node.bitmap_height, 1)
+                height = max(node.bitmap_height, 32)
                 self.image_frame().change_textures(self.get_textures())
             except Exception:
                 width = height = 1
@@ -1234,46 +1268,42 @@ class HaloScriptSourceFrame(HaloRawdataFrame):
     def field_ext(self): return '.hsc'
 
 
-class HaloScriptTextFrame(TextFrame):
+class HaloScriptTextFrame(ComputedTextFrame):
     syntax  = None
     strings = None
 
-    def export_node(self): pass
-    def import_node(self): pass
-    def build_replace_map(self): pass
-    def flush(self, *a, **kw): pass
-    def set_edited(self, *a, **kw): pass
-    def set_needs_flushing(self, *a, **kw): pass
-
-    def reload(self):
+    def get_text(self):
         if self.parent is None:
+            return ""
+
+        if None in (self.strings, self.syntax):
+            tag_data = self.parent.parent.parent.parent
+            self.syntax  = reclaimer.hsc.get_hsc_data_block(
+                tag_data.script_syntax_data.data)
+            self.strings = tag_data.script_string_data.data.decode("latin-1")
+
+        if None in (self.strings, self.syntax):
             return
 
-        try:
-            if None in (self.strings, self.syntax):
-                tag_data = self.parent.parent.parent.parent
-                self.syntax  = reclaimer.hsc.get_hsc_data_block(
-                    tag_data.script_syntax_data.data)
-                self.strings = tag_data.script_string_data.data.decode("latin-1")
+        typ = "script"
+        if "global" in self.f_widget_parent.node.NAME:
+            typ = "global"
 
-            if None in (self.strings, self.syntax):
-                return
+        tag_data = self.parent.parent.parent.parent
+        new_text = reclaimer.hsc.hsc_bytecode_to_string(
+                self.syntax, self.strings, self.f_widget_parent.attr_index,
+                tag_data.scripts.STEPTREE, tag_data.globals.STEPTREE, typ)
+        return new_text
 
-            typ = "script"
-            if "global" in self.f_widget_parent.node.NAME:
-                typ = "global"
 
-            tag_data = self.parent.parent.parent.parent
-            new_text = reclaimer.hsc.hsc_bytecode_to_string(
-                    self.syntax, self.strings, self.f_widget_parent.attr_index,
-                    tag_data.scripts.STEPTREE, tag_data.globals.STEPTREE, typ)
+class HaloHudMessageTextFrame(ComputedTextFrame):
+    def get_text(self):
+        if self.parent is None:
+            return ""
 
-            self.data_text.delete(1.0, tk.END)
-            self.data_text.insert(1.0, new_text)
-        except Exception:
-            print(format_exc())
-
-    populate = reload
+        tag_data = self.parent.parent.parent.parent
+        message_index = self.parent.parent.index(self.parent)
+        return parse_hmt_message(tag_data, message_index)[0]
 
 
 class SoundSampleFrame(HaloRawdataFrame):
