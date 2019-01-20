@@ -152,10 +152,6 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
             outline=self.bitmap_canvas_outline_color)
 
     def change_textures(self, textures):
-        if not (hasattr(self, "sprite_menu") and
-                hasattr(self, "sequence_menu")):
-            return
-
         BitmapDisplayFrame.change_textures(self, textures)
         tag = self.bitmap_tag
         if tag is None: return
@@ -163,8 +159,115 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
         data = tag.data.tagdata
         options = {i+1: str(i) for i in range(len(data.sequences.STEPTREE))}
         options[0] = "None"
+
+        if not (hasattr(self, "sprite_menu") and
+                hasattr(self, "sequence_menu")):
+            return
         self.sequence_menu.set_options(options)
         self.sequence_menu.sel_index = (self.sequence_menu.max_index >= 0) - 1
+
+
+class FontCharacterDisplayFrame(BitmapDisplayFrame):
+    def __init__(self, *args, **kwargs):
+        BitmapDisplayFrame.__init__(self, *args, **kwargs)
+        self.labels_frame = tk.Frame(self, highlightthickness=0)
+        self.preview_frame = tk.Frame(self, highlightthickness=0)
+
+        self.font_label0 = tk.Label(self.labels_frame, text="UTF-16 character\t")
+        self.font_label1 = tk.Label(self.labels_frame, text="Bitmap preview\t")
+        self.preview_label = tk.Label(self.preview_frame, text="",
+                                      font=("sans-serif", 12))
+        for lbl in (self.font_label0, self.font_label1):
+            lbl.config(width=30, anchor='w',
+                       bg=self.default_bg_color, fg=self.text_normal_color,
+                       disabledforeground=self.text_disabled_color)
+
+        for w in (self.hsb, self.vsb, self.root_canvas):
+            w.pack_forget()
+
+        self.image_canvas = tk.Canvas(self.preview_frame, highlightthickness=0,
+                                      bg=self.bitmap_canvas_bg_color)
+        #self.save_button = tk.Button(self.font_frame1, width=11,
+        #                             text="Save as...", command=self.save_as)
+
+        padx = self.horizontal_padx
+        pady = self.horizontal_pady
+
+        self.image_canvas.config(width=1, height=1)
+        self.labels_frame.pack(fill='both', side='left')
+        self.preview_frame.pack(fill='both', side='left')
+        self.font_label0.pack(fill='x', padx=padx, pady=pady)
+        self.font_label1.pack(fill='x', padx=padx, pady=pady)
+        self.preview_label.pack(fill='x', padx=padx, pady=pady)
+        self.image_canvas.pack(fill='x', padx=padx, pady=pady,
+                               in_=self.preview_frame)
+        #self.save_button.pack(side='left', padx=padx, pady=pady)
+
+        self.apply_style()
+
+    def apply_style(self, seen=None):
+        BitmapDisplayFrame.apply_style(self, seen)
+
+
+class FontCharacterFrame(ContainerFrame):
+    font_tag = None
+    char_canvas = None
+
+    def __init__(self, *args, **kwargs):
+        ContainerFrame.__init__(self, *args, **kwargs)
+        try:
+            self.font_tag = self.tag_window.tag
+        except AttributeError:
+            pass
+        self.populate()
+
+    def populate(self):
+        ContainerFrame.populate(self)
+        if self.char_canvas is None or self.char_canvas() is None:
+            self.char_canvas = weakref.ref(FontCharacterDisplayFrame(self))
+        self.reload()
+
+    def reload(self):
+        ContainerFrame.reload(self)
+        if self.char_canvas and self.node:
+            node = self.node
+            char_canvas = self.char_canvas()
+            try:
+                char_int = node.character
+                char = bytes([char_int & 0xFF, char_int >> 8]).decode("utf-16-le")
+                width = max(node.bitmap_width, node.character_width, 1)
+                height = max(node.bitmap_height, 1)
+                char_canvas.change_textures(self.get_textures())
+            except Exception:
+                width = height = 1
+                char = ""
+            char_canvas.preview_label.config(text=char)
+            char_canvas.image_canvas.config(width=width, height=height)
+
+        self.pose_fields()
+
+    def pose_fields(self):
+        orient = self.desc.get('ORIENT', 'v')[:1].lower()
+        side = 'left' if orient == 'h' else 'top'
+        if self.char_canvas:
+            self.char_canvas().pack(side=side, fill='x')
+        ContainerFrame.pose_fields(self)
+
+    def get_textures(self):
+        texture_block = []
+        if self.node and self.font_tag:
+            width = max(self.node.bitmap_width, 1)
+            height = max(self.node.bitmap_height, 1)
+            tex_info = dict(width=width, height=height,
+                            format=arbytmap.FORMAT_L8)
+            pixels_count = width * height
+            all_pixels = self.font_tag.data.tagdata.pixels.data
+            pixels = all_pixels[self.node.pixels_offset:
+                                self.node.pixels_offset + pixels_count]
+            pixels += b'\x00' * (pixels_count - len(pixels))
+            texture_block.append([[pixels], tex_info])
+
+        return texture_block
 
 
 class HaloBitmapDisplayBase:
@@ -1033,6 +1136,7 @@ class HaloRawdataFrame(RawdataFrame):
         undo_node = self.node
         self.node = self.parent[self.attr_index] = self.node[0:0]
         self.set_edited()
+
         self.edit_create(undo_node=undo_node, redo_node=self.node)
 
         # reload the parent field widget so sizes will be updated
