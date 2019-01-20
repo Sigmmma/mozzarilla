@@ -6,11 +6,11 @@ from traceback import format_exc
 
 from supyr_struct.defs.util import sanitize_path
 from supyr_struct.defs.constants import PATHDIV
-from reclaimer.hek.defs.hmt_ import icon_types
+from reclaimer.enums import hmt_icon_types
 
 
-icon_type_map = {icon_types[i]: i for i in range(len(icon_types))}
-MAX_ICON_NAME_LENGTH = max(*(len(name) for name in icon_types))
+icon_type_map = {hmt_icon_types[i]: i for i in range(len(hmt_icon_types))}
+MAX_ICON_NAME_LENGTH = max(*(len(name) for name in hmt_icon_types))
 
 
 def hud_message_text_from_hmt(app, fp=None):
