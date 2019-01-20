@@ -18,6 +18,7 @@ from binilla.widgets import *
 
 from reclaimer.h2.constants import *
 from reclaimer.h3.util import get_virtual_dimension, get_h3_pixel_bytes_size
+from reclaimer.meter_image import meter_image_def
 
 try:
     import arbytmap
@@ -39,6 +40,33 @@ def inject_color(chan_char, new_val, parent, attr_index):
     node = parent[attr_index]
     chan_mask = 0xFFFFFFFF - (0xFF << off)
     parent[attr_index] = (node & chan_mask) | ((new_val & 0xFF) << off)
+
+
+class SimpleImageFrame(ContainerFrame):
+    tag = None
+    image_frame = None
+    display_frame_cls = None
+
+    def __init__(self, *args, **kwargs):
+        ContainerFrame.__init__(self, *args, **kwargs)
+        try:
+            self.tag = self.tag_window.tag
+        except AttributeError:
+            pass
+        self.populate()
+
+    def populate(self):
+        ContainerFrame.populate(self)
+        if self.image_frame is None or self.image_frame() is None:
+            self.image_frame = weakref.ref(self.display_frame_cls(self))
+        self.reload()
+
+    def pose_fields(self):
+        orient = self.desc.get('ORIENT', 'v')[:1].lower()
+        side = 'left' if orient == 'h' else 'top'
+        if self.image_frame:
+            self.image_frame().pack(side=side, fill='x')
+        ContainerFrame.pose_fields(self)
 
 
 class HaloBitmapDisplayFrame(BitmapDisplayFrame):
@@ -167,6 +195,68 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
         self.sequence_menu.sel_index = (self.sequence_menu.max_index >= 0) - 1
 
 
+class MeterImageDisplayFrame(BitmapDisplayFrame):
+    def __init__(self, *args, **kwargs):
+        BitmapDisplayFrame.__init__(self, *args, **kwargs)
+        for w in (self.hsb, self.vsb, self.root_canvas):
+            w.pack_forget()
+
+        self.preview_label = tk.Label(self, text="Bitmap preview\t")
+        self.image_canvas = tk.Canvas(self, highlightthickness=0,
+                                      bg=self.bitmap_canvas_bg_color)
+        self.channel_menu = ScrollMenu(self, menu_width=9, can_scroll=True,
+                                       variable=self.channel_index)
+        self.save_button = tk.Button(self, width=11, text="Save as...",
+                                     command=self.save_as)
+
+        padx = self.horizontal_padx
+        pady = self.horizontal_pady
+
+        self.image_canvas.config(width=1, height=1)
+        self.preview_label.pack(side='left', padx=padx, pady=pady, fill='x')
+        self.channel_menu.pack(side='left', padx=padx, pady=pady)
+        self.save_button.pack(side='left', padx=padx, pady=pady)
+        self.image_canvas.pack(side='left', padx=padx, pady=pady,
+                               fill='x', expand=True)
+
+        self.apply_style()
+
+
+class MeterImageFrame(SimpleImageFrame):
+    display_frame_cls = MeterImageDisplayFrame
+
+    def reload(self):
+        ContainerFrame.reload(self)
+        if self.image_frame and self.node:
+            try:
+                width = max(self.node.width, 1)
+                height = max(self.node.height, 1)
+                self.image_frame().change_textures(self.get_textures())
+            except Exception:
+                print(format_exc())
+                width = height = 1
+            self.image_frame().image_canvas.config(width=width, height=height)
+
+        self.pose_fields()
+
+    def get_textures(self):
+        texture_block = []
+        if self.node:
+            width = max(self.node.width, 1)
+            height = max(self.node.height, 1)
+            tex_info = dict(width=width, height=height,
+                            format=arbytmap.FORMAT_A8R8G8B8)
+            pixels = bytearray(width * height * 4)
+            for line in meter_image_def.build(rawdata=self.node.meter_data.data):
+                off = (line.x_pos + line.y_pos * width) * 4
+                pixels[off: off + line.width * 4] = line.line_data
+
+            # need it packed otherwise channel swapping wont occur
+            texture_block.append([[array("I", pixels)], tex_info])
+
+        return texture_block
+
+
 class FontCharacterDisplayFrame(BitmapDisplayFrame):
     def __init__(self, *args, **kwargs):
         BitmapDisplayFrame.__init__(self, *args, **kwargs)
@@ -187,81 +277,49 @@ class FontCharacterDisplayFrame(BitmapDisplayFrame):
 
         self.image_canvas = tk.Canvas(self.preview_frame, highlightthickness=0,
                                       bg=self.bitmap_canvas_bg_color)
-        #self.save_button = tk.Button(self.font_frame1, width=11,
-        #                             text="Save as...", command=self.save_as)
-
         padx = self.horizontal_padx
         pady = self.horizontal_pady
 
         self.image_canvas.config(width=1, height=1)
         self.labels_frame.pack(fill='both', side='left')
         self.preview_frame.pack(fill='both', side='left')
-        self.font_label0.pack(fill='x', padx=padx, pady=pady)
-        self.font_label1.pack(fill='x', padx=padx, pady=pady)
-        self.preview_label.pack(fill='x', padx=padx, pady=pady)
-        self.image_canvas.pack(fill='x', padx=padx, pady=pady,
-                               in_=self.preview_frame)
-        #self.save_button.pack(side='left', padx=padx, pady=pady)
+        for w in (self.font_label0, self.font_label1,
+                  self.preview_label, self.image_canvas):
+            w.pack(fill='x', padx=padx, pady=pady)
 
         self.apply_style()
 
-    def apply_style(self, seen=None):
-        BitmapDisplayFrame.apply_style(self, seen)
 
-
-class FontCharacterFrame(ContainerFrame):
-    font_tag = None
-    char_canvas = None
-
-    def __init__(self, *args, **kwargs):
-        ContainerFrame.__init__(self, *args, **kwargs)
-        try:
-            self.font_tag = self.tag_window.tag
-        except AttributeError:
-            pass
-        self.populate()
-
-    def populate(self):
-        ContainerFrame.populate(self)
-        if self.char_canvas is None or self.char_canvas() is None:
-            self.char_canvas = weakref.ref(FontCharacterDisplayFrame(self))
-        self.reload()
+class FontCharacterFrame(SimpleImageFrame):
+    display_frame_cls = FontCharacterDisplayFrame
 
     def reload(self):
         ContainerFrame.reload(self)
-        if self.char_canvas and self.node:
+        if self.image_frame and self.node:
             node = self.node
-            char_canvas = self.char_canvas()
             try:
                 char_int = node.character
                 char = bytes([char_int & 0xFF, char_int >> 8]).decode("utf-16-le")
                 width = max(node.bitmap_width, node.character_width, 1)
                 height = max(node.bitmap_height, 1)
-                char_canvas.change_textures(self.get_textures())
+                self.image_frame().change_textures(self.get_textures())
             except Exception:
                 width = height = 1
                 char = ""
-            char_canvas.preview_label.config(text=char)
-            char_canvas.image_canvas.config(width=width, height=height)
+            self.image_frame().preview_label.config(text=char)
+            self.image_frame().image_canvas.config(width=width, height=height)
 
         self.pose_fields()
 
-    def pose_fields(self):
-        orient = self.desc.get('ORIENT', 'v')[:1].lower()
-        side = 'left' if orient == 'h' else 'top'
-        if self.char_canvas:
-            self.char_canvas().pack(side=side, fill='x')
-        ContainerFrame.pose_fields(self)
-
     def get_textures(self):
         texture_block = []
-        if self.node and self.font_tag:
+        if self.node and self.tag:
             width = max(self.node.bitmap_width, 1)
             height = max(self.node.bitmap_height, 1)
             tex_info = dict(width=width, height=height,
                             format=arbytmap.FORMAT_L8)
             pixels_count = width * height
-            all_pixels = self.font_tag.data.tagdata.pixels.data
+            all_pixels = self.tag.data.tagdata.pixels.data
             pixels = all_pixels[self.node.pixels_offset:
                                 self.node.pixels_offset + pixels_count]
             pixels += b'\x00' * (pixels_count - len(pixels))
