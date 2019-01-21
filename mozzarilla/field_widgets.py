@@ -23,7 +23,7 @@ from reclaimer.meter_image import meter_image_def
 
 try:
     import arbytmap
-    from reclaimer.hek.defs.objs.bitm import P8_PALETTE
+    from reclaimer.bitmaps.p8_palette import HALO_P8_PALETTE, STUBBS_P8_PALETTE
 except ImportError:
     pass
 
@@ -365,6 +365,16 @@ class FontCharacterFrame(SimpleImageFrame):
 class HaloBitmapDisplayBase:
     cubemap_padding = CUBEMAP_PADDING
 
+    @property
+    def p8_palette(self):
+        engine = getattr(self.master.tag_window, "engine", None)
+        if engine is None:
+            return self.master.tag_window.tag.p8_palette
+        elif "stubbs" in engine:
+            return STUBBS_P8_PALETTE
+        else:
+            return HALO_P8_PALETTE
+
     def get_base_address(self, tag):
         if tag is None:
             return 0
@@ -446,7 +456,7 @@ class HaloBitmapDisplayBase:
             mipmap_count = b.mipmaps + 1
             if fmt == arbytmap.FORMAT_P8_BUMP:
                 tex_info.update(
-                    palette=[P8_PALETTE.p8_palette_32bit_packed]*mipmap_count,
+                    palette=[self.p8_palette.p8_palette_32bit_packed]*mipmap_count,
                     palette_packed=True, indexing_size=8)
 
             tex_block = self.get_bitmap_pixels(i, tag)

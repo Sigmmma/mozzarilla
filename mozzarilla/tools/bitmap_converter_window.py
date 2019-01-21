@@ -12,8 +12,6 @@ from tkinter.filedialog import asksaveasfilename, askdirectory
 from time import sleep, time
 from traceback import format_exc
 
-from reclaimer.hek.defs.bitm import bitm_def
-from reclaimer.hek.defs.objs.bitm import P8_PALETTE
 from reclaimer.field_types import *
 
 from binilla.util import *
@@ -294,16 +292,16 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
 
         if ab.CHANNEL_COUNTS[fmt_s] == 4:
             if fmt_s == ab.FORMAT_P8_BUMP:
-                palette_picker = P8_PALETTE.argb_array_to_p8_array_auto
+                palette_picker = tag.p8_palette.argb_array_to_p8_array_auto
             elif ck_trans and fmt_s not in (ab.FORMAT_X8R8G8B8, ab.FORMAT_R5G6B5):
                 if conv_flags.p8_mode == 0:
-                    palette_picker = P8_PALETTE.argb_array_to_p8_array_auto_alpha
+                    palette_picker = tag.p8_palette.argb_array_to_p8_array_auto_alpha
                 else:
-                    palette_picker = P8_PALETTE.argb_array_to_p8_array_average_alpha
+                    palette_picker = tag.p8_palette.argb_array_to_p8_array_average_alpha
             elif conv_flags.p8_mode == 0:
-                palette_picker = P8_PALETTE.argb_array_to_p8_array_auto
+                palette_picker = tag.p8_palette.argb_array_to_p8_array_auto
             else:
-                palette_picker = P8_PALETTE.argb_array_to_p8_array_average
+                palette_picker = tag.p8_palette.argb_array_to_p8_array_average
 
         arb.load_new_texture(texture_block=tex_block, texture_info=tex_info)
 
@@ -583,7 +581,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
 
 
         self.p8_mode_menu.tooltip_string = (
-            "The method used for picking P8-bump normals.\n"
+            "The method used for picking p8-bump normals.\n"
             "Auto emphasizes preserving shadow depth.\n"
             "Average emphasizes preserving smoothness.")
         self.ay8_channel_src_menu.tooltip_string = (
@@ -592,7 +590,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             "Setting this will swap them when going to/from A8Y8.")
         self.ck_transparency_menu.tooltip_string = (
             "Whether to use color-key transparency when converting\n"
-            "to P8-bump or DXT1. These formats support transparency\n"
+            "to p8-bump or DXT1. These formats support transparency\n"
             "where transparent pixels are also solid black in color.")
         self.swap_a8y8_menu.tooltip_string = (
             "Whether or not to swap the alpha and intensity\n"
@@ -602,7 +600,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             "This does nothing to DXT1/3/5 bitmaps.\n"
             "Xbox bitmaps MUST be swizzled to work.")
         self.alpha_bias_box.tooltip_string = (
-            "When converting to DXT1 with transparency, P8-bump,\n"
+            "When converting to DXT1 with transparency, p8-bump,\n"
             "or A1R5G5B5, alpha values below this are rounded to\n"
             "black, while values at or above it round to white.")
 
