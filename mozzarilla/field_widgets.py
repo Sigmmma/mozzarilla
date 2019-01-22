@@ -366,11 +366,18 @@ class HaloBitmapDisplayBase:
     cubemap_padding = CUBEMAP_PADDING
 
     @property
-    def p8_palette(self):
-        engine = getattr(self.master.tag_window, "engine", None)
-        if engine is None:
+    def engine(self):
+        if getattr(self.master, "engine", None):
+            return self.master.engine
+
+        return getattr(getattr(self.master, "tag_window", None), "engine", None)
+
+    def get_p8_palette(self, tag):
+        if getattr(tag, "p8_palette", None):
+            return tag.p8_palette
+        elif not self.engine:
             return self.master.tag_window.tag.p8_palette
-        elif "stubbs" in engine:
+        elif "stubbs" in self.engine:
             return STUBBS_P8_PALETTE
         else:
             return HALO_P8_PALETTE
@@ -455,8 +462,9 @@ class HaloBitmapDisplayBase:
 
             mipmap_count = b.mipmaps + 1
             if fmt == arbytmap.FORMAT_P8_BUMP:
+                p8_palette = self.get_p8_palette(tag)
                 tex_info.update(
-                    palette=[self.p8_palette.p8_palette_32bit_packed]*mipmap_count,
+                    palette=[p8_palette.p8_palette_32bit_packed]*mipmap_count,
                     palette_packed=True, indexing_size=8)
 
             tex_block = self.get_bitmap_pixels(i, tag)
