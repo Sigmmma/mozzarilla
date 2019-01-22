@@ -12,6 +12,8 @@ from tkinter.filedialog import asksaveasfilename, askdirectory
 from time import sleep, time
 from traceback import format_exc
 
+from reclaimer.hek.defs.bitm import bitm_def as halo_bitm_def
+from reclaimer.stubbs.defs.bitm import bitm_def as stubbs_bitm_def
 from reclaimer.field_types import *
 
 from binilla.util import *
@@ -36,7 +38,7 @@ AL_COMBO_TO_ARGB = (0, 0, 0, 0)
 
 BITMAP_PLATFORMS = ("PC", "XBOX")
 MULTI_SWAP_OPTIONS = ("", "PC to XBOX", "XBOX to PC")
-P8_MODE_OPTIONS = ("Auto", "Average")
+P8_MODE_OPTIONS = ("Auto", "Average", "Best fit")
 AY8_OPTIONS = ("Alpha", "Intensity")
 EXTRACT_TO_OPTIONS = ("", "DDS", "TGA", "PNG")
 NO_YES_OPTIONS = ("No", "Yes")
@@ -71,7 +73,7 @@ else:
 class ConversionFlags:
     platform = BITMAP_PLATFORMS.index("PC")
     multi_swap = MULTI_SWAP_OPTIONS.index("")
-    p8_mode = P8_MODE_OPTIONS.index("Auto")
+    p8_mode = P8_MODE_OPTIONS.index("Best fit")
     mono_channel_to_keep = AY8_OPTIONS.index("Alpha")
 
     extract_to = EXTRACT_TO_OPTIONS.index("")
@@ -296,12 +298,16 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
             elif ck_trans and fmt_s not in (ab.FORMAT_X8R8G8B8, ab.FORMAT_R5G6B5):
                 if conv_flags.p8_mode == 0:
                     palette_picker = tag.p8_palette.argb_array_to_p8_array_auto_alpha
-                else:
+                elif conv_flags.p8_mode == 1:
                     palette_picker = tag.p8_palette.argb_array_to_p8_array_average_alpha
+                else:
+                    palette_picker = tag.p8_palette.argb_array_to_p8_array_best_fit_alpha
             elif conv_flags.p8_mode == 0:
                 palette_picker = tag.p8_palette.argb_array_to_p8_array_auto
-            else:
+            elif conv_flags.p8_mode == 1:
                 palette_picker = tag.p8_palette.argb_array_to_p8_array_average
+            else:
+                palette_picker = tag.p8_palette.argb_array_to_p8_array_best_fit
 
         arb.load_new_texture(texture_block=tex_block, texture_info=tex_info)
 
@@ -348,6 +354,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
     app_root = None
     tag_list_frame = None
     loaded_tags_dir = ''
+    last_load_dir = ''
 
     prune_tiff = None
     read_only = None
@@ -372,6 +379,8 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
     buttons = ()
     spinboxes = ()
     menus = ()
+
+    bitm_def = halo_bitm_def
 
     def __init__(self, app_root, *args, **kwargs):
         BinillaWidget.__init__(self, *args, **kwargs)
@@ -583,7 +592,8 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         self.p8_mode_menu.tooltip_string = (
             "The method used for picking p8-bump normals.\n"
             "Auto emphasizes preserving shadow depth.\n"
-            "Average emphasizes preserving smoothness.")
+            "Average emphasizes preserving smoothness.\n"
+            "Best fit chooses the closest available color.")
         self.ay8_channel_src_menu.tooltip_string = (
             "HUD meters converted to/from Xbox A8Y8 need to\n"
             "have their intensity and alpha channels swapped.\n"
@@ -878,7 +888,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
                         return
 
                     try:
-                        bitm_tag = bitm_def.build(filepath=join(root, filename))
+                        bitm_tag = self.bitm_def.build(filepath=join(root, filename))
                     except Exception:
                         print(format_exc())
                         bitm_tag = None
@@ -942,7 +952,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
                     extracting = conv_flags.extract_to != 0
                     converting = get_will_be_converted(conv_flags, bitmap_info)
                     if pruning or converting or extracting:
-                        tag = bitm_def.build(filepath=join(tags_dir, fp))
+                        tag = self.bitm_def.build(filepath=join(tags_dir, fp))
                         if pruning:
                             tag.data.tagdata.compressed_color_plate_data.data = bytearray()
 
@@ -1544,7 +1554,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
         display_frame = self.master.bitmap_display_windows.get(tag_path)
         if display_frame is None or display_frame() is None:
             tags_dir = self.master.loaded_tags_dir
-            tag = bitm_def.build(filepath=join(tags_dir, tag_path))
+            tag = self.master.bitm_def.build(filepath=join(tags_dir, tag_path))
 
             if not tag:
                 print("Could not load the tag: %s" % tag_path)
@@ -1556,6 +1566,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
             w = tk.Toplevel(self.master)
             display_frame = weakref.ref(HaloBitmapDisplayFrame(w, tag))
+
             display_frame().change_textures(self.get_textures(tag))
             display_frame().pack(expand=True, fill="both")
 
