@@ -12,8 +12,8 @@ from tkinter.filedialog import asksaveasfilename, askdirectory
 from time import sleep, time
 from traceback import format_exc
 
-from reclaimer.hek.defs.bitm import bitm_def as halo_bitm_def
-from reclaimer.stubbs.defs.bitm import bitm_def as stubbs_bitm_def
+from reclaimer.bitmaps.p8_palette import HALO_P8_PALETTE, STUBBS_P8_PALETTE
+from reclaimer.hek.defs.bitm import bitm_def
 from reclaimer.field_types import *
 
 from binilla.util import *
@@ -38,7 +38,6 @@ AL_COMBO_TO_ARGB = (0, 0, 0, 0)
 
 BITMAP_PLATFORMS = ("PC", "XBOX")
 MULTI_SWAP_OPTIONS = ("", "PC to XBOX", "XBOX to PC")
-P8_MODE_OPTIONS = ("Auto", "Average", "Best fit")
 AY8_OPTIONS = ("Alpha", "Intensity")
 EXTRACT_TO_OPTIONS = ("", "DDS", "TGA", "PNG")
 NO_YES_OPTIONS = ("No", "Yes")
@@ -73,7 +72,6 @@ else:
 class ConversionFlags:
     platform = BITMAP_PLATFORMS.index("PC")
     multi_swap = MULTI_SWAP_OPTIONS.index("")
-    p8_mode = P8_MODE_OPTIONS.index("Best fit")
     mono_channel_to_keep = AY8_OPTIONS.index("Alpha")
 
     extract_to = EXTRACT_TO_OPTIONS.index("")
@@ -81,6 +79,7 @@ class ConversionFlags:
     alpha_bias = 127
     new_format = 0
 
+    prune_tiff = 0
     swizzled = 0
     mono_swap = 0
     ck_trans = 0
@@ -296,16 +295,7 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
             if fmt_s == ab.FORMAT_P8_BUMP:
                 palette_picker = tag.p8_palette.argb_array_to_p8_array_auto
             elif ck_trans and fmt_s not in (ab.FORMAT_X8R8G8B8, ab.FORMAT_R5G6B5):
-                if conv_flags.p8_mode == 0:
-                    palette_picker = tag.p8_palette.argb_array_to_p8_array_auto_alpha
-                elif conv_flags.p8_mode == 1:
-                    palette_picker = tag.p8_palette.argb_array_to_p8_array_average_alpha
-                else:
-                    palette_picker = tag.p8_palette.argb_array_to_p8_array_best_fit_alpha
-            elif conv_flags.p8_mode == 0:
-                palette_picker = tag.p8_palette.argb_array_to_p8_array_auto
-            elif conv_flags.p8_mode == 1:
-                palette_picker = tag.p8_palette.argb_array_to_p8_array_average
+                palette_picker = tag.p8_palette.argb_array_to_p8_array_best_fit_alpha
             else:
                 palette_picker = tag.p8_palette.argb_array_to_p8_array_best_fit
 
@@ -356,7 +346,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
     loaded_tags_dir = ''
     last_load_dir = ''
 
-    prune_tiff = None
+    use_stubbs_p8 = None
     read_only = None
     backup_tags = None
     open_log = None
@@ -380,7 +370,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
     spinboxes = ()
     menus = ()
 
-    bitm_def = halo_bitm_def
+    bitm_def = bitm_def
 
     def __init__(self, app_root, *args, **kwargs):
         BinillaWidget.__init__(self, *args, **kwargs)
@@ -407,10 +397,10 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             print("Could not load window icon.")
 
         # make the tkinter variables
-        self.prune_tiff = tk.BooleanVar(self)
         self.read_only = tk.BooleanVar(self)
         self.backup_tags = tk.BooleanVar(self, True)
         self.open_log = tk.BooleanVar(self, True)
+        self.use_stubbs_p8 = tk.BooleanVar(self)
 
         self.scan_dir_path = tk.StringVar(self)
         self.data_dir_path = tk.StringVar(self)
@@ -502,15 +492,13 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             self.global_params_frame, text="Backup tags �",
             variable=self.backup_tags)
         self.open_log_cbutton = tk.Checkbutton(
-            self.global_params_frame, text="Open log when done �",
+            self.global_params_frame, text="Show log �",
             variable=self.open_log)
-        self.prune_tiff_cbutton = tk.Checkbutton(
-            self.global_params_frame, text="Prune tiff data �",
-            variable=self.prune_tiff, command=self.update_all_path_colors)
+        self.use_stubbs_p8_cbutton = tk.Checkbutton(
+            self.global_params_frame, text="Use Stubbs p8 palette �",
+            variable=self.use_stubbs_p8)
 
-        self.prune_tiff_cbutton.tooltip_string = (
-            "Prunes the uncompressed TIFF pixel data\n"
-            "from all bitmaps to reduce their filesize.")
+
         self.read_only_cbutton.tooltip_string = (
             "Does no conversion, and instead writes a\n"
             "log detailing all bitmaps in the directory.")
@@ -519,6 +507,9 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             "(does nothing if a backup already exists)")
         self.open_log_cbutton.tooltip_string = (
             "Open the conversion log when finished.")
+        self.use_stubbs_p8_cbutton.tooltip_string = (
+            "Use Stubbs the Zombie's p8-bump palette\n"
+            "instead of Halo's for P8-bump textures.")
 
 
         self.platform_menu = ScrollMenu(
@@ -533,10 +524,10 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             self.general_params_frame, menu_width=12,
             options=EXTRACT_TO_OPTIONS, callback=lambda *a, s=self:
             s.set_conversion_flag(self.extract_to_menu, "extract_to"))
-        self.multi_swap_menu = ScrollMenu(
+        self.prune_tiff_menu = ScrollMenu(
             self.general_params_frame, menu_width=12,
-            options=MULTI_SWAP_OPTIONS, callback=lambda *a, s=self:
-            s.set_conversion_flag(self.multi_swap_menu, "multi_swap"))
+            options=NO_YES_OPTIONS, callback=lambda *a, s=self:
+            s.set_conversion_flag(self.prune_tiff_menu, "prune_tiff"))
         self.generate_mips_menu = ScrollMenu(
             self.general_params_frame, menu_width=12,
             options=NO_YES_OPTIONS, callback=lambda *a, s=self:
@@ -553,20 +544,15 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             "The format to convert the bitmap to.")
         self.extract_to_menu.tooltip_string = (
             "The image format to extract the bitmap to.")
-        self.multi_swap_menu.tooltip_string = (
-            "When converting multipurpose bitmaps to/from\n"
-            "Xbox/PC, use this to swap the their color\n"
-            "channels so they work on the other platform.")
+        self.prune_tiff_menu.tooltip_string = (
+            "Prunes the uncompressed TIFF pixel data\n"
+            "from all bitmaps to reduce their filesize.")
         self.generate_mips_menu.tooltip_string = (
             "Whether or not to generate all necessary mipmaps.")
         self.downres_box.tooltip_string = (
             "Number of times to cut the bitmaps\n"
             "width, height, and depth in half.")
 
-        self.p8_mode_menu = ScrollMenu(
-            self.format_params_frame, menu_width=10,
-            options=P8_MODE_OPTIONS, callback=lambda *a, s=self:
-            s.set_conversion_flag(self.p8_mode_menu, "p8_mode"))
         self.ay8_channel_src_menu = ScrollMenu(
             self.format_params_frame, menu_width=10,
             options=AY8_OPTIONS, callback=lambda *a, s=self:
@@ -579,6 +565,10 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             self.format_params_frame, menu_width=10,
             options=NO_YES_OPTIONS, callback=lambda *a, s=self:
             s.set_conversion_flag(self.swap_a8y8_menu, "mono_swap"))
+        self.multi_swap_menu = ScrollMenu(
+            self.format_params_frame, menu_width=10,
+            options=MULTI_SWAP_OPTIONS, callback=lambda *a, s=self:
+            s.set_conversion_flag(self.multi_swap_menu, "multi_swap"))
         self.swizzled_menu = ScrollMenu(
             self.format_params_frame, menu_width=10,
             options=NO_YES_OPTIONS, callback=lambda *a, s=self:
@@ -589,11 +579,6 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             s.set_conversion_flag(self.alpha_bias_box, "alpha_bias"))
 
 
-        self.p8_mode_menu.tooltip_string = (
-            "The method used for picking p8-bump normals.\n"
-            "Auto emphasizes preserving shadow depth.\n"
-            "Average emphasizes preserving smoothness.\n"
-            "Best fit chooses the closest available color.")
         self.ay8_channel_src_menu.tooltip_string = (
             "HUD meters converted to/from Xbox A8Y8 need to\n"
             "have their intensity and alpha channels swapped.\n"
@@ -605,6 +590,10 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         self.swap_a8y8_menu.tooltip_string = (
             "Whether or not to swap the alpha and intensity\n"
             "channels when converting to or from A8Y8.")
+        self.multi_swap_menu.tooltip_string = (
+            "When converting multipurpose bitmaps to/from\n"
+            "Xbox/PC, use this to swap the their color\n"
+            "channels so they work on the other platform.")
         self.swizzled_menu.tooltip_string = (
             "Whether or not to swizzle the bitmap pixels.\n"
             "This does nothing to DXT1/3/5 bitmaps.\n"
@@ -658,13 +647,13 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         self.read_only_cbutton.grid(row=0, column=0, sticky='w')
         self.backup_tags_cbutton.grid(row=0, column=1, sticky='w')
         self.open_log_cbutton.grid(row=0, column=2, sticky='w')
-        self.prune_tiff_cbutton.grid(row=0, column=3, sticky='w')
+        self.use_stubbs_p8_cbutton.grid(row=0, column=3, sticky='w')
 
         i = 0
         widgets = (self.platform_menu, self.format_menu, self.extract_to_menu,
-                   self.multi_swap_menu, self.generate_mips_menu, self.downres_box)
+                   self.prune_tiff_menu, self.generate_mips_menu, self.downres_box)
         for name in ("Platform", "Format", "Extract to",
-                     "Multi. swap", "Generate mipmaps", "Downres. level"):
+                     "Prune TIFF data", "Generate mipmaps", "Downres. level"):
             w = widgets[i]
             lbl = tk.Label(self.general_params_frame, text=name)
             lbl.grid(row=i, column=0, sticky='w')
@@ -678,10 +667,12 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             i += 1
 
         i = 0
-        widgets = (self.p8_mode_menu, self.ay8_channel_src_menu, self.ck_transparency_menu,
-                   self.swap_a8y8_menu, self.swizzled_menu, self.alpha_bias_box)
-        for name in ("P8 mode", "AY8 channel source", "Use CK transparency",
-                     "Swap A8Y8", "Swizzled", "Alpha bias"):
+        widgets = (self.ay8_channel_src_menu, self.ck_transparency_menu,
+                   self.swap_a8y8_menu, self.multi_swap_menu,
+                   self.swizzled_menu, self.alpha_bias_box)
+        for name in ("AY8 channel source", "Use CK transparency",
+                     "Swap A8Y8", "Multi. swap",
+                     "Swizzled", "Alpha bias"):
             w = widgets[i]
             lbl = tk.Label(self.format_params_frame, text=name)
             lbl.grid(row=i, column=0, sticky='w')
@@ -740,12 +731,12 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
 
         self.buttons = (self.scan_dir_browse_button, self.scan_button,
                         self.log_file_browse_button, self.convert_button)
-        self.checkbuttons = (self.prune_tiff_cbutton, self.read_only_cbutton,
-                             self.backup_tags_cbutton, self.open_log_cbutton)
+        self.checkbuttons = (self.read_only_cbutton, self.backup_tags_cbutton,
+                             self.open_log_cbutton, self.use_stubbs_p8_cbutton)
         self.spinboxes = (self.downres_box, self.alpha_bias_box)
         self.menus = (self.platform_menu, self.format_menu,
-                      self.extract_to_menu, self.multi_swap_menu,
-                      self.generate_mips_menu, self.p8_mode_menu,
+                      self.extract_to_menu, self.prune_tiff_menu,
+                      self.multi_swap_menu, self.generate_mips_menu,
                       self.ay8_channel_src_menu, self.ck_transparency_menu,
                       self.swap_a8y8_menu, self.swizzled_menu)
 
@@ -939,7 +930,6 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         else:
             print("Converting bitmaps...")
             tags_dir = self.loaded_tags_dir
-            pruning = self.prune_tiff.get()
     
             for fp in sorted(self.bitmap_tag_infos):
                 try:
@@ -949,6 +939,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
 
                     bitmap_info = self.bitmap_tag_infos[fp]
                     conv_flags = self.conversion_flags[fp]
+                    pruning = conv_flags.prune_tiff
                     extracting = conv_flags.extract_to != 0
                     converting = get_will_be_converted(conv_flags, bitmap_info)
                     if pruning or converting or extracting:
@@ -1020,8 +1011,8 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         try:
             self.enable_settings()
             menus = (self.platform_menu, self.format_menu,
-                     self.multi_swap_menu, self.extract_to_menu,
-                     self.generate_mips_menu, self.p8_mode_menu,
+                     self.extract_to_menu, self.prune_tiff_menu,
+                     self.multi_swap_menu, self.generate_mips_menu,
                      self.ay8_channel_src_menu, self.ck_transparency_menu,
                      self.swap_a8y8_menu, self.swizzled_menu)
             for w in menus:
@@ -1050,7 +1041,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
                 if not flags:
                     continue
 
-                for name in ("platform", "multi_swap", "p8_mode",
+                for name in ("platform", "multi_swap", "prune_tiff",
                              "mono_channel_to_keep", "extract_to", "new_format",
                              "swizzled", "mono_swap", "ck_trans", "mip_gen",
                              "downres", "alpha_bias"):
@@ -1059,9 +1050,9 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
 
             self.platform_menu.sel_index = comb_flags.platform
             self.multi_swap_menu.sel_index = comb_flags.multi_swap
-            self.p8_mode_menu.sel_index = comb_flags.p8_mode
             self.ay8_channel_src_menu.sel_index = comb_flags.mono_channel_to_keep
             self.extract_to_menu.sel_index = comb_flags.extract_to
+            self.prune_tiff_menu.sel_index = comb_flags.prune_tiff
             self.format_menu.sel_index = comb_flags.new_format
             self.swizzled_menu.sel_index = comb_flags.swizzled
             self.swap_a8y8_menu.sel_index = comb_flags.mono_swap
@@ -1224,7 +1215,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         if self.read_only.get() or (not info or not info.bitmap_infos):
             return False
 
-        if self.prune_tiff.get() and info.tiff_data_size:
+        if self.conversion_flags[tag_path].prune_tiff and info.tiff_data_size:
             return True
         elif self.conversion_flags[tag_path].extract_to != 0:
             return True
@@ -1447,6 +1438,11 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             listbox.pack(side="left", fill="both")
 
         self.apply_style()
+
+    def get_p8_palette(self, tag=None):
+        if not self.master.use_stubbs_p8 or not self.master.use_stubbs_p8.get():
+            return HALO_P8_PALETTE
+        return STUBBS_P8_PALETTE
 
     @property
     def path_listbox(self): return self.listboxes[0]
