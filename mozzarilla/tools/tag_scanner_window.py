@@ -470,6 +470,20 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                     err += "\n"
                 err = err[:-1]
 
+        elif cls == "effe":
+            i = 0
+            events = tag.data.tagdata.events.STEPTREE
+            for i in range(len(events)):
+                # tool exceptions if any parts reference a damage effect
+                # tag type, but have an empty filepath for the reference
+                parts = events[i].parts.STEPTREE
+                for j in range(len(parts)):
+                    part = parts[j]
+                    if (part.type.tag_class.enum_name == "damage_effect" and
+                        not part.type.filepath):
+                        err += ("     Missing filepath in damage_effect "
+                                "reference in part %s of event %s\n." % (j, i))
+
         if err:
             errors[cls] = "%s\n%s:\n%s\n" % (
                 errors.get(cls, ""),
