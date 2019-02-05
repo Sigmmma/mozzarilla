@@ -292,12 +292,10 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
                 ck_trans = True
 
         if ab.CHANNEL_COUNTS[fmt_s] == 4:
-            if fmt_s == ab.FORMAT_P8_BUMP:
-                palette_picker = tag.p8_palette.argb_array_to_p8_array_auto
-            elif ck_trans and fmt_s not in (ab.FORMAT_X8R8G8B8, ab.FORMAT_R5G6B5):
-                palette_picker = tag.p8_palette.argb_array_to_p8_array_best_fit_alpha
-            else:
+            if not ck_trans or fmt_s in (ab.FORMAT_X8R8G8B8, ab.FORMAT_R5G6B5):
                 palette_picker = tag.p8_palette.argb_array_to_p8_array_best_fit
+            else:
+                palette_picker = tag.p8_palette.argb_array_to_p8_array_best_fit_alpha
 
         arb.load_new_texture(texture_block=tex_block, texture_info=tex_info)
 
