@@ -99,6 +99,16 @@ class Mozzarilla(Binilla):
 
     tags_dirs = ()
 
+    about_module_names = (
+        "arbytmap",
+        "binilla",
+        "mozzarilla",
+        "reclaimer",
+        "refinery",
+        "supyr_struct",
+        "threadsafe_tkinter",
+        )
+
     _curr_handler_index  = 0
     _curr_tags_dir_index = 0
 
@@ -126,11 +136,16 @@ class Mozzarilla(Binilla):
         Binilla.__init__(self, *args, **kwargs)
         try:
             try:
-                self.iconbitmap(join(this_curr_dir, 'mozzarilla.ico'))
+                icon_filepath = join(this_curr_dir, 'mozzarilla.ico')
+                self.iconbitmap(icon_filepath)
             except Exception:
-                self.iconbitmap(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
+                icon_filepath = join(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
+                self.iconbitmap(icon_filepath)
         except Exception:
+            icon_filepath = ""
             print("Could not load window icon.")
+
+        self.icon_filepath = icon_filepath
 
         self.file_menu.insert_command("Exit", label="Load guerilla config",
                                       command=self.load_guerilla_config)
@@ -157,10 +172,17 @@ class Mozzarilla(Binilla):
         self.tools_menu = tk.Menu(self.main_menu, tearoff=0)
         self.compile_menu = tk.Menu(self.main_menu, tearoff=0)
         self.defs_menu = tk.Menu(self.main_menu, tearoff=0)
-
+        
+        self.main_menu.delete(0, "end")  # clear the menu
+        self.main_menu.add_cascade(label="File",    menu=self.file_menu)
+        self.main_menu.add_cascade(label="Settings", menu=self.settings_menu)
+        self.main_menu.add_cascade(label="Windows", menu=self.windows_menu)
+        if self.debug_mode:
+            self.main_menu.add_cascade(label="Debug", menu=self.debug_menu)
         self.main_menu.add_cascade(label="Tag set", menu=self.defs_menu)
         self.main_menu.add_cascade(label="Tools", menu=self.tools_menu)
         self.main_menu.add_cascade(label="Compile Tag", menu=self.compile_menu)
+        self.main_menu.add_command(label="About", command=self.show_about_window)
         try:
             if e_c.IS_WIN and not is_main_frozen():
                 import hek_pool
