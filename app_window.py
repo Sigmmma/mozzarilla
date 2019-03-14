@@ -22,6 +22,8 @@ from reclaimer.os_v4_hek.handler import OsV4HaloHandler
 from reclaimer.misc.handler import MiscHaloLoader
 from reclaimer.stubbs.handler import StubbsHandler
 
+import mozzarilla
+
 from mozzarilla.config_def import config_def, guerilla_workspace_def
 from mozzarilla.widget_picker import *
 from mozzarilla.tag_window import HaloTagWindow
@@ -56,7 +58,7 @@ this_curr_dir = get_cwd(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
-    version = '1.4.5'
+    version = "%s.%s.%s" % mozzarilla.__version__
     log_filename = 'mozzarilla.log'
     debug = 0
 
