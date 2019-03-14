@@ -7,9 +7,8 @@ except ImportError:
 
 curr_dir = dirname(__file__)
 
-#               YYYY.MM.DD
-release_date = "2019.02.05"
-version = (1, 4, 5)  # DONT FORGET TO UPDATE THE VERSION IN app_window.py
+import mozzarilla
+
 
 try:
     try:
@@ -25,7 +24,7 @@ setup(
     description='A variant of Binilla for editing binary structures for \
 games built with the Blam engine.',
     long_description=long_desc,
-    version='%s.%s.%s' % version,
+    version='%s.%s.%s' % mozzarilla.__version__,
     url='http://bitbucket.org/moses_of_egypt/mozzarilla',
     author='Devin Bobadilla',
     author_email='MosesBobadilla@gmail.com',
