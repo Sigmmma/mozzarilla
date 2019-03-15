@@ -104,7 +104,6 @@ class Mozzarilla(Binilla):
         "binilla",
         "mozzarilla",
         "reclaimer",
-        "refinery",
         "supyr_struct",
         "threadsafe_tkinter",
         )
@@ -136,16 +135,14 @@ class Mozzarilla(Binilla):
         Binilla.__init__(self, *args, **kwargs)
         try:
             try:
-                icon_filepath = join(this_curr_dir, 'mozzarilla.ico')
-                self.iconbitmap(icon_filepath)
+                self.icon_filepath = join(this_curr_dir, 'mozzarilla.ico')
+                self.iconbitmap(self.icon_filepath)
             except Exception:
-                icon_filepath = join(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
-                self.iconbitmap(icon_filepath)
+                self.icon_filepath = join(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
+                self.iconbitmap(self.icon_filepath)
         except Exception:
-            icon_filepath = ""
+            self.icon_filepath = ""
             print("Could not load window icon.")
-
-        self.icon_filepath = icon_filepath
 
         self.file_menu.insert_command("Exit", label="Load guerilla config",
                                       command=self.load_guerilla_config)
