@@ -34,7 +34,7 @@ games built with the Blam engine.',
         'mozzarilla.tools',
         ],
     package_data={
-        '': ['*.txt', '*.md', '*.rst', '*.pyw', '*.ico'],
+        '': ['*.txt', '*.md', '*.rst', '*.pyw', '*.ico', '*.png'],
         'mozzarilla': [
             'styles/*.*',
             ]
