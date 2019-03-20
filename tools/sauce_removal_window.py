@@ -23,7 +23,7 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
 
-        self.title("Scenario Open Sauce Scrubber Tool")
+        self.title("Scenario Open Sauce remover")
         self.geometry("400x80+0+0")
         self.resizable(0, 0)
         self.update()
