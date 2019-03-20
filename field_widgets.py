@@ -1033,8 +1033,7 @@ class DependencyFrame(ContainerFrame):
 
         t_w = self.tag_window
         try:
-            tags_dir, app, handler = t_w.tag.tags_dir,\
-                                     t_w.app_root, t_w.handler
+            tags_dir, app, handler = t_w.tag.tags_dir, t_w.app_root, t_w.handler
         except AttributeError:
             return
 
