@@ -55,7 +55,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
 
-        self.title("[%s] Tag directory scanner" %
+        self.title("[%s] Tags directory error locator" %
                    app_root.handler_names[app_root._curr_handler_index])
         self.minsize(width=400, height=300)
         self.update()

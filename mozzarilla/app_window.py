@@ -193,14 +193,15 @@ class Mozzarilla(Binilla):
                                        self.select_defs(i, manual=True))
 
         self.tools_menu.add_command(
-            label="Dependency viewer", command=self.show_dependency_viewer)
+            label="Tag dependency viewer / zipper", command=self.show_dependency_viewer)
         self.tools_menu.add_command(
-            label="Tags directory scanner", command=self.show_tag_scanner)
+            label="Tags directory error locator", command=self.show_tag_scanner)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
             label="Search and replace", command=self.show_search_and_replace)
         self.tools_menu.add_command(
-            label="Scenario sauce scrubber", command=self.show_sauce_removal_window)
+            label="Scenario Open Sauce remover",
+            command=self.show_sauce_removal_window)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
             label="Bitmap converter",
@@ -319,6 +320,7 @@ class Mozzarilla(Binilla):
         self.switch_tags_dir(index=new_index, manual=False)
 
         if manual:
+            self.last_load_dir = self.tags_dir
             print("Tags directory is currently:\n    %s\n" % self.tags_dir)
 
     def set_tags_dir(self, e=None, tags_dir=None, manual=True):
@@ -340,6 +342,7 @@ class Mozzarilla(Binilla):
         self.tags_dir = tags_dir
 
         if manual:
+            self.last_load_dir = self.tags_dir
             print("Tags directory is currently:\n    %s\n" % self.tags_dir)
 
     def switch_tags_dir(self, e=None, index=None, manual=True):
@@ -681,6 +684,25 @@ class Mozzarilla(Binilla):
 
         self.update_tag_window_title(w)
         return tag
+
+    def save_all(self, e=None):
+        '''
+        Saves all currently loaded tags to their files.
+        '''
+        for handler in self.handlers:
+            if not getattr(handler, "tags", None):
+                continue
+
+            tags = handler.tags
+            for def_id in tags:
+                tag_coll = tags[def_id]
+                for tag_path in tag_coll:
+                    try:
+                        self.save_tag(tag_coll[tag_path])
+                    except Exception:
+                        print(format_exc())
+                        print("Exception occurred while trying to save '%s'" %
+                              tag_path)
 
     def get_handler(self, handler_name=None, initialize=True):
         try:
