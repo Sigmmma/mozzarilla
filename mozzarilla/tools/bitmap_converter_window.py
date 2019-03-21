@@ -1569,7 +1569,9 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
             self.master.bitmap_display_windows[tag_path] = display_frame
 
+        w.update_idletasks()
         display_frame().focus_set()
+        self.master.place_window_relative(w)
 
     def select_path_listbox(self, src_listbox_index=0):
         src_listbox = self.listboxes[src_listbox_index]

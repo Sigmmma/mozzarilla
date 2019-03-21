@@ -13,6 +13,7 @@ from reclaimer.constants import *
 # that are built that use them will have them in their descriptor entries.
 inject_halo_constants()
 
+from binilla.handler import Handler
 from binilla.app_window import *
 from binilla.util import do_subprocess, is_main_frozen, get_cwd
 from reclaimer.hek.handler import HaloHandler
@@ -70,7 +71,7 @@ class Mozzarilla(Binilla):
     config_def  = config_def
     config_version = 2
 
-    handlers = (
+    handler_classes = (
         HaloHandler,
         OsV3HaloHandler,
         OsV4HaloHandler,
@@ -78,6 +79,8 @@ class Mozzarilla(Binilla):
         StubbsHandler,
         Halo3Handler,
         )
+
+    handlers = ()
 
     handler_names = (
         "Halo 1",
@@ -131,6 +134,8 @@ class Mozzarilla(Binilla):
         kwargs['handler'] = MiscHaloLoader(debug=self.debug)
         self.tags_dir_relative = set(self.tags_dir_relative)
         self.tags_dirs = ["%s%stags%s" % (this_curr_dir, PATHDIV, PATHDIV)]
+        self.handlers = list({} for i in range(len(self.handler_classes)))
+        self.handler_names = list(self.handler_names)
 
         Binilla.__init__(self, *args, **kwargs)
         try:
@@ -229,8 +234,6 @@ class Mozzarilla(Binilla):
             label="String_list / unicode_string_list from txt", command=self.strings_from_txt)
 
         self.defs_menu.add_separator()
-        self.handlers = list(self.handlers)
-        self.handler_names = list(self.handler_names)
 
         self.select_defs(manual=False)
         self.tool_windows = {}
@@ -251,13 +254,6 @@ class Mozzarilla(Binilla):
             pass
 
     @property
-    def tags_dir(self):
-        try:
-            return self.tags_dirs[self._curr_tags_dir_index]
-        except IndexError:
-            return None
-
-    @property
     def data_dir(self):
         try:
             tags_dir = self.tags_dir
@@ -268,11 +264,124 @@ class Mozzarilla(Binilla):
         except IndexError:
             return None
 
+    @property
+    def tags_dir(self):
+        try:
+            return self.tags_dirs[self._curr_tags_dir_index]
+        except IndexError:
+            return None
+
     @tags_dir.setter
     def tags_dir(self, new_val):
-        handler = self.handlers[self._curr_handler_index]
         new_val = join(sanitize_path(new_val), '')  # ensure it ends with a \
-        self.tags_dirs[self._curr_tags_dir_index] = handler.tagsdir = new_val
+        self.tags_dirs[self._curr_tags_dir_index] = new_val
+
+    def get_handler_index(self, handler):
+        return self.handler_classes.index(type(handler))
+
+    def get_handler(self, index=None, tags_dir=None, create_if_not_exists=True):
+        try:
+            if index is None:
+                index = self._curr_handler_index
+
+            if not tags_dir:
+                tags_dir = self.tags_dir
+
+            if isinstance(index, str):
+                index = self.handler_names.index(index)
+
+            tags_dir = join(sanitize_path(tags_dir), '')
+            if not self.handlers[index].get(tags_dir.lower(), None):
+                if create_if_not_exists:
+                    self.create_handlers(tags_dir, index)
+                else:
+                    return None
+
+            return self.handlers[index][tags_dir.lower()]
+        except Exception:
+            return None
+
+    def create_handlers(self, tags_dir, handler_indices=()):
+        tags_dir = join(sanitize_path(tags_dir), '')
+        tags_dir_key = tags_dir.lower()
+        if isinstance(handler_indices, int):
+            handler_indices = (handler_indices, )
+        elif not handler_indices:
+            handler_indices = range(len(self.handler_classes))
+
+        for i in handler_indices:
+            if isinstance(i, str):
+                i = self.handler_names.index(i)
+
+            handlers_by_dir = self.handlers[i]
+            if handlers_by_dir.get(tags_dir_key, None):
+                continue
+
+            handler = self.handler_classes[i](debug=self.debug)
+            handler.tagsdir = tags_dir
+            handlers_by_dir[tags_dir_key] = handler
+
+    def set_active_handler(self, handler=None, index=None, tags_dir=None):
+        if handler is not None:
+            if not isinstance(handler, Handler):
+                raise TypeError("Invalid type for handler argument. "
+                                "Must be of type %s" % Handler)
+            elif index is not None or tags_dir is not None:
+                raise ValueError("Provide either a handler or a handler "
+                                 "index and tags_dir, not all three.")
+
+            index = self.get_handler_index(handler)
+            tags_dir = handler.tagsdir
+        else:
+            if not tags_dir:
+                tags_dir = self.tags_dir
+            elif not isinstance(tags_dir, str):
+                raise TypeError("Invalid type for tags_dir argument. "
+                                "Must be of type %s" % str)
+
+            if index is None:
+                index = self._curr_handler_index
+            elif isinstance(index, str):
+                index = self.handler_names.index(index)
+            elif not isinstance(index, int):
+                raise TypeError("Invalid type for index argument. "
+                                "Must be of type %s or %s" % (str, int))
+
+            handler = self.get_handler(index, tags_dir)
+
+        self.handler = handler
+        self._curr_handler_index = index
+        self.tags_dir = tags_dir
+
+    def select_defs(self, menu_index=None, manual=True):
+        if menu_index is None:
+            menu_index = self._curr_handler_index
+            try:
+                # make sure the current handler index is valid
+                self.handler_names[menu_index]
+            except Exception:
+                menu_index = 0
+
+        handler = self.get_handler(menu_index, create_if_not_exists=False)
+        if not handler or handler is not self.handler:
+            if manual:
+                print("Changing tag set to %s" % self.handler_names[menu_index])
+                self.io_text.update_idletasks()
+
+            self.set_active_handler(index=menu_index)
+            try:
+                self.config_file.data.mozzarilla.selected_handler.data = menu_index
+            except AttributeError:
+                pass
+
+            if manual:
+                print("    Finished")
+
+        for i in range(len(self.handler_names)):
+            label = self.handler_names[i]
+            if i == self._curr_handler_index:
+                label += u' \u2713'
+            self.defs_menu.entryconfig(i, label=label)
 
     def add_tags_dir(self, e=None, tags_dir=None, manual=True):
         if tags_dir is None:
@@ -352,14 +461,10 @@ class Mozzarilla(Binilla):
             return
 
         self._curr_tags_dir_index = index
-        self.handler.tagsdir = self.tags_dir
+        self.handler = self.get_handler()
 
         if self.directory_frame is not None:
             self.directory_frame.highlight_tags_dir(self.tags_dir)
-
-        for handler in self.handlers:
-            try: handler.tagsdir = self.tags_dir
-            except Exception: pass
 
         if manual:
             self.last_load_dir = self.tags_dir
@@ -384,6 +489,7 @@ class Mozzarilla(Binilla):
         self._curr_tags_dir_index = 0
         for tags_dir in tags_dirs:
             self.add_tags_dir(tags_dir=tags_dir.path, manual=False)
+
         self.switch_tags_dir(
             index=min(mozz.last_tags_dir, len(self.tags_dirs)), manual=False)
 
@@ -524,83 +630,6 @@ class Mozzarilla(Binilla):
         self.def_selector_window = dsw
         self.place_window_relative(self.def_selector_window, 30, 50)
 
-    def make_config(self, filepath=None):
-        if filepath is None:
-            filepath = self.config_path
-
-        # create the config file from scratch
-        self.config_file = self.config_def.build()
-        self.config_file.filepath = filepath
-
-        data = self.config_file.data
-
-        # make sure these have as many entries as they're supposed to
-        for block in (data.directory_paths, data.widgets.depths, data.colors):
-            block.extend(len(block.NAME_MAP))
-
-        tags_dirs = data.mozzarilla.tags_dirs
-        for tags_dir in self.tags_dirs:
-            tags_dirs.append()
-            tags_dirs[-1].path = tags_dir
-
-        self.update_config()
-
-        c_hotkeys = data.hotkeys
-        c_tag_window_hotkeys = data.tag_window_hotkeys
-
-        for k_set, b in ((default_hotkeys, c_hotkeys),
-                         (default_tag_window_hotkeys, c_tag_window_hotkeys)):
-            default_keys = k_set
-            hotkeys = b
-            for combo, method in k_set.items():
-                hotkeys.append()
-                keys = hotkeys[-1].combo
-
-                modifier, key = read_hotkey_string(combo)
-                keys.modifier.set_to(modifier)
-                keys.key.set_to(key)
-
-                hotkeys[-1].method.set_to(method)
-
-    def make_tag_window(self, tag, *, focus=True, window_cls=None,
-                        is_new_tag=False):
-        if window_cls is None:
-            window_cls = HaloTagWindow
-        w = Binilla.make_tag_window(self, tag, focus=focus,
-                                    window_cls=window_cls,
-                                    is_new_tag=is_new_tag)
-        self.update_tag_window_title(w)
-        try:
-            try:
-                w.iconbitmap(join(this_curr_dir, 'mozzarilla.ico'))
-            except Exception:
-                w.iconbitmap(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
-        except Exception:
-            pass
-
-        return w
-
-    def make_window_panes(self):
-        self.window_panes = tk.PanedWindow(
-            self.root_frame, sashrelief='raised', sashwidth=8,
-            bd=self.frame_depth, bg=self.frame_bg_color)
-        self.window_panes.pack(anchor='nw', fill='both', expand=True)
-
-    def make_io_text(self, master=None):
-        if not self._initialized:
-            return
-        if master is None:
-            master = self.root_frame
-        Binilla.make_io_text(self, master)
-
-    def make_directory_frame(self, master=None):
-        if not self._initialized:
-            return
-        if master is None:
-            master = self.root_frame
-        self.directory_frame = DirectoryFrame(self)
-        self.directory_frame.pack(expand=True, fill='both')
-
     def new_tag(self, e=None):
         if self.def_selector_window:
             return
@@ -704,118 +733,43 @@ class Mozzarilla(Binilla):
                         print("Exception occurred while trying to save '%s'" %
                               tag_path)
 
-    def get_handler(self, handler_name=None, initialize=True):
-        try:
-            menu_index = self.handler_names.index(handler_name)
-            handler = self.handlers[menu_index]
+    def make_config(self, filepath=None):
+        if filepath is None:
+            filepath = self.config_path
 
-            if isinstance(handler, type) and initialize:
-                self.handlers[menu_index] = handler = handler(debug=self.debug)
+        # create the config file from scratch
+        self.config_file = self.config_def.build()
+        self.config_file.filepath = filepath
 
-            return handler
-        except Exception:
-            return None
+        data = self.config_file.data
 
-    def select_defs(self, menu_index=None, manual=True):
-        if menu_index is None:
-            menu_index = self._curr_handler_index
-            try:
-                # make sure the current handler index is valid
-                self.handler_names[menu_index]
-            except Exception:
-                menu_index = 0
+        # make sure these have as many entries as they're supposed to
+        for block in (data.directory_paths, data.widgets.depths, data.colors):
+            block.extend(len(block.NAME_MAP))
 
-        try:
-            handler_name = self.handler_names[menu_index]
-        except Exception:
-            print(format_exc())
-            handler_name = None
+        tags_dirs = data.mozzarilla.tags_dirs
+        for tags_dir in self.tags_dirs:
+            tags_dirs.append()
+            tags_dirs[-1].path = tags_dir
 
-        handler = self.get_handler(handler_name, False)
-        if handler is None or handler is self.handler:
-            return
+        self.update_config()
 
-        if manual:
-            print("Changing tag set to %s" % handler_name)
-            self.io_text.update_idletasks()
+        c_hotkeys = data.hotkeys
+        c_tag_window_hotkeys = data.tag_window_hotkeys
 
-        if isinstance(handler, type):
-            self.handlers[menu_index] = handler(debug=self.debug)
+        for k_set, b in ((default_hotkeys, c_hotkeys),
+                         (default_tag_window_hotkeys, c_tag_window_hotkeys)):
+            default_keys = k_set
+            hotkeys = b
+            for combo, method in k_set.items():
+                hotkeys.append()
+                keys = hotkeys[-1].combo
 
-        self.handler = self.handlers[menu_index]
-        self._curr_handler_index = menu_index
-        for i in range(len(self.handler_names)):
-            self.defs_menu.entryconfig(i, label=self.handler_names[i])
+                modifier, key = read_hotkey_string(combo)
+                keys.modifier.set_to(modifier)
+                keys.key.set_to(key)
 
-        self.defs_menu.entryconfig(self._curr_handler_index,
-                                   label=("%s %s" % (handler_name, u'\u2713')))
-
-        if manual:
-            print("    Finished")
-
-        self.config_file.data.mozzarilla.selected_handler.data = menu_index
-
-    def set_handler(self, handler=None, index=None, name=None):
-        if handler is not None:
-            handler_index = self.handlers.index(handler)
-            self._curr_handler_index = handler_index
-            self.handler = handler
-        elif index is not None:
-            self._curr_handler_index = handler_index
-            self.handler = self.handlers[handler_index]
-        elif name is not None:
-            handler_index = self.handler_names.index(name)
-            self._curr_handler_index = handler_index
-            self.handler = self.handlers[handler_index]
-
-    def show_tool_window(self, window_name, window_class,
-                         needs_tag_refs=False):
-        w = self.tool_windows.get(window_name)
-        if w is not None:
-            try: del self.tool_windows[window_name]
-            except Exception: pass
-            try: w.destroy()
-            except Exception: pass
-            return
-
-        if needs_tag_refs and not hasattr(self.handler, 'tag_ref_cache'):
-            print("Change the current tag set.")
-            return
-
-        self.tool_windows[window_name] = w = window_class(self)
-        w.window_name = window_name
-        self.place_window_relative(w, 30, 50); w.focus_set()
-
-    def show_dependency_viewer(self, e=None):
-        self.show_tool_window("dependency_window", DependencyWindow, True)
-
-    def show_tag_scanner(self, e=None):
-        self.show_tool_window("tag_scanner_window", TagScannerWindow, True)
-
-    def show_bitmap_converter_window(self, e=None):
-        self.show_tool_window("show_bitmap_converter_window", BitmapConverterWindow)
-
-    def show_data_extraction_window(self, e=None):
-        self.show_tool_window("data_extraction_window", DataExtractionWindow, True)
-
-    def show_model_compiler_window(self, e=None):
-        self.show_tool_window("model_compiler_window", ModelCompilerWindow, True)
-
-    def show_search_and_replace(self, e=None):
-        self.show_tool_window("s_and_r_window", SearchAndReplaceWindow)
-
-    def show_sauce_removal_window(self, e=None):
-        self.show_tool_window("sauce_removal_window", SauceRemovalWindow)
-
-    def create_hek_pool_window(self, e=None):
-        try:
-            launcher = Thread(
-                target=do_subprocess, daemon=True, args=("pythonw", ),
-                kwargs=dict(exec_args=("-m", "hek_pool.run"),
-                            proc_controller=ProcController(abandon=True)))
-            launcher.start()
-        except Exception:
-            print("Could not open HEK Pool")
+                hotkeys[-1].method.set_to(method)
 
     def update_config(self, config_file=None):
         if config_file is None:
@@ -885,12 +839,14 @@ class Mozzarilla(Binilla):
                 else:
                     tags_dir_str = tags_dir_str[-2]
 
-            handler_i = self.handlers.index(window.handler)
+            handler_i = self.get_handler_index(window.handler)
 
             title = "[%s][%s][%s]" % (
                 self.handler_names[handler_i], tags_dir_str, tag.rel_filepath)
         except Exception:
-            pass
+            print(format_exc())
+            title = window.title()
+
         window.update_title(title)
 
     def apply_style(self, seen=None):
@@ -925,6 +881,94 @@ class Mozzarilla(Binilla):
                 print(format_exc())
         except AttributeError: print(format_exc())
         except Exception: print(format_exc())
+
+    def make_tag_window(self, tag, *, focus=True, window_cls=None,
+                        is_new_tag=False):
+        if window_cls is None:
+            window_cls = HaloTagWindow
+        w = Binilla.make_tag_window(self, tag, focus=focus,
+                                    window_cls=window_cls,
+                                    is_new_tag=is_new_tag)
+        self.update_tag_window_title(w)
+        try:
+            try:
+                w.iconbitmap(join(this_curr_dir, 'mozzarilla.ico'))
+            except Exception:
+                w.iconbitmap(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
+        except Exception:
+            pass
+
+        return w
+
+    def make_window_panes(self):
+        self.window_panes = tk.PanedWindow(
+            self.root_frame, sashrelief='raised', sashwidth=8,
+            bd=self.frame_depth, bg=self.frame_bg_color)
+        self.window_panes.pack(anchor='nw', fill='both', expand=True)
+
+    def make_io_text(self, master=None):
+        if not self._initialized:
+            return
+        if master is None:
+            master = self.root_frame
+        Binilla.make_io_text(self, master)
+
+    def make_directory_frame(self, master=None):
+        if not self._initialized:
+            return
+        if master is None:
+            master = self.root_frame
+        self.directory_frame = DirectoryFrame(self)
+        self.directory_frame.pack(expand=True, fill='both')
+
+    def show_tool_window(self, window_name, window_class,
+                         needs_tag_refs=False):
+        w = self.tool_windows.get(window_name)
+        if w is not None:
+            try: del self.tool_windows[window_name]
+            except Exception: pass
+            try: w.destroy()
+            except Exception: pass
+            return
+
+        if needs_tag_refs and not hasattr(self.handler, 'tag_ref_cache'):
+            print("Change the current tag set.")
+            return
+
+        self.tool_windows[window_name] = w = window_class(self)
+        w.window_name = window_name
+        self.place_window_relative(w, 30, 50); w.focus_set()
+
+    def show_dependency_viewer(self, e=None):
+        self.show_tool_window("dependency_window", DependencyWindow, True)
+
+    def show_tag_scanner(self, e=None):
+        self.show_tool_window("tag_scanner_window", TagScannerWindow, True)
+
+    def show_bitmap_converter_window(self, e=None):
+        self.show_tool_window("show_bitmap_converter_window", BitmapConverterWindow)
+
+    def show_data_extraction_window(self, e=None):
+        self.show_tool_window("data_extraction_window", DataExtractionWindow, True)
+
+    def show_model_compiler_window(self, e=None):
+        self.show_tool_window("model_compiler_window", ModelCompilerWindow, True)
+
+    def show_search_and_replace(self, e=None):
+        self.show_tool_window("s_and_r_window", SearchAndReplaceWindow)
+
+    def show_sauce_removal_window(self, e=None):
+        self.show_tool_window("sauce_removal_window", SauceRemovalWindow)
+
+    def create_hek_pool_window(self, e=None):
+        try:
+            launcher = Thread(
+                target=do_subprocess, daemon=True, args=("pythonw", ),
+                kwargs=dict(exec_args=("-m", "hek_pool.run"),
+                            proc_controller=ProcController(abandon=True)))
+            launcher.start()
+        except Exception:
+            print("Could not open HEK Pool")
 
     def bitmap_from_dds(self, e=None):
         bitmap_from_dds(self)
