@@ -1020,12 +1020,12 @@ class DependencyFrame(ContainerFrame):
             except AttributeError:
                 pass
 
-            app.set_handler(new_handler)
+            app.set_active_handler(new_handler)
             app.load_tags(filepaths=filepath + ext)
         except Exception:
             print(format_exc())
         finally:
-            app.set_handler(cur_handler)
+            app.set_active_handler(cur_handler)
 
     def get_dependency_tag(self):
         if self.node is None:
