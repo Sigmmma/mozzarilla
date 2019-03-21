@@ -263,8 +263,8 @@ class MeterImageFrame(SimpleImageFrame):
         ContainerFrame.reload(self)
         if self.image_frame and self.node:
             try:
-                width = max(self.node.width, 1)
-                height = max(self.node.height, 1)
+                width = min(640, max(self.node.width, 1))
+                height = min(480, max(self.node.height, 1))
                 self.image_frame().change_textures(self.get_textures())
             except Exception:
                 print(format_exc())
@@ -276,8 +276,10 @@ class MeterImageFrame(SimpleImageFrame):
     def get_textures(self):
         texture_block = []
         if self.node:
-            width = max(self.node.width, 1)
-            height = max(self.node.height, 1)
+            # apparently some meter images tags have fucked endianness
+            # on the dimensions and position, so these NEED to be capped
+            width = min(640, max(self.node.width, 1))
+            height = min(480, max(self.node.height, 1))
             tex_info = dict(width=width, height=height,
                             format=arbytmap.FORMAT_A8R8G8B8)
             pixels = bytearray(width * height * 4)
@@ -348,8 +350,8 @@ class FontCharacterFrame(SimpleImageFrame):
     def get_textures(self):
         texture_block = []
         if self.node and self.tag:
-            width = max(self.node.bitmap_width, 1)
-            height = max(self.node.bitmap_height, 1)
+            width = min(640, max(self.node.bitmap_width, 1))
+            height = min(480, max(self.node.bitmap_height, 1))
             tex_info = dict(width=width, height=height,
                             format=arbytmap.FORMAT_L8)
             pixels_count = width * height
