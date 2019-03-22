@@ -273,11 +273,21 @@ class Mozzarilla(Binilla):
 
     @tags_dir.setter
     def tags_dir(self, new_val):
+        assert isinstance(new_val, str)
         new_val = join(sanitize_path(new_val), '')  # ensure it ends with a \
         self.tags_dirs[self._curr_tags_dir_index] = new_val
 
+    def get_tags_dir_index(self, tags_dir):
+        try:
+            return self.tags_dirs.index(tags_dir)
+        except Exception:
+            return None
+
     def get_handler_index(self, handler):
-        return self.handler_classes.index(type(handler))
+        try:
+            return self.handler_classes.index(type(handler))
+        except Exception:
+            return None
 
     def get_handler(self, index=None, tags_dir=None, create_if_not_exists=True):
         try:
@@ -332,26 +342,35 @@ class Mozzarilla(Binilla):
 
             index = self.get_handler_index(handler)
             tags_dir = handler.tagsdir
+            if index is None:
+                raise TypeError("Provided Handler is not recognized.")
         else:
             if not tags_dir:
                 tags_dir = self.tags_dir
             elif not isinstance(tags_dir, str):
-                raise TypeError("Invalid type for tags_dir argument. "
-                                "Must be of type %s" % str)
+                raise TypeError("Invalid type for tags_dir argument. Must be "
+                                "of type %s, not %s" % (str, type(tags_dir)))
 
             if index is None:
                 index = self._curr_handler_index
             elif isinstance(index, str):
                 index = self.handler_names.index(index)
             elif not isinstance(index, int):
-                raise TypeError("Invalid type for index argument. "
-                                "Must be of type %s or %s" % (str, int))
+                raise TypeError("Invalid type for index argument. Must be of "
+                                "type %s or %s, not %s" % (str, int, type(index)))
 
             handler = self.get_handler(index, tags_dir)
 
+        if None in (index, tags_dir):
+            return
+
+        tags_dir_index = self.get_tags_dir_index(tags_dir)
         self.handler = handler
         self._curr_handler_index = index
-        self.tags_dir = tags_dir
+        if tags_dir_index is None:
+            self.tags_dir = tags_dir
+        else:
+            self.switch_tags_dir(index=tags_dir_index, manual=False)
 
     def select_defs(self, menu_index=None, manual=True):
         if menu_index is None:
@@ -383,6 +402,13 @@ class Mozzarilla(Binilla):
                 label += u' \u2713'
             self.defs_menu.entryconfig(i, label=label)
 
+    def get_tags_dir_exists(self, tags_dir):
+        if not self.tags_dirs:
+            return False
+
+        tags_dir = join(sanitize_path(tags_dir), '')
+        return tags_dir in self.tags_dirs
+
     def add_tags_dir(self, e=None, tags_dir=None, manual=True):
         if tags_dir is None:
             tags_dir = askdirectory(initialdir=self.tags_dir, parent=self,
@@ -392,7 +418,7 @@ class Mozzarilla(Binilla):
             return
 
         tags_dir = join(sanitize_path(tags_dir), '')
-        if tags_dir in self.tags_dirs:
+        if self.get_tags_dir_exists(tags_dir):
             if manual:
                 print("That tags directory already exists.")
             return
@@ -405,7 +431,6 @@ class Mozzarilla(Binilla):
 
         if manual:
             self.last_load_dir = tags_dir
-            curr_index = self._curr_tags_dir_index
             print("Tags directory is currently:\n    %s\n" % self.tags_dir)
 
     def remove_tags_dir(self, e=None, index=None, manual=True):
@@ -448,6 +473,7 @@ class Mozzarilla(Binilla):
         if self.directory_frame is not None:
             self.directory_frame.set_root_dir(tags_dir)
             self.directory_frame.highlight_tags_dir(self.tags_dir)
+
         self.tags_dir = tags_dir
 
         if manual:
@@ -461,7 +487,7 @@ class Mozzarilla(Binilla):
             return
 
         self._curr_tags_dir_index = index
-        self.handler = self.get_handler()
+        self.set_active_handler()
 
         if self.directory_frame is not None:
             self.directory_frame.highlight_tags_dir(self.tags_dir)
@@ -501,13 +527,87 @@ class Mozzarilla(Binilla):
         if not self.tags_dir:
             self.tags_dir = self.curr_dir + "%stags%s" % (PATHDIV, PATHDIV)
 
-        for handler in self.handlers:
-            try: handler.tagsdir = self.tags_dir
-            except Exception: pass
+    def record_open_tags(self):
+        return
+        try:
+            open_tags = self.config_file.data.mozzarilla.open_mozz_tags
+            tags_dirs = self.config_file.data.mozzarilla.tags_dirs
+            del open_tags[:]
+        except Exception:
+            print(format_exc())
+            return
+
+        for wid in sorted(self.tag_windows):
+            try:
+                w = self.tag_windows[wid]
+                tag, handler = w.tag, w.handler
+
+                # dont store tags that arent from the current handler
+                if tag in (self.config_file, None):
+                    continue
+
+                tags_dir_index = self.get_tags_dir_index(handler.tagsdir)
+                handler_index = self.get_handler_index(handler)
+                if None in (tags_dir_index, handler_index):
+                    continue
+
+                open_tags.append()
+                open_tag = open_tags[-1]
+                header = open_tag.header
+
+                if w.state() == 'withdrawn':
+                    header.flags.minimized = True
+
+                pos_x, pos_y = w.winfo_x(), w.winfo_y()
+                width, height = w.geometry().split('+')[0].split('x')[:2]
+
+                header.offset_x, header.offset_y = pos_x, pos_y
+                header.width, header.height = int(width), int(height)
+                header.tags_dir_index = tags_dir_index
+                header.handler_index = handler_index
+
+                open_tag.def_id, open_tag.path = tag.def_id, tag.filepath
+            except Exception:
+                print(format_exc())
 
     def load_last_workspace(self):
-        if self._mozzarilla_initialized:
-            Binilla.load_last_workspace(self)
+        if not self._mozzarilla_initialized:
+            return
+
+        try:
+            mozz = self.config_file.data.mozzarilla
+            open_tags = mozz.open_mozz_tags
+            tags_dirs = [b.path for b in mozz.tags_dirs]
+        except Exception:
+            print(format_exc())
+            return
+
+        print("Loading last workspace...")
+        self.io_text.update_idletasks()
+        for open_tag in open_tags:
+            try:
+                header = open_tag.header
+                self.set_active_handler(
+                    index=header.handler_index,
+                    tags_dir=tags_dirs[header.tags_dir_index])
+
+                windows = self.load_tags(filepaths=open_tag.path,
+                                         def_id=open_tag.def_id)
+                if not windows:
+                    continue
+
+                if header.flags.minimized:
+                    windows[0].withdraw()
+                    self.selected_tag = None
+
+                windows[0].geometry("%sx%s+%s+%s" % (
+                    header.width, header.height,
+                    header.offset_x, header.offset_y))
+            except Exception:
+                print(format_exc())
+
+        print("    Finished")
+        del open_tags[:]
 
     def load_guerilla_config(self):
         fp = askopenfilename(initialdir=self.last_load_dir, parent=self,
@@ -519,18 +619,17 @@ class Mozzarilla(Binilla):
             return
 
         self.last_load_dir = dirname(fp)
+        tags_dir = os.path.join(dirname(fp), "tags", "")
+        if not os.path.exists(tags_dir):
+            print("Specified guerilla.cfg has no corrosponding tags directory.")
+            return
+
         workspace = guerilla_workspace_def.build(filepath=fp)
 
-        pad_x = self.io_text.winfo_rootx() - self.winfo_x()
-        pad_y = self.io_text.winfo_rooty() - self.winfo_y()
+        if not self.get_tags_dir_exists(tags_dir):
+            self.add_tags_dir(tags_dir=tags_dir)
 
-        tl_corner = workspace.data.window_header.t_l_corner
-        br_corner = workspace.data.window_header.b_r_corner
-
-        self.geometry("%sx%s+%s+%s" % (
-            br_corner.x - tl_corner.x - pad_x,
-            br_corner.y - tl_corner.y - pad_y,
-            tl_corner.x, tl_corner.y))
+        self.set_active_handler(tags_dir=tags_dir)
 
         for tag in workspace.data.tags:
             if not tag.is_valid_tag:
@@ -545,8 +644,7 @@ class Mozzarilla(Binilla):
             tl_corner = tag.window_header.t_l_corner
             br_corner = tag.window_header.b_r_corner
 
-            self.place_window_relative(w, pad_x + tl_corner.x,
-                                          pad_y + tl_corner.y)
+            self.place_window_relative(w, tl_corner.x, tl_corner.y)
             w.geometry("%sx%s" % (br_corner.x - tl_corner.x,
                                   br_corner.y - tl_corner.y))
 
@@ -718,20 +816,21 @@ class Mozzarilla(Binilla):
         '''
         Saves all currently loaded tags to their files.
         '''
-        for handler in self.handlers:
-            if not getattr(handler, "tags", None):
-                continue
+        for handler_set in self.handlers:
+            for handler in handler_set.values():
+                if not getattr(handler, "tags", None):
+                    continue
 
-            tags = handler.tags
-            for def_id in tags:
-                tag_coll = tags[def_id]
-                for tag_path in tag_coll:
-                    try:
-                        self.save_tag(tag_coll[tag_path])
-                    except Exception:
-                        print(format_exc())
-                        print("Exception occurred while trying to save '%s'" %
-                              tag_path)
+                tags = handler.tags
+                for def_id in tags:
+                    tag_coll = tags[def_id]
+                    for tag_path in tag_coll:
+                        try:
+                            self.save_tag(tag_coll[tag_path])
+                        except Exception:
+                            print(format_exc())
+                            print("Exception occurred while trying to save '%s'" %
+                                  tag_path)
 
     def make_config(self, filepath=None):
         if filepath is None:

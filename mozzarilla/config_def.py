@@ -60,6 +60,30 @@ tag_window_hotkeys = Array(
     "tag_window_hotkeys", SUB_STRUCT=hotkey, DYN_NAME_PATH='.method.enum_name',
     SIZE=".array_counts.tag_window_hotkey_count", WIDGET=DynamicArrayFrame)
 
+open_mozz_tag = Container("open_tag",
+    Struct("header",
+        UInt16("width"),
+        UInt16("height"),
+        SInt16("offset_x"),
+        SInt16("offset_y"),
+        Bool32("flags",
+            "minimized",
+            ),
+
+        # UPDATE THIS PADDING WHEN ADDING STUFF ABOVE IT
+        Pad(48 - 2*4 - 4*1),
+
+        UInt16("def_id_len"),
+        UInt16("path_len"),
+        UInt16("tags_dir_index"),
+        UInt16("handler_index"),
+        SIZE=64
+        ),
+
+    StrUtf8("def_id", SIZE=".header.def_id_len"),
+    StrUtf8("path", SIZE=".header.path_len"),
+    )
+
 mozzarilla = Container("mozzarilla",
     Bool16("flags",
         {NAME: "show_hierarchy_window", TOOLTIP: mozz_flag_tooltips[0]},
@@ -82,15 +106,19 @@ mozzarilla = Container("mozzarilla",
     UInt32("last_tool_path", VISIBLE=False, EDITABLE=False),
     Pad(64 - 2*4 - 4*1),
 
-    UInt16("tags_dirs_count",  VISIBLE=False, EDITABLE=False),
-    UInt16("load_dirs_count",  VISIBLE=False, EDITABLE=False),
-    Pad(64 - 2*2),
+    UInt16("tags_dirs_count",     VISIBLE=False, EDITABLE=False),
+    UInt16("load_dirs_count",     VISIBLE=False, EDITABLE=False),
+    UInt16("open_mozz_tag_count", VISIBLE=False, EDITABLE=False),
+    Pad(64 - 2*3),
 
     Array("tags_dirs", SUB_STRUCT=filepath, SIZE=".tags_dirs_count",
         MIN=1,  VISIBLE=False),
     Array("load_dirs", SUB_STRUCT=filepath, SIZE=".load_dirs_count",
         NAME_MAP=("last_data_load_dir", "jms_load_dir", "bitmap_load_dir"),
         MIN=3, VISIBLE=False
+        ),
+    Array("open_mozz_tags",
+        SUB_STRUCT=open_mozz_tag, SIZE=".open_mozz_tag_count", VISIBLE=False
         ),
     COMMENT="\nThese are settings specific to Mozzarilla.\n"
     )
