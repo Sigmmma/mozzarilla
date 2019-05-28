@@ -9,7 +9,11 @@ mozz_flag_tooltips = (
     ("Whether to recalculate certain hidden values when saving.\n" +
      "For all intents and purposes, this should stay on unless\n" +
      "you are doing some form of experimenting or debugging."),
-    "",
+    "When reading scripts, extract names for encounters,\n"
+    "command lists, scripts, cutscene titles/camera points/flags,\n"
+    "trigger volumes, recorded animations, ai conversations,\n"
+    "object names, device groups, and player starting profiles\n"
+    "from the scenarios reflexives, rather than script strings.",
     "Whether or not to show the full tags directory in the tag window title."
     )
 
@@ -89,8 +93,8 @@ mozzarilla = Container("mozzarilla",
         {NAME: "show_hierarchy_window", TOOLTIP: mozz_flag_tooltips[0]},
         {NAME: "show_console_window", TOOLTIP: mozz_flag_tooltips[1]},
         {NAME: "calc_internal_data", TOOLTIP: mozz_flag_tooltips[2]},
-        {NAME: "unused", VISIBLE: False},
-        {NAME: "show full tags directory", TOOLTIP: mozz_flag_tooltips[4]},
+        {NAME: "use_scenario_names_in_scripts", TOOLTIP: mozz_flag_tooltips[3]},
+        {NAME: "show_full_tags_directory", TOOLTIP: mozz_flag_tooltips[4]},
         DEFAULT=sum([1<<i for i in (0, 1, 2)])
         ),
     UEnum16("selected_handler",
