@@ -1309,9 +1309,17 @@ class HaloScriptTextFrame(ComputedTextFrame):
             typ = "global"
 
         tag_data = self.parent.parent.parent.parent
+        script_strings_by_type = ()
+        try:
+            if self.tag_window.use_scenario_names_for_script_names:
+                script_strings_by_type = reclaimer.hsc.get_h1_scenario_script_object_type_strings(tag_data)
+        except Exception:
+            pass
+
         new_text = reclaimer.hsc.hsc_bytecode_to_string(
                 self.syntax, self.strings, self.f_widget_parent.attr_index,
-                tag_data.scripts.STEPTREE, tag_data.globals.STEPTREE, typ)
+                tag_data.scripts.STEPTREE, tag_data.globals.STEPTREE, typ,
+                hsc_node_strings_by_type=script_strings_by_type)
         return new_text
 
 

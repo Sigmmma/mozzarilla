@@ -11,6 +11,7 @@ from binilla.widgets import BinillaWidget
 from binilla.util import get_cwd
 from supyr_struct.defs.constants import *
 from supyr_struct.defs.util import *
+from reclaimer.hsc import get_h1_scenario_script_object_type_strings
 
 curr_dir = get_cwd(__file__)
 
@@ -61,6 +62,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         self.tag_path = tk.StringVar(self)
         self.overwrite = tk.BooleanVar(self)
         self.decode_adpcm = tk.BooleanVar(self)
+        self.use_scenario_names_in_scripts = tk.BooleanVar(self)
 
         # make the frames
         self.options_frame = tk.LabelFrame(
@@ -96,6 +98,9 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         self.decode_adpcm_cbtn = tk.Checkbutton(
             self.options_frame, variable=self.decode_adpcm,
             text="Decode Xbox ADPCM audio")
+        self.use_scenario_names_in_scripts_cbtn = tk.Checkbutton(
+            self.options_frame, variable=self.use_scenario_names_in_scripts,
+            text="Use scenario names in scripts")
 
         self.dir_path_entry = tk.Entry(
             self.dir_path_frame, textvariable=self.dir_path)
@@ -117,6 +122,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
         self.overwrite_cbtn.pack(fill="x", anchor="nw", side="left")
         self.decode_adpcm_cbtn.pack(fill="x", anchor="nw")
+        self.use_scenario_names_in_scripts_cbtn.pack(fill="x", anchor="nw", side="left")
 
 
         self.def_ids_listbox.pack(side='left', fill="both", expand=True)
@@ -274,6 +280,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
         settings = dict(out_dir=data_path, overwrite=self.overwrite.get(),
                         decode_adpcm=self.decode_adpcm.get(), engine="yelo")
+
         print("Beginning tag data extracton in:\t%s" % tags_dir)
 
         s_time = time()
@@ -359,6 +366,14 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         if tag is None:
             print((' '*8) + "Could not load tag.")
             return
+
+        try:
+            if (self.use_scenario_names_in_scripts.get() and
+                tag.data[0].tag_class.enum_name == "scenario"):
+                settings["hsc_node_strings_by_type"] = get_h1_scenario_script_object_type_strings(tag.data.tagdata)
+                print(len(settings))
+        except Exception:
+            print(format_exc())
 
         try:
             result = extractor(tag.data.tagdata, tag_path, **settings)
