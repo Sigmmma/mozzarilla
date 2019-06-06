@@ -14,7 +14,7 @@ from traceback import format_exc
 
 try:
     from mozzarilla.app_window import Mozzarilla
-    main_window = Mozzarilla(debug=3)
+    main_window = Mozzarilla(debug=1)
     main_window.mainloop()
     
 except Exception:
