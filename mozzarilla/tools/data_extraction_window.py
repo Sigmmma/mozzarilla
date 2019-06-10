@@ -47,13 +47,14 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         self.title("Tag Data Extractor")
         self.resizable(0, 0)
         self.update()
-        try:
+        for sub_dirs in ((), ('..', ), ('icons', )):
             try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+                self.iconbitmap(os.path.join(
+                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
+                    ))
+                break
             except Exception:
-                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
+                pass
 
         self.listbox_index_to_def_id = list(sorted(self.tag_data_extractors.keys()))
 

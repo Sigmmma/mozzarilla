@@ -20,10 +20,9 @@ from binilla.util import *
 from binilla.widgets import BinillaWidget, ScrollMenu
 from mozzarilla.field_widgets import HaloBitmapDisplayFrame, HaloBitmapDisplayBase
 
+window_base_class = tk.Toplevel
 if __name__ == "__main__":
-    bitmap_converter_base_class = tk.Tk
-else:
-    bitmap_converter_base_class = tk.Toplevel
+    window_base_class = tk.Tk
 
 
 curr_dir = get_cwd(__file__)
@@ -338,7 +337,7 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
     return True
 
 
-class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
+class BitmapConverterWindow(window_base_class, BinillaWidget):
     app_root = None
     tag_list_frame = None
     loaded_tags_dir = ''
@@ -372,12 +371,13 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
 
     def __init__(self, app_root, *args, **kwargs):
         BinillaWidget.__init__(self, *args, **kwargs)
-        if bitmap_converter_base_class == tk.Toplevel:
+        if isinstance(self, tk.Toplevel):
             kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
             self.app_root = app_root
         else:
             self.app_root = self
-        bitmap_converter_base_class.__init__(self, app_root, *args, **kwargs)
+
+        super(type(self), self).__init__(app_root, *args, **kwargs)
 
         self.conversion_flags = {}
         self.bitmap_tag_infos = {}
@@ -386,13 +386,14 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         self.title("Bitmap converter")
         self.resizable(0, 1)
         self.update()
-        try:
+        for sub_dirs in ((), ('..', ), ('icons', )):
             try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+                self.iconbitmap(os.path.join(
+                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
+                    ))
+                break
             except Exception:
-                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
+                pass
 
         # make the tkinter variables
         self.read_only = tk.BooleanVar(self)
@@ -755,7 +756,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             self.app_root.tool_windows.pop(self.window_name, None)
         except AttributeError:
             pass
-        bitmap_converter_base_class.destroy(self)
+        super(type(self), self).destroy(self)
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
@@ -1770,4 +1771,9 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
 
 if __name__ == "__main__":
-    BitmapConverterWindow(None).mainloop()
+    try:
+        BitmapConverterWindow(None).mainloop()
+        raise SystemExit(0)
+    except Exception:
+        print(format_exc())
+        input()

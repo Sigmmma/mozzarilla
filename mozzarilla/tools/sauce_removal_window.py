@@ -27,13 +27,14 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
         self.geometry("400x80+0+0")
         self.resizable(0, 0)
         self.update()
-        try:
+        for sub_dirs in ((), ('..', ), ('icons', )):
             try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+                self.iconbitmap(os.path.join(
+                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
+                    ))
+                break
             except Exception:
-                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
+                pass
 
         # make the tkinter variables
         self.scenario_path = tk.StringVar(self)

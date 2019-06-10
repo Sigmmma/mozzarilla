@@ -38,6 +38,11 @@ new_method_enums = (
     {GUI_NAME:"make hud_message_text from hmt", NAME:"hud_message_text_from_hmt"},
     {GUI_NAME:"make bitmap from dds", NAME:"bitmap_from_multiple_dds"},
     {GUI_NAME:"make strings from txt", NAME:"strings_from_txt"},
+    {GUI_NAME:"open model converter", NAME:"show_model_converter"},
+    {GUI_NAME:"open gbxmodel converter", NAME:"show_gbxmodel_converter"},
+    {GUI_NAME:"open collision converter", NAME:"show_collision_converter"},
+    {GUI_NAME:"open sbsp converter", NAME:"show_sbsp_converter"},
+    {GUI_NAME:"open chicago shader converter", NAME:"show_chicago_shader_converter"},
     )
 
 method_enums += new_method_enums

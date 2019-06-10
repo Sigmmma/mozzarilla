@@ -20,13 +20,14 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
         self.minsize(width=450, height=270)
         self.resizable(1, 0)
         self.update()
-        try:
+        for sub_dirs in ((), ('..', ), ('icons', )):
             try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+                self.iconbitmap(os.path.join(
+                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
+                    ))
+                break
             except Exception:
-                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
+                pass
 
         # make the tkinter variables
         self.find_var = tk.StringVar(self)

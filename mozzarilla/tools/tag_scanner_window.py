@@ -59,13 +59,14 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                    app_root.handler_names[app_root._curr_handler_index])
         self.minsize(width=400, height=300)
         self.update()
-        try:
+        for sub_dirs in ((), ('..', ), ('icons', )):
             try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+                self.iconbitmap(os.path.join(
+                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
+                    ))
+                break
             except Exception:
-                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
+                pass
 
         ext_id_map = handler.ext_id_map
         self.listbox_index_to_def_id = [
