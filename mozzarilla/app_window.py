@@ -36,7 +36,7 @@ from mozzarilla.tools import \
      ModelCompilerWindow, physics_from_jms,\
      hud_message_text_from_hmt, strings_from_txt,\
      GbxmodelConverter, ModelConverter, ChicagoShaderConverter,\
-     CollisionConverter, SbspConverter
+     ModelAnimationsConverter, CollisionConverter, SbspConverter
 
 
 default_hotkeys.update({
@@ -232,10 +232,15 @@ class Mozzarilla(Binilla):
             label="model_collision_geometry  to  gbxmodel", command=self.show_collision_converter)
         self.converters_menu.add_command(
             label="model  to  gbxmodel", command=self.show_model_converter)
+        self.converters_menu.add_separator()
         self.converters_menu.add_command(
             label="gbxmodel  to  model", command=self.show_gbxmodel_converter)
+        self.converters_menu.add_separator()
         self.converters_menu.add_command(
             label="chicago_extended  to  chicago (shaders)", command=self.show_chicago_shader_converter)
+        self.converters_menu.add_separator()
+        self.converters_menu.add_command(
+            label="model_animations_yelo  to  model_animations", command=self.show_animations_converter)
 
         self.compile_menu.add_command(
             label="Bitmap from dds texture(s)", command=self.bitmap_from_multiple_dds)
@@ -1072,6 +1077,9 @@ class Mozzarilla(Binilla):
 
     def show_collision_converter(self, e=None):
         self.show_tool_window("collision_converter_window", CollisionConverter)
+
+    def show_animations_converter(self, e=None):
+        self.show_tool_window("animations_converter_window", ModelAnimationsConverter)
 
     def show_sbsp_converter(self, e=None):
         self.show_tool_window("sbsp_converter_window", SbspConverter)

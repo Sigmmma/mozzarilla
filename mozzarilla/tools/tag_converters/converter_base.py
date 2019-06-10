@@ -22,7 +22,9 @@ class ConverterBase(BinillaWidget):
         BinillaWidget.__init__(self, app_root, *args, **kwargs)
 
     def setup_window(self, *args, **kwargs):
-        self.title(kwargs.pop("title", "Untitled converter"))
+        kwargs.setdefault("title", "%s to %s convertor" %
+                          (self.src_ext.capitalize(), self.dst_ext))
+        self.title(kwargs.pop("title"))
         self.resizable(0, 0)
         self.update()
         for sub_dirs in ((), ('..', '..'), ('icons', )):
