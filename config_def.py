@@ -43,6 +43,7 @@ new_method_enums = (
     {GUI_NAME:"open collision converter", NAME:"show_collision_converter"},
     {GUI_NAME:"open sbsp converter", NAME:"show_sbsp_converter"},
     {GUI_NAME:"open chicago shader converter", NAME:"show_chicago_shader_converter"},
+    {GUI_NAME:"open animations converter", NAME:"show_animations_converter"},
     )
 
 method_enums += new_method_enums

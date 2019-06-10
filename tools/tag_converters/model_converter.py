@@ -125,8 +125,6 @@ class ModelConverter(ConverterBase, window_base_class):
 
         ConverterBase.__init__(self, app_root, *args, **kwargs)
         window_base_class.__init__(self, app_root, *args, **kwargs)
-        kwargs["title"] = "%s to %s convertor" % (self.src_ext.capitalize(),
-                                                  self.dst_ext)
         self.setup_window(*args, **kwargs)
 
     def setup_window(self, *args, **kwargs):

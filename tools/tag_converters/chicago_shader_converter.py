@@ -46,7 +46,6 @@ class ChicagoShaderConverter(ConverterBase, window_base_class):
 
         ConverterBase.__init__(self, app_root, *args, **kwargs)
         window_base_class.__init__(self, app_root, *args, **kwargs)
-        kwargs["title"] = "Chicago_extended to chicago convertor"
         self.setup_window(*args, **kwargs)
 
     def setup_window(self, *args, **kwargs):
