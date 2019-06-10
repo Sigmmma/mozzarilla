@@ -34,7 +34,9 @@ from mozzarilla.tools import \
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
      bitmap_from_dds, bitmap_from_multiple_dds, bitmap_from_bitmap_source, \
      ModelCompilerWindow, physics_from_jms,\
-     hud_message_text_from_hmt, strings_from_txt
+     hud_message_text_from_hmt, strings_from_txt,\
+     GbxmodelConverter, ModelConverter, ChicagoShaderConverter,\
+     CollisionConverter, SbspConverter
 
 
 default_hotkeys.update({
@@ -183,6 +185,7 @@ class Mozzarilla(Binilla):
         self.compile_menu = tk.Menu(self.main_menu, tearoff=0)
         self.defs_menu = tk.Menu(self.main_menu, tearoff=0,
                                  postcommand=self.generate_defs_menu)
+        self.converters_menu = tk.Menu(self.tools_menu, tearoff=0)
         
         self.main_menu.delete(0, "end")  # clear the menu
         self.main_menu.add_cascade(label="File",    menu=self.file_menu)
@@ -203,14 +206,9 @@ class Mozzarilla(Binilla):
             pass
 
         self.tools_menu.add_command(
-            label="Tag dependency viewer / zipper", command=self.show_dependency_viewer)
-        self.tools_menu.add_command(
-            label="Tags directory error locator", command=self.show_tag_scanner)
-        self.tools_menu.add_separator()
-        self.tools_menu.add_command(
             label="Search and replace", command=self.show_search_and_replace)
         self.tools_menu.add_command(
-            label="Scenario Open Sauce remover",
+            label="Scenario 'Open Sauce' remover",
             command=self.show_sauce_removal_window)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
@@ -218,8 +216,26 @@ class Mozzarilla(Binilla):
             command=self.show_bitmap_converter_window)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
+            label="Tags directory error locator", command=self.show_tag_scanner)
+        self.tools_menu.add_command(
+            label="Tag dependency viewer / zipper", command=self.show_dependency_viewer)
+        self.tools_menu.add_command(
             label="Tag data extraction",
             command=self.show_data_extraction_window)
+        self.tools_menu.add_separator()
+        self.tools_menu.add_cascade(
+            label="Tag converters", menu=self.converters_menu)
+
+        self.converters_menu.add_command(
+            label="scenario_structure_bsp  to  gbxmodel", command=self.show_sbsp_converter)
+        self.converters_menu.add_command(
+            label="model_collision_geometry  to  gbxmodel", command=self.show_collision_converter)
+        self.converters_menu.add_command(
+            label="model  to  gbxmodel", command=self.show_model_converter)
+        self.converters_menu.add_command(
+            label="gbxmodel  to  model", command=self.show_gbxmodel_converter)
+        self.converters_menu.add_command(
+            label="chicago_extended  to  chicago (shaders)", command=self.show_chicago_shader_converter)
 
         self.compile_menu.add_command(
             label="Bitmap from dds texture(s)", command=self.bitmap_from_multiple_dds)
@@ -1028,7 +1044,7 @@ class Mozzarilla(Binilla):
         self.directory_frame.pack(expand=True, fill='both')
 
     def show_tool_window(self, window_name, window_class,
-                         needs_tag_refs=False):
+                         needs_tag_refs=False, **kw):
         w = self.tool_windows.get(window_name)
         if w is not None:
             try: del self.tool_windows[window_name]
@@ -1041,9 +1057,24 @@ class Mozzarilla(Binilla):
             print("Change the current tag set.")
             return
 
-        self.tool_windows[window_name] = w = window_class(self)
+        self.tool_windows[window_name] = w = window_class(self, **kw)
         w.window_name = window_name
         self.place_window_relative(w, 30, 50); w.focus_set()
+
+    def show_chicago_shader_converter(self, e=None):
+        self.show_tool_window("chicago_shader_converter", ChicagoShaderConverter)
+
+    def show_model_converter(self, e=None):
+        self.show_tool_window("model_converter_window", ModelConverter)
+
+    def show_gbxmodel_converter(self, e=None):
+        self.show_tool_window("gbxmodel_converter_window", GbxmodelConverter)
+
+    def show_collision_converter(self, e=None):
+        self.show_tool_window("collision_converter_window", CollisionConverter)
+
+    def show_sbsp_converter(self, e=None):
+        self.show_tool_window("sbsp_converter_window", SbspConverter)
 
     def show_dependency_viewer(self, e=None):
         self.show_tool_window("dependency_window", DependencyWindow, True)
