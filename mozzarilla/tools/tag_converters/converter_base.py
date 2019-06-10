@@ -162,7 +162,7 @@ class ConverterBase(BinillaWidget):
         if not os.path.isfile(tag_path):
             return
 
-        print("    %s" % tag_path)
+        print(tag_path)
 
         try:
             dst_tag = self.convert(tag_path)

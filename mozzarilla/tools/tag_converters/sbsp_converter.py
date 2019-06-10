@@ -297,7 +297,7 @@ def sbsp_to_mod2(
         fan_mirrors=True, optimize_fog_planes=False, optimize_portals=False,
         weather_polyhedra_tolerance=0.0000001):
 
-    print("    Loading...")
+    print("    Loading sbsp tag...")
     sbsp_tag = sbsp_def.build(filepath=sbsp_path)
     mod2_tag = mod2_def.build()
 
@@ -346,7 +346,7 @@ def sbsp_to_mod2(
             print(format_exc())
             print("    Could not convert mirrors")
 
-    if include_portals:
+    if include_portals and sbsp_body.collision_bsp.STEPTREE:
         print("    Converting portals...")
         try:
             jms_models.extend(make_cluster_portal_jms_models(
