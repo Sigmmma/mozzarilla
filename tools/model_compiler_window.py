@@ -67,13 +67,14 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         self.title("Gbxmodel compiler")
         self.resizable(1, 0)
         self.update()
-        try:
+        for sub_dirs in ((), ('..', ), ('icons', )):
             try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+                self.iconbitmap(os.path.join(
+                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
+                    ))
+                break
             except Exception:
-                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
+                pass
 
 
         self.superhigh_lod_cutoff = tk.StringVar(self)
