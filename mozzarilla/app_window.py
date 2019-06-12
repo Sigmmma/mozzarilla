@@ -35,8 +35,9 @@ from mozzarilla.tools import \
      bitmap_from_dds, bitmap_from_multiple_dds, bitmap_from_bitmap_source, \
      ModelCompilerWindow, physics_from_jms,\
      hud_message_text_from_hmt, strings_from_txt,\
-     GbxmodelConverter, ModelConverter, ChicagoShaderConverter,\
-     ModelAnimationsConverter, CollisionConverter, SbspConverter
+     ObjectConverter, GbxmodelConverter, ModelConverter,\
+     ChicagoShaderConverter, ModelAnimationsConverter, CollisionConverter,\
+     SbspConverter
 
 
 default_hotkeys.update({
@@ -232,6 +233,9 @@ class Mozzarilla(Binilla):
             label="model_collision_geometry  to  gbxmodel", command=self.show_collision_converter)
         self.converters_menu.add_command(
             label="model  to  gbxmodel", command=self.show_model_converter)
+        self.converters_menu.add_separator()
+        self.converters_menu.add_command(
+            label="object  to  object", command=self.show_object_converter)
         self.converters_menu.add_separator()
         self.converters_menu.add_command(
             label="gbxmodel  to  model", command=self.show_gbxmodel_converter)
@@ -1068,19 +1072,16 @@ class Mozzarilla(Binilla):
 
     def show_chicago_shader_converter(self, e=None):
         self.show_tool_window("chicago_shader_converter", ChicagoShaderConverter)
-
+    def show_object_converter(self, e=None):
+        self.show_tool_window("object_converter_window", ObjectConverter)
     def show_model_converter(self, e=None):
         self.show_tool_window("model_converter_window", ModelConverter)
-
     def show_gbxmodel_converter(self, e=None):
         self.show_tool_window("gbxmodel_converter_window", GbxmodelConverter)
-
     def show_collision_converter(self, e=None):
         self.show_tool_window("collision_converter_window", CollisionConverter)
-
     def show_animations_converter(self, e=None):
         self.show_tool_window("animations_converter_window", ModelAnimationsConverter)
-
     def show_sbsp_converter(self, e=None):
         self.show_tool_window("sbsp_converter_window", SbspConverter)
 
