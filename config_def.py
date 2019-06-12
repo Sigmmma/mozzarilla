@@ -18,12 +18,14 @@ mozz_flag_tooltips = (
     )
 
 new_method_enums = (
+    # start at 1024 to make sure to provide space for any future binilla methods
     {GUI_NAME:"", NAME:"mozz_divider1", VALUE:1024},
     {GUI_NAME:"MOZZARILLA METHODS", NAME:"mozz_divider2"},
     {GUI_NAME:"choose tags directory", NAME:"set_tags_dir"},
     {GUI_NAME:"switch tags directory", NAME:"switch_tags_dir"},
     {GUI_NAME:"add tags directory",    NAME:"add_tags_dir"},
     {GUI_NAME:"remove tags directory", NAME:"remove_tags_dir"},
+    # space for a total of 64 enums here
 
     {GUI_NAME:"", NAME:"mozz_divider3", VALUE:1024 + 64},
     {GUI_NAME:"open dependency scanner", NAME:"show_dependency_viewer"},
@@ -38,12 +40,16 @@ new_method_enums = (
     {GUI_NAME:"make hud_message_text from hmt", NAME:"hud_message_text_from_hmt"},
     {GUI_NAME:"make bitmap from dds", NAME:"bitmap_from_multiple_dds"},
     {GUI_NAME:"make strings from txt", NAME:"strings_from_txt"},
+    # space for another 64 enums here
+
+    {GUI_NAME:"", NAME:"mozz_divider4", VALUE:1024 + 64*2},
     {GUI_NAME:"open model converter", NAME:"show_model_converter"},
     {GUI_NAME:"open gbxmodel converter", NAME:"show_gbxmodel_converter"},
     {GUI_NAME:"open collision converter", NAME:"show_collision_converter"},
     {GUI_NAME:"open sbsp converter", NAME:"show_sbsp_converter"},
     {GUI_NAME:"open chicago shader converter", NAME:"show_chicago_shader_converter"},
     {GUI_NAME:"open animations converter", NAME:"show_animations_converter"},
+    {GUI_NAME:"open object converter", NAME:"show_object_converter"},
     )
 
 method_enums += new_method_enums
