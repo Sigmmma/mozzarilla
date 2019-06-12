@@ -452,22 +452,18 @@ class CollisionConverter(ConverterBase, window_base_class):
         self.use_mats = tk.IntVar(self, 1)
 
         # make the frames
-        self.checkbox_frame = tk.LabelFrame(self, text="Conversion settings")
+        self.settings_frame = tk.LabelFrame(self, text="Conversion settings")
 
         # add the buttons
         self.guess_mod2_checkbutton = tk.Checkbutton(
-            self.checkbox_frame, variable=self.guess_mod2,
+            self.settings_frame, variable=self.guess_mod2,
             text="Locate gbxmodel in directory")
         self.use_mats_checkbutton = tk.Checkbutton(
-            self.checkbox_frame, variable=self.use_mats,
+            self.settings_frame, variable=self.use_mats,
             text="Use collision materials as shaders")
 
         self.pack_widgets()
         self.apply_style()
-
-    def destroy(self):
-        ConverterBase.destroy(self)
-        window_base_class.destroy(self)
 
     def pack_widgets(self):
         ConverterBase.pack_widgets(self)
@@ -475,7 +471,11 @@ class CollisionConverter(ConverterBase, window_base_class):
         # pack everything
         self.guess_mod2_checkbutton.pack(anchor='w', padx=10)
         self.use_mats_checkbutton.pack(anchor='w', padx=10)
-        self.checkbox_frame.pack(fill='both', anchor='nw')
+        self.settings_frame.pack(fill='both', anchor='nw')
+
+    def destroy(self):
+        ConverterBase.destroy(self)
+        window_base_class.destroy(self)
 
     def convert(self, tag_path):
         return coll_to_mod2(tag_path, guess_mod2=self.guess_mod2.get(),

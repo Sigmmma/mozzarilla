@@ -17,6 +17,9 @@ class ConverterBase(BinillaWidget):
     _running_thread = None
     stop_conversion = False
 
+    @property
+    def src_exts(self): return (self.src_ext, )
+
     def __init__(self, app_root, *args, **kwargs):
         self.app_root = app_root
         BinillaWidget.__init__(self, app_root, *args, **kwargs)
@@ -50,10 +53,10 @@ class ConverterBase(BinillaWidget):
         # add the filepath boxes
         self.tags_dir_entry = tk.Entry(
             self.tags_dir_frame, textvariable=self.tags_dir)
-        self.tags_dir_entry.config(width=70, state=tk.DISABLED)
+        self.tags_dir_entry.config(width=50, state=tk.DISABLED)
         self.tag_path_entry = tk.Entry(
             self.tag_path_frame, textvariable=self.tag_path)
-        self.tag_path_entry.config(width=70, state=tk.DISABLED)
+        self.tag_path_entry.config(width=50, state=tk.DISABLED)
 
         # add the buttons
         self.convert_dir_btn = tk.Button(
@@ -107,10 +110,13 @@ class ConverterBase(BinillaWidget):
         if not initialdir:
             initialdir = self.tags_dir.get()
 
+        filetypes = (("%s tag" % self.src_ext, "*.%s" % self.src_ext), )
+        filetypes += tuple(("%s tag" % ext, "*.%s" % ext)
+                          for ext in self.src_exts if ext != self.src_ext)
+        filetypes += (('All', '*'), )
         tag_path = askopenfilename(
             initialdir=initialdir,
-            filetypes=(("%s tag" % self.src_ext, "*.%s" % self.src_ext),
-                       ('All', '*')))
+            filetypes=filetypes)
         if tag_path:
             self.tag_path.set(tag_path)
 
@@ -169,7 +175,7 @@ class ConverterBase(BinillaWidget):
         try:
             dst_tag = self.convert(tag_path)
             if not part_of_batch and self.stop_conversion:
-                print("Conversion cancelled by user.")
+                print("    Conversion cancelled by user.")
                 return
 
             if dst_tag:
@@ -179,22 +185,23 @@ class ConverterBase(BinillaWidget):
             print(format_exc())
 
         if not part_of_batch:
-            print('Finished. Took %s seconds.\n' % round(time() - start, 1))
+            print('    Finished. Took %s seconds.\n' % round(time() - start, 1))
 
     def do_convert_dir(self, *args, **kwargs):
         print("Converting  %s  to  %s" % (self.src_ext, self.dst_ext))
         start = time()
+        valid_ext = "." + self.src_ext
         for root, dirs, files in os.walk(self.tags_dir.get()):
             for filename in files:
                 if self.stop_conversion:
                     break
 
                 filepath = os.path.join(root, filename)
-                if os.path.splitext(filename)[-1].lower() == "." + self.src_ext:
+                if os.path.splitext(filename)[-1].lower() == valid_ext:
                     self.do_convert_tag(filepath)
 
             if self.stop_conversion:
-                print("Conversion cancelled by user.")
+                print("    Conversion cancelled by user.")
                 break
 
-        print('Finished. Took %s seconds.\n' % round(time() - start, 1))
+        print('    Finished. Took %s seconds.\n' % round(time() - start, 1))
