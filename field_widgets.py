@@ -1406,7 +1406,7 @@ class SoundSampleFrame(HaloRawdataFrame):
 
                 rawdata = wav_file.data.wav_data.audio_data
             else:
-                rawdata = get_rawdata(filepath=filepath)
+                rawdata = get_rawdata(filepath=filepath, writable=False)
 
             undo_node = self.node
             self.parent.set_size(len(rawdata), attr_index=index)
