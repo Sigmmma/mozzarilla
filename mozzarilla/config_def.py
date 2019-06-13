@@ -40,6 +40,7 @@ new_method_enums = (
     {GUI_NAME:"make hud_message_text from hmt", NAME:"hud_message_text_from_hmt"},
     {GUI_NAME:"make bitmap from dds", NAME:"bitmap_from_multiple_dds"},
     {GUI_NAME:"make strings from txt", NAME:"strings_from_txt"},
+    {GUI_NAME:"open bitmap source extractor", NAME:"show_bitmap_source_extractor"},
     # space for another 64 enums here
 
     {GUI_NAME:"", NAME:"mozz_divider4", VALUE:1024 + 64*2},

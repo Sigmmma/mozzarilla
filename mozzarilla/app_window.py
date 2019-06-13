@@ -29,7 +29,8 @@ from mozzarilla.config_def import config_def, guerilla_workspace_def
 from mozzarilla.widget_picker import *
 from mozzarilla.tag_window import HaloTagWindow
 from mozzarilla.tools import \
-     SearchAndReplaceWindow, SauceRemovalWindow, BitmapConverterWindow,\
+     SearchAndReplaceWindow, SauceRemovalWindow, \
+     BitmapSourceExtractorWindow, BitmapConverterWindow,\
      DependencyWindow, TagScannerWindow, DataExtractionWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
      bitmap_from_dds, bitmap_from_multiple_dds, bitmap_from_bitmap_source, \
@@ -215,6 +216,9 @@ class Mozzarilla(Binilla):
         self.tools_menu.add_command(
             label="Bitmap converter",
             command=self.show_bitmap_converter_window)
+        self.tools_menu.add_command(
+            label="Bitmap source extractor",
+            command=self.show_bitmap_source_extractor)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
             label="Tags directory error locator", command=self.show_tag_scanner)
@@ -1087,12 +1091,13 @@ class Mozzarilla(Binilla):
 
     def show_dependency_viewer(self, e=None):
         self.show_tool_window("dependency_window", DependencyWindow, True)
-
     def show_tag_scanner(self, e=None):
         self.show_tool_window("tag_scanner_window", TagScannerWindow, True)
 
     def show_bitmap_converter_window(self, e=None):
-        self.show_tool_window("show_bitmap_converter_window", BitmapConverterWindow)
+        self.show_tool_window("bitmap_converter_window", BitmapConverterWindow)
+    def show_bitmap_source_extractor(self, e=None):
+        self.show_tool_window("bitmap_source_extractor_window", BitmapSourceExtractorWindow)
 
     def show_data_extraction_window(self, e=None):
         self.show_tool_window("data_extraction_window", DataExtractionWindow, True)
