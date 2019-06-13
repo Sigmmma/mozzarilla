@@ -53,10 +53,10 @@ class ConverterBase(BinillaWidget):
         # add the filepath boxes
         self.tags_dir_entry = tk.Entry(
             self.tags_dir_frame, textvariable=self.tags_dir)
-        self.tags_dir_entry.config(width=50, state=tk.DISABLED)
+        self.tags_dir_entry.config(width=70, state=tk.DISABLED)
         self.tag_path_entry = tk.Entry(
             self.tag_path_frame, textvariable=self.tag_path)
-        self.tag_path_entry.config(width=50, state=tk.DISABLED)
+        self.tag_path_entry.config(width=70, state=tk.DISABLED)
 
         # add the buttons
         self.convert_dir_btn = tk.Button(
