@@ -6,7 +6,7 @@ from struct import unpack, pack
 
 from binilla.util import *
 from binilla.widgets import BinillaWidget
-from reclaimer.data_extraction import extract_h1_scnr_data
+from reclaimer.halo_script.hsc_decompilation import extract_h1_scripts
 from supyr_struct.defs.constants import *
 
 curr_dir = get_cwd(__file__)
@@ -135,7 +135,7 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
             print("    WARNING: Scripts are too large to fit in a " +
                   "normal scenario. Extracting scripts to the same " +
                   "directory as the scenario.")
-            extract_h1_scnr_data(
+            extract_h1_scripts(
                 tagdata,
                 splitext(scenario_path.replace("\\", "/").split("/")[-1])[0],
                 out_dir=dirname(scenario_path), engine="yelo")

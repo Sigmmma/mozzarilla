@@ -18,8 +18,8 @@ from binilla.widgets import *
 
 from reclaimer.h2.constants import *
 from reclaimer.h3.util import get_virtual_dimension, get_h3_pixel_bytes_size
-from reclaimer.hmt import parse_hmt_message
-from reclaimer.meter_image import meter_image_def
+from reclaimer.strings.strings_decompilation import parse_hmt_message
+from reclaimer.bitmaps.meter_image import meter_image_def
 
 try:
     import arbytmap
@@ -1297,7 +1297,7 @@ class HaloScriptTextFrame(ComputedTextFrame):
 
         if None in (self.strings, self.syntax):
             tag_data = self.parent.parent.parent.parent
-            self.syntax  = reclaimer.hsc.get_hsc_data_block(
+            self.syntax  = reclaimer.halo_script.hsc.get_hsc_data_block(
                 tag_data.script_syntax_data.data)
             self.strings = tag_data.script_string_data.data.decode("latin-1")
 
@@ -1312,11 +1312,12 @@ class HaloScriptTextFrame(ComputedTextFrame):
         script_strings_by_type = ()
         try:
             if self.tag_window.use_scenario_names_for_script_names:
-                script_strings_by_type = reclaimer.hsc.get_h1_scenario_script_object_type_strings(tag_data)
+                script_strings_by_type = reclaimer.halo_script.hsc.\
+                                         get_h1_scenario_script_object_type_strings(tag_data)
         except Exception:
             pass
 
-        new_text = reclaimer.hsc.hsc_bytecode_to_string(
+        new_text = reclaimer.halo_script.hsc.hsc_bytecode_to_string(
                 self.syntax, self.strings, self.f_widget_parent.attr_index,
                 tag_data.scripts.STEPTREE, tag_data.globals.STEPTREE, typ,
                 hsc_node_strings_by_type=script_strings_by_type)

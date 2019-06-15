@@ -253,7 +253,7 @@ class Mozzarilla(Binilla):
         self.compile_menu.add_command(
             label="Bitmap from dds texture(s)", command=self.bitmap_from_multiple_dds)
         self.compile_menu.add_command(
-            label="Bitmap(s) from dds texture", command=self.bitmap_from_dds)
+            label="Bitmap(s) from dds texture(s)", command=self.bitmap_from_dds)
         self.compile_menu.add_command(
             label="Bitmap(s) from bitmap source", command=self.bitmap_from_bitmap_source)
         self.compile_menu.add_separator()
