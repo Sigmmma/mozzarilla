@@ -370,14 +370,14 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
     bitm_def = bitm_def
 
     def __init__(self, app_root, *args, **kwargs):
-        BinillaWidget.__init__(self, *args, **kwargs)
+        BinillaWidget.__init__(self, app_root, *args, **kwargs)
         if isinstance(self, tk.Toplevel):
             kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
             self.app_root = app_root
         else:
             self.app_root = self
 
-        super(type(self), self).__init__(app_root, *args, **kwargs)
+        window_base_class.__init__(self, app_root, *args, **kwargs)
 
         self.conversion_flags = {}
         self.bitmap_tag_infos = {}
@@ -756,7 +756,7 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
             self.app_root.tool_windows.pop(self.window_name, None)
         except AttributeError:
             pass
-        super(type(self), self).destroy(self)
+        super(type(self), self).destroy()
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
