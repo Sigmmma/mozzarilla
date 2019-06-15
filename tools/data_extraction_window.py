@@ -11,7 +11,8 @@ from binilla.widgets import BinillaWidget
 from binilla.util import get_cwd
 from supyr_struct.defs.constants import *
 from supyr_struct.defs.util import *
-from reclaimer.hsc import get_h1_scenario_script_object_type_strings
+from reclaimer.halo_script.hsc import \
+     get_h1_scenario_script_object_type_strings
 
 curr_dir = get_cwd(__file__)
 
