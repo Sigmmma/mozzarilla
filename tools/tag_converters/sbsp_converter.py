@@ -10,7 +10,7 @@ from copy import deepcopy
 from reclaimer.model.jms import JmsNode, JmsMaterial, JmsMarker, JmsVertex,\
      JmsModel, MergedJmsModel, edge_loop_to_tris
 from reclaimer.model.model_compilation import compile_gbxmodel
-from reclaimer.hek.defs.objs.matrices import euler_to_quaternion, \
+from reclaimer.util.matrices import euler_to_quaternion, \
      planes_to_verts_and_edge_loops, Ray
 from reclaimer.hek.defs.sbsp import sbsp_def
 from reclaimer.hek.defs.mod2 import mod2_def
