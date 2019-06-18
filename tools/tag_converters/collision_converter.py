@@ -13,7 +13,8 @@ from reclaimer.hek.defs.mode import mode_def
 from reclaimer.stubbs.defs.mode import mode_def as stubbs_mode_def
 from reclaimer.stubbs.defs.coll import coll_def as stubbs_coll_def
 from reclaimer.common_descs import tag_header
-from reclaimer.hek.defs.objs.matrices import quaternion_to_matrix, Matrix
+from reclaimer.util.matrices import quaternion_to_matrix, Matrix
+
 from supyr_struct.buffer import get_rawdata
 from supyr_struct.defs.block_def import BlockDef
 from supyr_struct.field_types import FieldType, BytearrayRaw
