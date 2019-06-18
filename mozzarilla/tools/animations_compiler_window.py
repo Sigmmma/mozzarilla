@@ -1,0 +1,552 @@
+import os
+import tkinter as tk
+import time
+
+from tkinter import messagebox
+from tkinter.filedialog import askdirectory, asksaveasfilename
+from traceback import format_exc
+
+from binilla.util import sanitize_path, is_in_dir, get_cwd, PATHDIV
+from binilla.widgets import BinillaWidget, ScrollMenu
+from reclaimer.hek.defs.antr import antr_def
+from reclaimer.animation.jma import read_jma, write_jma,\
+     JmaAnimation, JmaAnimationSet, JMA_ANIMATION_EXTENSIONS
+from reclaimer.animation.animation_compilation import compile_model_animations
+
+if __name__ == "__main__":
+    window_base_class = tk.Tk
+else:
+    window_base_class = tk.Toplevel
+
+curr_dir = get_cwd(__file__)
+
+
+class AnimationsCompilerWindow(window_base_class, BinillaWidget):
+    app_root = None
+    tags_dir = ''
+
+    jma_anims = ()
+    jma_anim_set = None
+    antr_tag = None
+
+    _compiling = False
+    _loading = False
+    _saving = False
+
+    _jma_tree_iids = ()
+
+    def __init__(self, app_root, *args, **kwargs):
+        if window_base_class == tk.Toplevel:
+            kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
+            self.app_root = app_root
+        else:
+            self.app_root = self
+
+        BinillaWidget.__init__(self, *args, **kwargs)
+        window_base_class.__init__(self, app_root, *args, **kwargs)
+
+        self.title("Model_animations compiler")
+        self.resizable(1, 1)
+        self.update()
+        for sub_dirs in ((), ('..', ), ('icons', )):
+            try:
+                self.iconbitmap(os.path.os.path.join(
+                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
+                    ))
+                break
+            except Exception:
+                pass
+
+        tags_dir = getattr(app_root, "tags_dir", "")
+
+        self.tags_dir = tk.StringVar(self, tags_dir if tags_dir else "")
+        self.jma_dir = tk.StringVar(self)
+        self.model_animations_path = tk.StringVar(self)
+
+
+        # make the frames
+        self.main_frame = tk.Frame(self)
+        self.jma_info_frame = tk.LabelFrame(
+            self, text="Animations info")
+
+        self.dirs_frame = tk.LabelFrame(
+            self.main_frame, text="Directories")
+        self.buttons_frame = tk.Frame(self.main_frame)
+        self.settings_frame = tk.LabelFrame(
+            self.main_frame, text="Compilation settings")
+
+        self.jma_dir_frame = tk.LabelFrame(
+            self.dirs_frame, text="Source animations folder")
+        self.tags_dir_frame = tk.LabelFrame(
+            self.dirs_frame, text="Tags directory root folder")
+        self.model_animations_path_frame = tk.LabelFrame(
+            self.dirs_frame, text="Model_animations output path")
+
+
+        self.jma_info_tree = tk.ttk.Treeview(
+            self.jma_info_frame, selectmode='browse', padding=(0, 0), height=4)
+        self.jma_info_vsb = tk.Scrollbar(
+            self.jma_info_frame, orient='vertical',
+            command=self.jma_info_tree.yview)
+        self.jma_info_hsb = tk.Scrollbar(
+            self.jma_info_frame, orient='horizontal',
+            command=self.jma_info_tree.xview)
+        self.jma_info_tree.config(yscrollcommand=self.jma_info_vsb.set,
+                                  xscrollcommand=self.jma_info_hsb.set)
+
+        self.jma_dir_entry = tk.Entry(
+            self.jma_dir_frame, textvariable=self.jma_dir, state=tk.DISABLED)
+        self.jma_dir_browse_button = tk.Button(
+            self.jma_dir_frame, text="Browse", command=self.jma_dir_browse)
+
+
+        self.tags_dir_entry = tk.Entry(
+            self.tags_dir_frame, textvariable=self.tags_dir, state=tk.DISABLED)
+        self.tags_dir_browse_button = tk.Button(
+            self.tags_dir_frame, text="Browse", command=self.tags_dir_browse)
+
+
+        self.model_animations_path_entry = tk.Entry(
+            self.model_animations_path_frame,
+            textvariable=self.model_animations_path,
+            state=tk.DISABLED)
+        self.model_animations_path_browse_button = tk.Button(
+            self.model_animations_path_frame, text="Browse",
+            command=self.model_animations_path_browse)
+
+
+        self.load_button = tk.Button(
+            self.buttons_frame, text="Load\nanimations",
+            command=self.load_animations)
+        self.save_button = tk.Button(
+            self.buttons_frame, text="Save as JMA",
+            command=self.save_animations)
+        self.compile_button = tk.Button(
+            self.buttons_frame, text="Compile\nmodel_animations",
+            command=self.compile_model_animations)
+
+        self.populate_animations_info_tree()
+
+        # pack everything
+        self.main_frame.pack(fill="both", side='left', pady=3, padx=3)
+        self.jma_info_frame.pack(fill="both", side='left', pady=3, padx=3,
+                                 expand=True)
+
+        self.dirs_frame.pack(fill="x")
+        self.buttons_frame.pack(fill="x", pady=3, padx=3)
+        self.settings_frame.pack(fill="both")
+
+        self.jma_dir_frame.pack(fill='x')
+        self.tags_dir_frame.pack(fill='x')
+        self.model_animations_path_frame.pack(fill='x')
+
+        self.jma_dir_entry.pack(side='left', fill='x', expand=True)
+        self.jma_dir_browse_button.pack(side='left')
+
+        self.model_animations_path_entry.pack(side='left', fill='x', expand=True)
+        self.model_animations_path_browse_button.pack(side='left')
+
+        self.tags_dir_entry.pack(side='left', fill='x', expand=True)
+        self.tags_dir_browse_button.pack(side='left')
+
+        self.jma_info_hsb.pack(side="bottom", fill='x')
+        self.jma_info_vsb.pack(side="right",  fill='y')
+        self.jma_info_tree.pack(side='left', fill='both', expand=True)
+
+        self.load_button.pack(side='left', fill='both', padx=3)
+        self.save_button.pack(side='left', fill='both', padx=3)
+        self.compile_button.pack(side='right', fill='both', padx=3)
+
+        self.apply_style()
+        if self.app_root is not self:
+            self.transient(self.app_root)
+
+    def populate_animations_info_tree(self):
+        jma_tree = self.jma_info_tree
+        if not jma_tree['columns']:
+            jma_tree['columns'] = ('data', )
+            jma_tree.heading("#0")
+            jma_tree.heading("data")
+            jma_tree.column("#0", minwidth=100, width=100)
+            jma_tree.column("data", minwidth=80, width=80, stretch=False)
+
+        for iid in self._jma_tree_iids:
+            jma_tree.delete(iid)
+
+        self._jma_tree_iids = []
+
+        if not self.jma_anims or not self.jma_anim_set:
+            return
+
+        nodes_iid = jma_tree.insert('', 'end', text="Nodes", tags=('item',),
+                                    values=(len(self.jma_anim_set.nodes),))
+        self._jma_tree_iids.append(nodes_iid)
+        nodes = self.jma_anim_set.nodes
+        for node in nodes:
+            iid = jma_tree.insert(nodes_iid, 'end', text=node.name, tags=('item',))
+            parent_name = child_name = sibling_name = "NONE"
+            if node.parent_index >= 0:
+                parent_name = nodes[node.parent_index].name
+            if node.sibling_index >= 0:
+                child_name = nodes[node.sibling_index].name
+            if node.first_child >= 0:
+                sibling_name = nodes[node.first_child].name
+
+            jma_tree.insert(iid, 'end', text="Parent",
+                            values=(parent_name, ), tags=('item',),)
+            jma_tree.insert(iid, 'end', text="First child",
+                            values=(child_name, ), tags=('item',),)
+            jma_tree.insert(iid, 'end', text="Next sibling",
+                            values=(sibling_name, ), tags=('item',),)
+
+
+        anims_iid = jma_tree.insert('', 'end', text="Animations", tags=('item',),
+                                    values=(len(self.jma_anims),))
+        self._jma_tree_iids.append(anims_iid)
+        for jma_anim in self.jma_anims:
+            iid = jma_tree.insert(anims_iid, 'end', tags=('item',),
+                                  text=jma_anim.name + jma_anim.ext)
+            jma_tree.insert(iid, 'end', text="Node list checksum", tags=('item',),
+                            values=(jma_anim.node_list_checksum, ))
+            jma_tree.insert(iid, 'end', text="World relative", tags=('item',),
+                            values=(jma_anim.world_relative, ))
+            jma_tree.insert(iid, 'end', text="Type", tags=('item',),
+                            values=(jma_anim.anim_type, ))
+            jma_tree.insert(iid, 'end', text="Frame info", tags=('item',),
+                            values=(jma_anim.frame_info_type, ))
+
+            rot_flags   = jma_anim.rot_flags
+            trans_flags = jma_anim.trans_flags
+            scale_flags = jma_anim.scale_flags
+
+            node_flags_iid = jma_tree.insert(
+                iid, 'end', text="Transform flags", tags=('item',),
+                values=(len(jma_anim.nodes),))
+            for n in range(len(jma_anim.nodes)):
+                node_iid = jma_tree.insert(
+                    node_flags_iid, 'end', text=jma_anim.nodes[n].name,
+                    tags=('item',), values=(
+                        "*" if (rot_flags[n] or
+                                trans_flags[n] or
+                                scale_flags[n])
+                        else "",))
+
+                jma_tree.insert(node_iid, 'end', text="Rotation",
+                                values=(rot_flags[n], ), tags=('item',))
+                jma_tree.insert(node_iid, 'end', text="Position",
+                                values=(trans_flags[n], ), tags=('item',))
+                jma_tree.insert(node_iid, 'end', text="Scale",
+                                values=(scale_flags[n], ), tags=('item',))
+
+            nodes_iid = jma_tree.insert(
+                iid, 'end', text="Frame data", tags=('item',),
+                values=(len(jma_anim.nodes),))
+            for n in range(len(jma_anim.nodes)):
+                states_iid = jma_tree.insert(
+                    nodes_iid, 'end', text=jma_anim.nodes[n].name,
+                    tags=('item',))
+
+                for f in range(len(jma_anim.frames)):
+                    state = jma_anim.frames[f][n]
+                    node_iid = jma_tree.insert(
+                        states_iid, 'end', tags=('item',),
+                        text="frame%s" % f
+                        )
+                    jma_tree.insert(node_iid, 'end', text="i",
+                                    values=(state.rot_i, ), tags=('item',),)
+                    jma_tree.insert(node_iid, 'end', text="j",
+                                    values=(state.rot_j, ), tags=('item',),)
+                    jma_tree.insert(node_iid, 'end', text="k",
+                                    values=(state.rot_k, ), tags=('item',),)
+                    jma_tree.insert(node_iid, 'end', text="w",
+                                    values=(state.rot_w, ), tags=('item',),)
+
+                    jma_tree.insert(node_iid, 'end', text="x",
+                                    values=(state.pos_x, ), tags=('item',),)
+                    jma_tree.insert(node_iid, 'end', text="y",
+                                    values=(state.pos_y, ), tags=('item',),)
+                    jma_tree.insert(node_iid, 'end', text="z",
+                                    values=(state.pos_z, ), tags=('item',),)
+
+                    jma_tree.insert(node_iid, 'end', text="scale",
+                                    values=(state.scale, ), tags=('item',),)
+
+
+    def jma_dir_browse(self):
+        if self._compiling or self._loading or self._saving:
+            return
+
+        tags_dir = self.tags_dir.get()
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(tags_dir)), "data", "")
+        jma_dir = self.jma_dir.get()
+        if tags_dir and not jma_dir:
+            jma_dir = data_dir
+
+        dirpath = askdirectory(
+            initialdir=jma_dir, parent=self,
+            title="Select the folder of animations to compile...")
+
+        dirpath = os.path.join(sanitize_path(dirpath), "")
+        if not dirpath:
+            return
+
+        if tags_dir and data_dir and os.path.basename(dirpath).lower() == "animations":
+            object_dir = os.path.dirname(dirpath)
+
+            if object_dir and is_in_dir(object_dir, data_dir):
+                tag_path = os.path.join(object_dir, os.path.basename(object_dir))
+                tag_path = os.path.join(tags_dir, os.path.relpath(tag_path, data_dir))
+                self.model_animations_path.set(tag_path + ".model_animations")
+
+        self.app_root.last_load_dir = os.path.dirname(dirpath)
+        self.jma_dir.set(dirpath)
+        if not self.tags_dir.get():
+            path_pieces = self.app_root.last_load_dir.split(
+                "%sdata%s" % (PATHDIV, PATHDIV))
+            if len(path_pieces) > 1:
+                self.tags_dir.set(os.path.join(path_pieces[0], "tags"))
+
+    def tags_dir_browse(self):
+        if self._compiling or self._loading or self._saving:
+            return
+
+        old_tags_dir = self.tags_dir.get()
+        tags_dir = askdirectory(
+            initialdir=old_tags_dir, parent=self,
+            title="Select the root of the tags directory")
+
+        tags_dir = sanitize_path(os.path.join(tags_dir, ""))
+        if not tags_dir:
+            return
+
+        antr_path = self.model_animations_path.get()
+        if old_tags_dir and antr_path and not is_in_dir(antr_path, tags_dir):
+            # adjust antr filepath to be relative to the new tags directory
+            antr_path = os.path.join(tags_dir, os.path.relpath(antr_path, old_tags_dir))
+            self.model_animations_path.set(antr_path)
+
+        self.app_root.last_load_dir = os.path.dirname(tags_dir)
+        self.tags_dir.set(tags_dir)
+
+    def model_animations_path_browse(self, force=False):
+        if not force and (self._compiling or self._loading or self._saving):
+            return
+
+        antr_dir = os.path.dirname(self.model_animations_path.get())
+        if self.tags_dir.get() and not antr_dir:
+            antr_dir = self.tags_dir.get()
+
+        fp = asksaveasfilename(
+            initialdir=antr_dir, title="Save model_animations to...", parent=self,
+            filetypes=(("Model animations graph", "*.model_animations"), ('All', '*')))
+
+        if not fp:
+            return
+
+        fp = sanitize_path(fp)
+        if not os.path.splitext(fp)[-1]:
+            fp += ".model_animations"
+
+        self.app_root.last_load_dir = os.path.dirname(fp)
+        self.model_animations_path.set(fp)
+
+        path_pieces = os.path.join(self.app_root.last_load_dir, '').split(
+            "%stags%s" % (PATHDIV, PATHDIV))
+        if len(path_pieces) > 1:
+            self.tags_dir.set(os.path.join(path_pieces[0], "tags"))
+
+    def apply_style(self, seen=None):
+        BinillaWidget.apply_style(self, seen)
+        self.update()
+        w, h = self.winfo_reqwidth(), self.winfo_reqheight()
+        self.geometry("%sx%s" % (w, h))
+        self.minsize(width=w, height=h)
+
+    def destroy(self):
+        try:
+            self.app_root.tool_windows.pop(self.window_name, None)
+        except AttributeError:
+            pass
+        window_base_class.destroy(self)
+
+    def load_animations(self):
+        if not self._compiling and not self._loading and not self._saving:
+            self._loading = True
+            try:
+                self._load_animations()
+            except Exception:
+                print(format_exc())
+            try:
+                self.populate_animations_info_tree()
+            except Exception:
+                print(format_exc())
+            self._loading = False
+
+    def save_animations(self):
+        if not self._compiling and not self._loading and not self._saving:
+            self._saving = True
+            try:
+                self._save_animations()
+            except Exception:
+                print(format_exc())
+            self._saving = False
+
+    def compile_model_animations(self):
+        if not self._compiling and not self._loading and not self._saving:
+            self._compiling = True
+            try:
+                self._compile_model_animations()
+            except Exception:
+                print(format_exc())
+            self._compiling = False
+
+    def _load_animations(self):
+        animations_dir = self.jma_dir.get()
+        if not animations_dir:
+            return
+
+        start = time.time()
+        print("Locating jma files...")
+        fps = []
+        for _, __, files in os.walk(animations_dir):
+            for fname in files:
+                ext = os.path.splitext(fname)[-1].lower()
+                if ext in JMA_ANIMATION_EXTENSIONS:
+                    fps.append(os.path.join(animations_dir, fname))
+
+            break
+
+        if not fps:
+            print("    No valid jma files found in the folder.")
+            return
+
+        self.antr_tag = self.jma_anim_set = None
+
+        jma_anims = self.jma_anims = []
+        print("Loading jma files...")
+        self.app_root.update()
+        for fp in fps:
+            try:
+                print("    %s" % fp.replace('/', '\\').split("\\")[-1])
+                self.app_root.update()
+
+                anim_name = os.path.basename(fp)
+                ext = os.path.splitext(fp)[-1].lower()
+
+                jma_anim = None
+                if ext in JMA_ANIMATION_EXTENSIONS:
+                    with open(fp, "r") as f:
+                        jma_anim = read_jma(f.read(), '', anim_name)
+
+                if jma_anim:
+                    jma_anims.append(jma_anim)
+            except Exception:
+                print(format_exc())
+                print("    Could not parse jma file.")
+                self.app_root.update()
+
+        if not jma_anims:
+            print("    No valid jma files found.")
+            return
+
+        first_crc = None
+        for jma_anim in jma_anims:
+            if first_crc is None:
+                first_crc = jma_anim.node_list_checksum
+            elif first_crc != jma_anim.node_list_checksum:
+                print("    Warning, not all node list checksums match.")
+                break
+
+
+        print("Merging jma data...")
+        self.app_root.update()
+        self.jma_anim_set = JmaAnimationSet()
+        errors_occurred = False
+        for jma_anim in jma_anims:
+            errors = self.jma_anim_set.merge_jma_animation(jma_anim)
+            errors_occurred |= bool(errors)
+            if errors:
+                print("    Errors in '%s'" % jma_anim.name)
+                for error in errors:
+                    print("        ", error, sep='')
+
+            self.app_root.update()
+
+        antr_path = self.model_animations_path.get()
+        if errors_occurred:
+            print("    Errors occurred while loading jma files.")
+        elif os.path.isfile(antr_path):
+            try:
+                self.antr_tag = antr_def.build(filepath=antr_path)
+            except Exception:
+                print(format_exc())
+
+
+        if not self.antr_tag:
+            print("    Existing model_animations tag not detected or could not be loaded.\n"
+                  "        A new model_animations tag will be created.")
+
+        print("Finished loading animations. Took %s seconds.\n" %
+              str(time.time() - start).split('.')[0])
+
+    def _save_animations(self):
+        animations_dir = self.jma_dir.get()
+        if not animations_dir:
+            return
+
+        start = time.time()
+        print("Saving jma animations...")
+        for jma_anim in self.jma_anims:
+            if isinstance(jma_anim, JmaAnimation):
+                jma_filepath = os.path.join(
+                    animations_dir, jma_anim.name + jma_anim.ext)
+                write_jma(jma_filepath, jma_anim)
+
+        print("Finished saving animations. Took %s seconds.\n" %
+              str(time.time() - start).split('.')[0])
+
+    def _compile_model_animations(self):
+        if not self.jma_anim_set:
+            return
+
+        updating = self.antr_tag is not None
+        if updating:
+            print("Updating existing model_animations tag.")
+            antr_tag = self.antr_tag
+        else:
+            print("Creating new model_animations tag.")
+            antr_tag = antr_def.build()
+
+            while not self.model_animations_path.get():
+                self.model_animations_path_browse(True)
+                if not self.model_animations_path.get():
+                    if messagebox.askyesno(
+                            "Unsaved model_animations",
+                            "Are you sure you wish to cancel saving?",
+                            icon='warning', parent=self):
+                        print("    Model_animations compilation cancelled.")
+                        return
+
+            antr_tag.filepath = self.model_animations_path.get()
+
+        self.app_root.update()
+
+        errors = compile_model_animations(antr_tag, self.jma_anim_set)
+        if errors:
+            for error in errors:
+                print(error)
+            print("Model_animations compilation failed.")
+            return
+
+        try:
+            antr_tag.calc_internal_data()
+            antr_tag.serialize(temp=False, backup=False, calc_pointers=False,
+                               int_test=False)
+            print("    Finished")
+        except Exception:
+            print(format_exc())
+            print("    Could not save compiled model_animations.")
+
+
+if __name__ == "__main__":
+    AnimationsCompilerWindow(None).mainloop()

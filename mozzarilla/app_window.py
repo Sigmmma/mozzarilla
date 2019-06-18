@@ -34,7 +34,7 @@ from mozzarilla.tools import \
      DependencyWindow, TagScannerWindow, DataExtractionWindow,\
      DirectoryFrame, HierarchyFrame, DependencyFrame,\
      bitmap_from_dds, bitmap_from_multiple_dds, bitmap_from_bitmap_source, \
-     ModelCompilerWindow, physics_from_jms,\
+     AnimationsCompilerWindow, ModelCompilerWindow, physics_from_jms,\
      hud_message_text_from_hmt, strings_from_txt,\
      ObjectConverter, GbxmodelConverter, ModelConverter,\
      ChicagoShaderConverter, ModelAnimationsConverter, CollisionConverter,\
@@ -257,6 +257,8 @@ class Mozzarilla(Binilla):
         self.compile_menu.add_command(
             label="Bitmap(s) from bitmap source", command=self.bitmap_from_bitmap_source)
         self.compile_menu.add_separator()
+        self.compile_menu.add_command(
+            label="Model_animations from jma", command=self.show_animations_compiler_window)
         self.compile_menu.add_command(
             label="Gbxmodel from jms", command=self.show_model_compiler_window)
         self.compile_menu.add_command(
@@ -1102,6 +1104,8 @@ class Mozzarilla(Binilla):
     def show_data_extraction_window(self, e=None):
         self.show_tool_window("data_extraction_window", DataExtractionWindow, True)
 
+    def show_animations_compiler_window(self, e=None):
+        self.show_tool_window("animations_compiler_window", AnimationsCompilerWindow, True)
     def show_model_compiler_window(self, e=None):
         self.show_tool_window("model_compiler_window", ModelCompilerWindow, True)
 
