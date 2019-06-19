@@ -35,6 +35,8 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
     _jma_tree_iids = ()
 
+    animation_delta_tolerance = 0.00000001
+
     def __init__(self, app_root, *args, **kwargs):
         if window_base_class == tk.Toplevel:
             kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
@@ -63,6 +65,11 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.jma_dir = tk.StringVar(self)
         self.model_animations_path = tk.StringVar(self)
 
+        self.animation_delta_tolerance_string = tk.StringVar(
+            self, str(self.animation_delta_tolerance))
+        self.animation_delta_tolerance_string.trace(
+            "w", lambda *a, s=self: s.set_animation_delta_tolerance())
+
 
         # make the frames
         self.main_frame = tk.Frame(self)
@@ -81,6 +88,19 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             self.dirs_frame, text="Tags directory root folder")
         self.model_animations_path_frame = tk.LabelFrame(
             self.dirs_frame, text="Model_animations output path")
+
+        self.animation_delta_tolerance_frame = tk.LabelFrame(
+            self.settings_frame, text="Animation delta tolerance")
+        
+        self.animation_delta_tolerance_info = tk.Label(
+            self.animation_delta_tolerance_frame, justify='left', anchor="w",
+            text=("How much a nodes position, rotation, or scale\n"
+                  "must change from the starting frame for that\n"
+                  "type of transform to be considered animated."))
+        self.animation_delta_tolerance_spinbox = tk.Spinbox(
+            self.animation_delta_tolerance_frame, from_=0,
+            to=100, width=25, increment=self.animation_delta_tolerance,
+            textvariable=self.animation_delta_tolerance_string, justify="right")
 
 
         self.jma_info_tree = tk.ttk.Treeview(
@@ -153,9 +173,15 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.jma_info_vsb.pack(side="right",  fill='y')
         self.jma_info_tree.pack(side='left', fill='both', expand=True)
 
-        self.load_button.pack(side='left', fill='both', padx=3)
-        self.save_button.pack(side='left', fill='both', padx=3)
-        self.compile_button.pack(side='right', fill='both', padx=3)
+        self.load_button.pack(side='left', fill='both', padx=3, expand=True)
+        self.save_button.pack(side='left', fill='both', padx=3, expand=True)
+        self.compile_button.pack(side='right', fill='both', padx=3, expand=True)
+
+        self.animation_delta_tolerance_info.pack(fill='both', expand=True,
+                                                 padx=5, pady=5)
+        self.animation_delta_tolerance_spinbox.pack(padx=5, pady=5)
+
+        self.animation_delta_tolerance_frame.pack(expand=True, fill='both')
 
         self.apply_style()
         if self.app_root is not self:
@@ -238,6 +264,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                 jma_tree.insert(node_iid, 'end', text="Scale",
                                 values=(scale_flags[n], ), tags=('item',))
 
+            #continue
             nodes_iid = jma_tree.insert(
                 iid, 'end', text="Frame data", tags=('item',),
                 values=(len(jma_anim.nodes),))
@@ -361,6 +388,20 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         w, h = self.winfo_reqwidth(), self.winfo_reqheight()
         self.geometry("%sx%s" % (w, h))
         self.minsize(width=w, height=h)
+
+    def set_animation_delta_tolerance(self):
+        try:
+            new_tolerance = float(self.animation_delta_tolerance_string.get())
+            if new_tolerance >= 0:
+                self.animation_delta_tolerance = new_tolerance
+                return
+
+            self.animation_delta_tolerance = 0
+        except Exception:
+            pass
+
+        self.animation_delta_tolerance_string.set(
+            str(("%.20f" % self.animation_delta_tolerance)).rstrip("0").rstrip("."))
 
     def destroy(self):
         try:
@@ -530,8 +571,8 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             antr_tag.filepath = self.model_animations_path.get()
 
         self.app_root.update()
-
-        errors = compile_model_animations(antr_tag, self.jma_anim_set)
+        errors = compile_model_animations(antr_tag, self.jma_anim_set, False,
+                                          self.animation_delta_tolerance)
         if errors:
             for error in errors:
                 print(error)
