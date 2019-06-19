@@ -264,7 +264,54 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                 jma_tree.insert(node_iid, 'end', text="Scale",
                                 values=(scale_flags[n], ), tags=('item',))
 
-            #continue
+            # code below is very cpu intensive.
+            # don't remove this continue unless debugging
+            continue
+
+            has_dxdy = "dx" in jma_anim.frame_info_type
+            has_dz   = "dz" in jma_anim.frame_info_type
+            has_dyaw = "dyaw" in jma_anim.frame_info_type
+
+            root_data_iid = jma_tree.insert(
+                iid, 'end', text="Root node data", tags=('item',),
+                values=(len(jma_anim.root_node_info),))
+            for f in range(len(jma_anim.root_node_info)):
+                if not has_dxdy and not has_dz and not has_dyaw:
+                    break
+
+                state = jma_anim.root_node_info[f]
+                frame_iid = jma_tree.insert(
+                    root_data_iid, 'end', tags=('item',),
+                    text="frame%s" % f
+                    )
+                if has_dxdy:
+                    jma_tree.insert(frame_iid, 'end', text="dx",
+                                    values=(state.dx, ), tags=('item',),)
+                    jma_tree.insert(frame_iid, 'end', text="dy",
+                                    values=(state.dy, ), tags=('item',),)
+
+                if has_dz:
+                    jma_tree.insert(frame_iid, 'end', text="dz",
+                                    values=(state.dz, ), tags=('item',),)
+
+                if has_dyaw:
+                    jma_tree.insert(frame_iid, 'end', text="dyaw",
+                                    values=(state.dyaw, ), tags=('item',),)
+
+                if has_dxdy:
+                    jma_tree.insert(frame_iid, 'end', text="x",
+                                    values=(state.x, ), tags=('item',),)
+                    jma_tree.insert(frame_iid, 'end', text="y",
+                                    values=(state.y, ), tags=('item',),)
+
+                if has_dz:
+                    jma_tree.insert(frame_iid, 'end', text="z",
+                                    values=(state.z, ), tags=('item',),)
+
+                if has_dyaw:
+                    jma_tree.insert(frame_iid, 'end', text="yaw",
+                                    values=(state.yaw, ), tags=('item',),)
+
             nodes_iid = jma_tree.insert(
                 iid, 'end', text="Frame data", tags=('item',),
                 values=(len(jma_anim.nodes),))
