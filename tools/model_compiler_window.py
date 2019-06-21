@@ -12,7 +12,8 @@ from reclaimer.hek.defs.mod2 import mod2_def
 from reclaimer.model.jms import read_jms, write_jms, MergedJmsModel, JmsModel
 from reclaimer.model.dae import jms_model_from_dae
 from reclaimer.model.obj import jms_model_from_obj
-from reclaimer.model.model_compilation import compile_gbxmodel, generate_shader
+from reclaimer.model.model_compilation import compile_gbxmodel
+from reclaimer.model.util import generate_shader
 
 if __name__ == "__main__":
     window_base_class = tk.Tk
@@ -64,7 +65,7 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         window_base_class.__init__(self, app_root, *args, **kwargs)
 
         self.title("Gbxmodel compiler")
-        self.resizable(1, 0)
+        self.resizable(1, 1)
         self.update()
         for sub_dirs in ((), ('..', ), ('icons', )):
             try:
