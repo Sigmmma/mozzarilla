@@ -549,7 +549,7 @@ class SbspConverter(ConverterBase, window_base_class):
             else:
                 self.weather_tolerance = self.min_weather_tolerance
         except Exception:
-            pass
+            return
 
         self.weather_tolerance_string.set(
             str(("%.20f" % self.weather_tolerance)).rstrip("0").rstrip("."))

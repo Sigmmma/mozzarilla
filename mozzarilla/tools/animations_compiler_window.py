@@ -11,7 +11,9 @@ from binilla.widgets import BinillaWidget, ScrollMenu
 from reclaimer.hek.defs.antr import antr_def
 from reclaimer.animation.jma import read_jma, write_jma,\
      JmaAnimation, JmaAnimationSet, JMA_ANIMATION_EXTENSIONS
-from reclaimer.animation.animation_compilation import compile_model_animations
+from reclaimer.animation.animation_compilation import \
+     compile_model_animations, ANIMATION_COMPILE_MODE_NEW,\
+     ANIMATION_COMPILE_MODE_PRESERVE, ANIMATION_COMPILE_MODE_ADDITIVE
 
 if __name__ == "__main__":
     window_base_class = tk.Tk
@@ -27,7 +29,6 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
     jma_anims = ()
     jma_anim_set = None
-    antr_tag = None
 
     _compiling = False
     _loading = False
@@ -65,6 +66,8 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.jma_dir = tk.StringVar(self)
         self.model_animations_path = tk.StringVar(self)
 
+        self.animation_count_limit = tk.IntVar(self, 256)
+        self.update_mode = tk.IntVar(self, ANIMATION_COMPILE_MODE_PRESERVE)
         self.animation_delta_tolerance_string = tk.StringVar(
             self, str(self.animation_delta_tolerance))
         self.animation_delta_tolerance_string.trace(
@@ -79,8 +82,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.dirs_frame = tk.LabelFrame(
             self.main_frame, text="Directories")
         self.buttons_frame = tk.Frame(self.main_frame)
-        self.settings_frame = tk.LabelFrame(
-            self.main_frame, text="Compilation settings")
+        self.settings_frame = tk.Frame(self.main_frame)
 
         self.jma_dir_frame = tk.LabelFrame(
             self.dirs_frame, text="Source animations folder")
@@ -91,6 +93,21 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
         self.animation_delta_tolerance_frame = tk.LabelFrame(
             self.settings_frame, text="Animation delta tolerance")
+        self.update_mode_frame = tk.LabelFrame(
+            self.settings_frame, text="What to do with existing model_animations tag")
+
+        self.compile_mode_replace_rbtn = tk.Radiobutton(
+            self.update_mode_frame, anchor="w",
+            variable=self.update_mode, value=ANIMATION_COMPILE_MODE_NEW,
+            text="Erase all animations/tag values")
+        self.compile_mode_preserve_rbtn = tk.Radiobutton(
+            self.update_mode_frame, anchor="w",
+            variable=self.update_mode, value=ANIMATION_COMPILE_MODE_PRESERVE,
+            text="Preserve any used animations/tag values")
+        self.compile_mode_additive_rbtn = tk.Radiobutton(
+            self.update_mode_frame, anchor="w",
+            variable=self.update_mode, value=ANIMATION_COMPILE_MODE_ADDITIVE,
+            text="Erase nothing(only add or replace animations)")
         
         self.animation_delta_tolerance_info = tk.Label(
             self.animation_delta_tolerance_frame, justify='left', anchor="w",
@@ -101,6 +118,11 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             self.animation_delta_tolerance_frame, from_=0,
             to=100, width=25, increment=self.animation_delta_tolerance,
             textvariable=self.animation_delta_tolerance_string, justify="right")
+
+        self.use_os_animation_count_limit_cbtn = tk.Checkbutton(
+            self.settings_frame, onvalue=2048, offvalue=256,
+            variable=self.animation_count_limit, anchor="w",
+            text="Use Open Sauce animation count limit")
 
 
         self.jma_info_tree = tk.ttk.Treeview(
@@ -177,11 +199,21 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.save_button.pack(side='left', fill='both', padx=3, expand=True)
         self.compile_button.pack(side='right', fill='both', padx=3, expand=True)
 
+        for w in (self.update_mode_frame,
+                  self.animation_delta_tolerance_frame):
+            w.pack(expand=True, fill='both')
+        
+        for w in (self.compile_mode_replace_rbtn,
+                  self.compile_mode_preserve_rbtn,
+                  self.compile_mode_additive_rbtn,):
+            w.pack(expand=True, fill='both')
+
         self.animation_delta_tolerance_info.pack(fill='both', expand=True,
                                                  padx=5, pady=5)
-        self.animation_delta_tolerance_spinbox.pack(padx=5, pady=5)
+        self.animation_delta_tolerance_spinbox.pack(padx=5, pady=5, anchor="w")
 
-        self.animation_delta_tolerance_frame.pack(expand=True, fill='both')
+        self.use_os_animation_count_limit_cbtn.pack(expand=True, fill='both')
+
 
         self.apply_style()
         if self.app_root is not self:
@@ -445,7 +477,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
             self.animation_delta_tolerance = 0
         except Exception:
-            pass
+            return
 
         self.animation_delta_tolerance_string.set(
             str(("%.20f" % self.animation_delta_tolerance)).rstrip("0").rstrip("."))
@@ -508,14 +540,14 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             print("    No valid jma files found in the folder.")
             return
 
-        self.antr_tag = self.jma_anim_set = None
+        self.jma_anim_set = None
 
         jma_anims = self.jma_anims = []
         print("Loading jma files...")
         self.app_root.update()
         for fp in fps:
             try:
-                print("    %s" % fp.replace('/', '\\').split("\\")[-1])
+                #print("    %s" % fp.replace('/', '\\').split("\\")[-1])
                 self.app_root.update()
 
                 anim_name = os.path.basename(fp)
@@ -530,7 +562,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                     jma_anims.append(jma_anim)
             except Exception:
                 print(format_exc())
-                print("    Could not parse jma file.")
+                print("    Could not parse '%s'" % anim_name)
                 self.app_root.update()
 
         if not jma_anims:
@@ -563,16 +595,6 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         antr_path = self.model_animations_path.get()
         if errors_occurred:
             print("    Errors occurred while loading jma files.")
-        elif os.path.isfile(antr_path):
-            try:
-                self.antr_tag = antr_def.build(filepath=antr_path)
-            except Exception:
-                print(format_exc())
-
-
-        if not self.antr_tag:
-            print("    Existing model_animations tag not detected or could not be loaded.\n"
-                  "        A new model_animations tag will be created.")
 
         print("Finished loading animations. Took %s seconds.\n" %
               str(time.time() - start).split('.')[0])
@@ -597,34 +619,47 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if not self.jma_anim_set:
             return
 
-        updating = self.antr_tag is not None
+        while not self.model_animations_path.get():
+            self.model_animations_path_browse(True)
+            if not self.model_animations_path.get():
+                if messagebox.askyesno(
+                        "Unsaved model_animations",
+                        "Are you sure you wish to cancel saving?",
+                        icon='warning', parent=self):
+                    print("    Model_animations compilation cancelled.")
+                    return
+
+        try:
+            antr_tag = antr_def.build(filepath=self.model_animations_path.get())
+        except Exception:
+            antr_tag = None
+
+        updating = antr_tag is not None
         if updating:
             print("Updating existing model_animations tag.")
-            antr_tag = self.antr_tag
         else:
             print("Creating new model_animations tag.")
             antr_tag = antr_def.build()
 
-            while not self.model_animations_path.get():
-                self.model_animations_path_browse(True)
-                if not self.model_animations_path.get():
-                    if messagebox.askyesno(
-                            "Unsaved model_animations",
-                            "Are you sure you wish to cancel saving?",
-                            icon='warning', parent=self):
-                        print("    Model_animations compilation cancelled.")
-                        return
-
-            antr_tag.filepath = self.model_animations_path.get()
+        antr_tag.filepath = self.model_animations_path.get()
 
         self.app_root.update()
         errors = compile_model_animations(antr_tag, self.jma_anim_set, False,
-                                          self.animation_delta_tolerance)
+                                          self.animation_count_limit.get(),
+                                          self.animation_delta_tolerance,
+                                          self.update_mode.get())
         if errors:
             for error in errors:
                 print(error)
-            print("Model_animations compilation failed.")
-            return
+
+            self.update_idletasks()
+            if messagebox.askyesno(
+                    "Model_animations compilation failed",
+                    "Errors occurred while compiling animations(check console). "
+                    "Do you want to save the model_animations tag anyway?",
+                    icon='warning', parent=self):
+                print("    Model_animations compilation failed.")
+                return
 
         try:
             antr_tag.calc_internal_data()
