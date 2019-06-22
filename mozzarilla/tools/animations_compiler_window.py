@@ -36,7 +36,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
     _jma_tree_iids = ()
 
-    animation_delta_tolerance = 0.00000001
+    animation_delta_tolerance = 0.00001
 
     def __init__(self, app_root, *args, **kwargs):
         if window_base_class == tk.Toplevel:
@@ -243,19 +243,19 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         for node in nodes:
             iid = jma_tree.insert(nodes_iid, 'end', text=node.name, tags=('item',))
             parent_name = child_name = sibling_name = "NONE"
+            if node.sibling_index >= 0:
+                sibling_name = nodes[node.sibling_index].name
+            if node.first_child >= 0:
+                child_name = nodes[node.first_child].name
             if node.parent_index >= 0:
                 parent_name = nodes[node.parent_index].name
-            if node.sibling_index >= 0:
-                child_name = nodes[node.sibling_index].name
-            if node.first_child >= 0:
-                sibling_name = nodes[node.first_child].name
 
-            jma_tree.insert(iid, 'end', text="Parent",
-                            values=(parent_name, ), tags=('item',),)
-            jma_tree.insert(iid, 'end', text="First child",
-                            values=(child_name, ), tags=('item',),)
             jma_tree.insert(iid, 'end', text="Next sibling",
                             values=(sibling_name, ), tags=('item',),)
+            jma_tree.insert(iid, 'end', text="First child",
+                            values=(child_name, ), tags=('item',),)
+            jma_tree.insert(iid, 'end', text="Parent",
+                            values=(parent_name, ), tags=('item',),)
 
 
         anims_iid = jma_tree.insert('', 'end', text="Animations", tags=('item',),
@@ -296,9 +296,10 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                 jma_tree.insert(node_iid, 'end', text="Scale",
                                 values=(scale_flags[n], ), tags=('item',))
 
-            # code below is very cpu intensive.
+            # code below is very CPU and RAM intensive.
             # don't remove this continue unless debugging
             continue
+            print("REMINDER TO REMOVE THIS DEBUG IN COMPILER WINDOW")
 
             has_dxdy = "dx" in jma_anim.frame_info_type
             has_dz   = "dz" in jma_anim.frame_info_type
@@ -344,6 +345,8 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                     jma_tree.insert(frame_iid, 'end', text="yaw",
                                     values=(state.yaw, ), tags=('item',),)
 
+            # even more CPU / RAM intensive code past here
+            continue
             nodes_iid = jma_tree.insert(
                 iid, 'end', text="Frame data", tags=('item',),
                 values=(len(jma_anim.nodes),))
