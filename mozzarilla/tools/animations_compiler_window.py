@@ -609,6 +609,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
         start = time.time()
         print("Saving jma animations...")
+        self.app_root.update()
         for jma_anim in self.jma_anims:
             if isinstance(jma_anim, JmaAnimation):
                 jma_filepath = os.path.join(
