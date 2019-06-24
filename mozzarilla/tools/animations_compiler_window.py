@@ -7,7 +7,7 @@ from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
 from binilla.util import sanitize_path, is_in_dir, get_cwd, PATHDIV
-from binilla.widgets import BinillaWidget, ScrollMenu
+from binilla.widgets import BinillaWidget
 from reclaimer.hek.defs.antr import antr_def
 from reclaimer.animation.jma import read_jma, write_jma,\
      JmaAnimation, JmaAnimationSet, JMA_ANIMATION_EXTENSIONS
@@ -554,11 +554,11 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
         jma_anims = self.jma_anims = []
         print("Loading jma files...")
-        self.app_root.update()
+        self.update()
         for fp in fps:
             try:
                 #print("    %s" % fp.replace('/', '\\').split("\\")[-1])
-                self.app_root.update()
+                self.update()
 
                 anim_name = os.path.basename(fp)
                 ext = os.path.splitext(fp)[-1].lower()
@@ -573,7 +573,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             except Exception:
                 print(format_exc())
                 print("    Could not parse '%s'" % anim_name)
-                self.app_root.update()
+                self.update()
 
         if not jma_anims:
             print("    No valid jma files found.")
@@ -600,7 +600,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                 for error in errors:
                     print("        ", error, sep='')
 
-            self.app_root.update()
+            self.update()
 
         antr_path = self.model_animations_path.get()
         if errors_occurred:
@@ -616,7 +616,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
         start = time.time()
         print("Saving jma animations...")
-        self.app_root.update()
+        self.update()
         for jma_anim in self.jma_anims:
             if isinstance(jma_anim, JmaAnimation):
                 jma_filepath = os.path.join(
@@ -630,6 +630,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if not self.jma_anim_set:
             return
 
+        print("Compiling...")
         while not self.model_animations_path.get():
             self.model_animations_path_browse(True)
             if (not self.model_animations_path.get()) and self.warn_cancel():
@@ -673,7 +674,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
         antr_tag.filepath = self.model_animations_path.get()
 
-        self.app_root.update()
+        self.update()
         errors = compile_model_animations(antr_tag, self.jma_anim_set, False,
                                           self.animation_count_limit.get(),
                                           self.animation_delta_tolerance,
@@ -682,7 +683,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             for error in errors:
                 print(error)
 
-            self.update_idletasks()
+            self.update()
             if messagebox.askyesno(
                     "Model_animations compilation failed",
                     "Errors occurred while compiling animations(check console). "
@@ -703,7 +704,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
     def warn_cancel(self):
         return bool(messagebox.askyesno(
             "Unsaved model_animations",
-            "Are you sure you wish to cancel saving?",
+            "Are you sure you wish to cancel?",
             icon='warning', parent=self))
 
 
