@@ -14,6 +14,7 @@ from reclaimer.animation.jma import read_jma, write_jma,\
 from reclaimer.animation.animation_compilation import \
      compile_model_animations, ANIMATION_COMPILE_MODE_NEW,\
      ANIMATION_COMPILE_MODE_PRESERVE, ANIMATION_COMPILE_MODE_ADDITIVE
+from reclaimer.animation.util import partial_mod2_def
 
 if __name__ == "__main__":
     window_base_class = tk.Tk
@@ -67,6 +68,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.model_animations_path = tk.StringVar(self)
 
         self.animation_count_limit = tk.IntVar(self, 256)
+        self.calculate_limp_limb_vectors = tk.IntVar(self, 0)
         self.update_mode = tk.IntVar(self, ANIMATION_COMPILE_MODE_PRESERVE)
         self.animation_delta_tolerance_string = tk.StringVar(
             self, str(self.animation_delta_tolerance))
@@ -107,8 +109,8 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.compile_mode_additive_rbtn = tk.Radiobutton(
             self.update_mode_frame, anchor="w",
             variable=self.update_mode, value=ANIMATION_COMPILE_MODE_ADDITIVE,
-            text="Erase nothing(only add or replace animations)")
-        
+            text="Erase nothing(only add/update animations and values)")
+
         self.animation_delta_tolerance_info = tk.Label(
             self.animation_delta_tolerance_frame, justify='left', anchor="w",
             text=("How much a nodes position, rotation, or scale\n"
@@ -123,6 +125,10 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             self.settings_frame, onvalue=2048, offvalue=256,
             variable=self.animation_count_limit, anchor="w",
             text="Use Open Sauce animation count limit")
+        self.calculate_limp_limb_vectors_cbtn = tk.Checkbutton(
+            self.settings_frame, variable=self.calculate_limp_limb_vectors,
+            text=("Calculate limp body node vectors\n"
+                  "(requires matching gbxmodel)"), anchor="w")
 
 
         self.jma_info_tree = tk.ttk.Treeview(
@@ -213,6 +219,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.animation_delta_tolerance_spinbox.pack(padx=5, pady=5, anchor="w")
 
         self.use_os_animation_count_limit_cbtn.pack(expand=True, fill='both')
+        self.calculate_limp_limb_vectors_cbtn.pack(expand=True, fill='both')
 
 
         self.apply_style()
@@ -625,18 +632,37 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
         while not self.model_animations_path.get():
             self.model_animations_path_browse(True)
-            if not self.model_animations_path.get():
-                if messagebox.askyesno(
-                        "Unsaved model_animations",
-                        "Are you sure you wish to cancel saving?",
-                        icon='warning', parent=self):
-                    print("    Model_animations compilation cancelled.")
-                    return
+            if (not self.model_animations_path.get()) and self.warn_cancel():
+                print("    Model_animations compilation cancelled.")
+                return
 
         try:
             antr_tag = antr_def.build(filepath=self.model_animations_path.get())
         except Exception:
             antr_tag = None
+
+        mod2_nodes = None
+        if self.calculate_limp_limb_vectors.get():
+            antr_path = self.model_animations_path.get()
+            antr_dir = os.path.dirname(antr_path)
+            mod2_path = os.path.join(
+                antr_dir, os.path.splitext(os.path.basename(antr_path))[0] + ".gbxmodel")
+            while mod2_nodes is None:
+                try:
+                    mod2_nodes = partial_mod2_def.build(filepath=mod2_path).\
+                                 data.tagdata.nodes.STEPTREE
+                    break
+                except Exception:
+                    print("Could not load the selected gbxmodel.")
+
+                mod2_path = asksaveasfilename(
+                    initialdir=antr_dir, parent=self,
+                    title="Select the gbxmodel to get nodes from",
+                    filetypes=(("Gearbox model", "*.gbxmodel"), ('All', '*')))
+
+                if (not mod2_path) and self.warn_cancel():
+                    print("    Model_animations compilation cancelled.")
+                    return
 
         updating = antr_tag is not None
         if updating:
@@ -651,7 +677,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         errors = compile_model_animations(antr_tag, self.jma_anim_set, False,
                                           self.animation_count_limit.get(),
                                           self.animation_delta_tolerance,
-                                          self.update_mode.get())
+                                          self.update_mode.get(), mod2_nodes)
         if errors:
             for error in errors:
                 print(error)
@@ -673,6 +699,12 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         except Exception:
             print(format_exc())
             print("    Could not save compiled model_animations.")
+
+    def warn_cancel(self):
+        return bool(messagebox.askyesno(
+            "Unsaved model_animations",
+            "Are you sure you wish to cancel saving?",
+            icon='warning', parent=self))
 
 
 if __name__ == "__main__":
