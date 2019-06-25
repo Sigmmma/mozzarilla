@@ -10,8 +10,8 @@ from copy import deepcopy
 from reclaimer.model.jms import JmsNode, JmsMaterial, JmsMarker, JmsVertex,\
      JmsModel, MergedJmsModel, edge_loop_to_tris
 from reclaimer.model.model_compilation import compile_gbxmodel
-from reclaimer.util.matrices import euler_to_quaternion, \
-     planes_to_verts_and_edge_loops, Ray
+from reclaimer.util.matrices import euler_to_quaternion, Ray
+from reclaimer.util.geometry import planes_to_verts_and_edge_loops
 from reclaimer.hek.defs.sbsp import sbsp_def
 from reclaimer.hek.defs.mod2 import mod2_def
 from supyr_struct.defs.block_def import BlockDef
