@@ -8,7 +8,8 @@ from traceback import format_exc
 
 from binilla.util import sanitize_path, get_cwd, PATHDIV
 from binilla.widgets import BinillaWidget
-from reclaimer.hek.defs.antr import antr_def
+from reclaimer.hek.defs.antr import antr_def as halo_antr_def
+from reclaimer.stubbs.defs.antr import antr_def as stubbs_antr_def
 from reclaimer.animation.animation_compression import \
      compress_animation, decompress_animation
 
@@ -39,8 +40,10 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
         BinillaWidget.__init__(self, *args, **kwargs)
         window_base_class.__init__(self, app_root, *args, **kwargs)
 
-        self.title("Model_animations compressor/decompressor")
-        self.resizable(1, 1)
+        #self.title("Model_animations compressor/decompressor")
+        self.title("Model_animations decompressor")
+        #self.resizable(1, 1)
+        self.resizable(0, 0)
         self.update()
         for sub_dirs in ((), ('..', ), ('icons', )):
             try:
@@ -55,6 +58,8 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
 
         self.tags_dir = tk.StringVar(self, tags_dir if tags_dir else "")
         self.model_animations_path = tk.StringVar(self)
+        self.preserve_uncompressed = tk.IntVar(self, True)
+        self.preserve_compressed = tk.IntVar(self, True)
 
 
         # make the frames
@@ -67,6 +72,9 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
         self.buttons_frame = tk.Frame(self.main_frame)
         self.settings_frame = tk.Frame(self.main_frame)
 
+        self.preserve_compressed_cbtn = tk.Checkbutton(
+            self.settings_frame, anchor="w", variable=self.preserve_compressed,
+            text="Don't delete compressed animation data")
 
         self.anims_info_tree = tk.ttk.Treeview(
             self.anims_info_frame, selectmode='browse', padding=(0, 0), height=4)
@@ -80,7 +88,7 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
                                     xscrollcommand=self.anims_info_hsb.set)
 
         self.model_animations_path_entry = tk.Entry(
-            self.model_animations_path_frame, width=45,
+            self.model_animations_path_frame, width=50,
             textvariable=self.model_animations_path,
             state=tk.DISABLED)
         self.model_animations_path_browse_button = tk.Button(
@@ -98,12 +106,14 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
 
         # pack everything
         self.main_frame.pack(fill="both", side='left', pady=3, padx=3)
-        self.anims_info_frame.pack(fill="both", side='left', pady=3, padx=3,
-                                   expand=True)
+        #self.anims_info_frame.pack(fill="both", side='left', pady=3, padx=3, expand=True)
 
         self.model_animations_path_frame.pack(fill='x')
         self.buttons_frame.pack(fill="x", pady=3, padx=3)
         self.settings_frame.pack(fill="both")
+        
+        for w in (self.preserve_compressed_cbtn, ):
+            w.pack(expand=True, fill='both')
 
         self.model_animations_path_entry.pack(side='left', fill='x', expand=True)
         self.model_animations_path_browse_button.pack(side='left')
@@ -112,7 +122,7 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
         self.anims_info_vsb.pack(side="right",  fill='y')
         self.anims_info_tree.pack(side='left', fill='both', expand=True)
 
-        self.compress_button.pack(side='right', fill='both', padx=3, expand=True)
+        #self.compress_button.pack(side='right', fill='both', padx=3, expand=True)
         self.decompress_button.pack(side='right', fill='both', padx=3, expand=True)
 
         self.apply_style()
@@ -202,15 +212,34 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
                 return
 
         self.app_root.update()
+        antr_def = None
+        try:
+            with open(self.model_animations_path.get(), 'rb') as f:
+                f.seek(56)
+                antr_ver = f.read(2)
+                if antr_ver == b'\x00\x05':
+                    antr_def = stubbs_antr_def
+                elif antr_ver == b'\x00\x04':
+                    antr_def = halo_antr_def
+        except Exception:
+            pass
+
+        if antr_def is None:
+            print("Could not determine model_animation tag version.")
+            return
+
         antr_tag = antr_def.build(filepath=self.model_animations_path.get())
         anims = antr_tag.data.tagdata.animations.STEPTREE
         errors = False
         for anim in anims:
             try:
+                if not anim.flags.compressed_data:
+                    continue
+
                 if compress:
-                    compress_animation(anim, True)
+                    compress_animation(anim, self.preserve_uncompressed.get())
                 else:
-                    decompress_animation(anim, True)
+                    decompress_animation(anim, self.preserve_compressed.get())
             except Exception:
                 print(format_exc())
                 self.update()
