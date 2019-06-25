@@ -208,9 +208,9 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
         for anim in anims:
             try:
                 if compress:
-                    compress_animation(anim)
+                    compress_animation(anim, True)
                 else:
-                    decompress_animation(anim)
+                    decompress_animation(anim, True)
             except Exception:
                 print(format_exc())
                 self.update()
@@ -218,7 +218,7 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
 
         if errors:
             self.update()
-            if messagebox.askyesno(
+            if not messagebox.askyesno(
                     "Model_animations %sing failed" % state,
                     ("Errors occurred while %sing(check console). " % state) +
                      "Do you want to save the model_animations tag anyway?",

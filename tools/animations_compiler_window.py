@@ -684,7 +684,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                 print(error)
 
             self.update()
-            if messagebox.askyesno(
+            if not messagebox.askyesno(
                     "Model_animations compilation failed",
                     "Errors occurred while compiling animations(check console). "
                     "Do you want to save the model_animations tag anyway?",
