@@ -41,6 +41,8 @@ new_method_enums = (
     {GUI_NAME:"make bitmap from dds", NAME:"bitmap_from_multiple_dds"},
     {GUI_NAME:"make strings from txt", NAME:"strings_from_txt"},
     {GUI_NAME:"open bitmap source extractor", NAME:"show_bitmap_source_extractor"},
+    {GUI_NAME:"open model animations compiler", NAME:"show_animations_compiler_window"},
+    {GUI_NAME:"open model animations compression", NAME:"show_animations_compression_window"},
     # space for another 64 enums here
 
     {GUI_NAME:"", NAME:"mozz_divider4", VALUE:1024 + 64*2},
