@@ -21,9 +21,8 @@ else:
 curr_dir = get_cwd(__file__)
 
 
-class AnimationCompressionWindow(window_base_class, BinillaWidget):
+class AnimationsCompressionWindow(window_base_class, BinillaWidget):
     app_root = None
-    tags_dir = ''
 
     _working = False
     _loading = False
@@ -54,12 +53,13 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
             except Exception:
                 pass
 
-        tags_dir = getattr(app_root, "tags_dir", "")
+        curr_dir = getattr(app_root, "tags_dir", "")
 
-        self.tags_dir = tk.StringVar(self, tags_dir if tags_dir else "")
         self.model_animations_path = tk.StringVar(self)
+        self.model_animations_dir = tk.StringVar(self, curr_dir if curr_dir else "")
         self.preserve_uncompressed = tk.IntVar(self, True)
         self.preserve_compressed = tk.IntVar(self, True)
+        self.overwrite = tk.IntVar(self, False)
 
 
         # make the frames
@@ -69,12 +69,18 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
 
         self.model_animations_path_frame = tk.LabelFrame(
             self.main_frame, text="Model_animations path")
-        self.buttons_frame = tk.Frame(self.main_frame)
+        self.model_animations_path_buttons_frame = tk.Frame(self.main_frame)
+        self.model_animations_dir_frame = tk.LabelFrame(
+            self.main_frame, text="Model_animations dir")
+        self.model_animations_dir_buttons_frame  = tk.Frame(self.main_frame)
         self.settings_frame = tk.Frame(self.main_frame)
 
         self.preserve_compressed_cbtn = tk.Checkbutton(
             self.settings_frame, anchor="w", variable=self.preserve_compressed,
-            text="Don't delete compressed animation data")
+            text="Preserve compressed animation data in tag")
+        self.overwrite_cbtn = tk.Checkbutton(
+            self.settings_frame, anchor="w", variable=self.overwrite,
+            text="Overwrite model_animations tags")
 
         self.anims_info_tree = tk.ttk.Treeview(
             self.anims_info_frame, selectmode='browse', padding=(0, 0), height=4)
@@ -95,12 +101,27 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
             self.model_animations_path_frame, text="Browse",
             command=self.model_animations_path_browse)
 
+        self.model_animations_dir_entry = tk.Entry(
+            self.model_animations_dir_frame, width=50,
+            textvariable=self.model_animations_dir,
+            state=tk.DISABLED)
+        self.model_animations_dir_browse_button = tk.Button(
+            self.model_animations_dir_frame, text="Browse",
+            command=self.model_animations_dir_browse)
+
         self.compress_button = tk.Button(
-            self.buttons_frame, text="Compress",
+            self.model_animations_path_buttons_frame, text="Compress tag",
             command=self.compress_model_animations)
         self.decompress_button = tk.Button(
-            self.buttons_frame, text="Decompress",
+            self.model_animations_path_buttons_frame, text="Decompress tag",
             command=self.decompress_model_animations)
+
+        self.compress_all_button = tk.Button(
+            self.model_animations_dir_buttons_frame, text="Compress all",
+            command=self.compress_all_model_animations)
+        self.decompress_all_button = tk.Button(
+            self.model_animations_dir_buttons_frame, text="Decompress all",
+            command=self.decompress_all_model_animations)
 
         self.populate_animations_info_tree()
 
@@ -108,12 +129,17 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
         self.main_frame.pack(fill="both", side='left', pady=3, padx=3)
         #self.anims_info_frame.pack(fill="both", side='left', pady=3, padx=3, expand=True)
 
+        self.model_animations_dir_frame.pack(fill='x')
+        self.model_animations_dir_buttons_frame.pack(fill="x", pady=3, padx=3)
         self.model_animations_path_frame.pack(fill='x')
-        self.buttons_frame.pack(fill="x", pady=3, padx=3)
+        self.model_animations_path_buttons_frame.pack(fill="x", pady=3, padx=3)
         self.settings_frame.pack(fill="both")
         
-        for w in (self.preserve_compressed_cbtn, ):
+        for w in (self.preserve_compressed_cbtn, self.overwrite_cbtn):
             w.pack(expand=True, fill='both')
+
+        self.model_animations_dir_entry.pack(side='left', fill='x', expand=True)
+        self.model_animations_dir_browse_button.pack(side='left')
 
         self.model_animations_path_entry.pack(side='left', fill='x', expand=True)
         self.model_animations_path_browse_button.pack(side='left')
@@ -122,6 +148,8 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
         self.anims_info_vsb.pack(side="right",  fill='y')
         self.anims_info_tree.pack(side='left', fill='both', expand=True)
 
+        #self.compress_all_button.pack(side='right', fill='both', padx=3, expand=True)
+        self.decompress_all_button.pack(side='right', fill='both', padx=3, expand=True)
         #self.compress_button.pack(side='right', fill='both', padx=3, expand=True)
         self.decompress_button.pack(side='right', fill='both', padx=3, expand=True)
 
@@ -143,13 +171,29 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
 
         self._anims_tree_iids = []
 
+    def model_animations_dir_browse(self, force=False):
+        if not force and (self._working or self._loading):
+            return
+
+        antr_dir = os.path.dirname(self.model_animations_dir.get())
+        dirpath = askdirectory(
+            initialdir=antr_dir, parent=self,
+            title="Directory of model_animations to compress/decompress")
+
+        if not dirpath:
+            return
+
+        dirpath = sanitize_path(dirpath)
+        self.app_root.last_load_dir = dirpath
+        self.model_animations_dir.set(dirpath)
+
     def model_animations_path_browse(self, force=False):
         if not force and (self._working or self._loading):
             return
 
         antr_dir = os.path.dirname(self.model_animations_path.get())
-        if self.tags_dir.get() and not antr_dir:
-            antr_dir = self.tags_dir.get()
+        if self.model_animations_dir.get() and not antr_dir:
+            antr_dir = self.model_animations_dir.get()
 
         fp = asksaveasfilename(
             initialdir=antr_dir, title="Model_animations to compress/decompress", parent=self,
@@ -165,11 +209,6 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
         self.app_root.last_load_dir = os.path.dirname(fp)
         self.model_animations_path.set(fp)
 
-        path_pieces = os.path.join(self.app_root.last_load_dir, '').split(
-            "%stags%s" % (PATHDIV, PATHDIV))
-        if len(path_pieces) > 1:
-            self.tags_dir.set(os.path.join(path_pieces[0], "tags"))
-
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
         self.update()
@@ -183,6 +222,24 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
         except AttributeError:
             pass
         window_base_class.destroy(self)
+
+    def compress_all_model_animations(self):
+        if not self._working and not self._loading:
+            self._working = True
+            try:
+                self._do_all_compression(True)
+            except Exception:
+                print(format_exc())
+            self._working = False
+
+    def decompress_all_model_animations(self):
+        if not self._working and not self._loading:
+            self._working = True
+            try:
+                self._do_all_compression(False)
+            except Exception:
+                print(format_exc())
+            self._working = False
 
     def compress_model_animations(self):
         if not self._working and not self._loading:
@@ -202,25 +259,50 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
                 print(format_exc())
             self._working = False
 
-    def _do_compression(self, compress):
-        state = "compress" if compress else "decompress"
-        print("%sing animations." % state.capitalize())
-        while not self.model_animations_path.get():
-            self.model_animations_path_browse(True)
-            if (not self.model_animations_path.get()) and self.warn_cancel():
+    def _do_all_compression(self, compress):
+        antr_dir = self.model_animations_dir.get()
+        while not antr_dir:
+            self.model_animations_dir_browse(True)
+            antr_dir = self.model_animations_dir.get()
+            if not antr_dir and self.warn_cancel():
                 print("    Model_animations %sion cancelled." % state)
                 return
+
+        for root, _, files in os.walk(antr_dir):
+            for fname in files:
+                try:
+                    if os.path.splitext(fname)[-1].lower() != ".model_animations":
+                        continue
+                    self._do_compression(compress, os.path.join(root, fname))
+                except Exception:
+                    pass#print(format_exc())
+
+    def _do_compression(self, compress, antr_path=None):
+        state = "compress" if compress else "decompress"
+        if not antr_path:
+            antr_path = self.model_animations_path.get()
+
+        while not antr_path:
+            self.model_animations_path_browse(True)
+            antr_path = self.model_animations_path.get()
+            if not antr_path and self.warn_cancel():
+                return
+
+        print("%sing %s." % (state.capitalize(), antr_path))
 
         self.app_root.update()
         antr_def = None
         try:
-            with open(self.model_animations_path.get(), 'rb') as f:
-                f.seek(56)
-                antr_ver = f.read(2)
-                if antr_ver == b'\x00\x05':
-                    antr_def = stubbs_antr_def
-                elif antr_ver == b'\x00\x04':
-                    antr_def = halo_antr_def
+            with open(antr_path, 'rb') as f:
+                f.seek(36)
+                tag_type = f.read(4)
+                if tag_type == b'antr':
+                    f.seek(56)
+                    antr_ver = f.read(2)
+                    if antr_ver == b'\x00\x05':
+                        antr_def = stubbs_antr_def
+                    elif antr_ver == b'\x00\x04':
+                        antr_def = halo_antr_def
         except Exception:
             pass
 
@@ -228,22 +310,27 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
             print("Could not determine model_animation tag version.")
             return
 
-        antr_tag = antr_def.build(filepath=self.model_animations_path.get())
+        antr_tag = antr_def.build(filepath=antr_path)
         anims = antr_tag.data.tagdata.animations.STEPTREE
         errors = False
+        edited = False
         for anim in anims:
             try:
                 if not anim.flags.compressed_data:
                     continue
 
                 if compress:
-                    compress_animation(anim, self.preserve_uncompressed.get())
+                    edited |= compress_animation(anim, self.preserve_uncompressed.get())
                 else:
-                    decompress_animation(anim, self.preserve_compressed.get())
+                    edited |= decompress_animation(anim, self.preserve_compressed.get())
             except Exception:
                 print(format_exc())
                 self.update()
                 errors = True
+
+        if not edited:
+            print("    No changes made. Not saving.")
+            return
 
         if errors:
             self.update()
@@ -256,6 +343,10 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
                 return
 
         try:
+            if not self.overwrite.get():
+                base, ext = os.path.splitext(antr_tag.filepath)
+                antr_tag.filepath = base + "_DECOMP" + ext
+
             antr_tag.calc_internal_data()
             antr_tag.serialize(temp=False, backup=False, calc_pointers=False,
                                int_test=False)
@@ -272,4 +363,4 @@ class AnimationCompressionWindow(window_base_class, BinillaWidget):
 
 
 if __name__ == "__main__":
-    AnimationCompressionWindow(None).mainloop()
+    AnimationsCompressionWindow(None).mainloop()

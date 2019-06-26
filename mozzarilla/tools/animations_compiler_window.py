@@ -219,7 +219,8 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.animation_delta_tolerance_spinbox.pack(padx=5, pady=5, anchor="w")
 
         self.use_os_animation_count_limit_cbtn.pack(expand=True, fill='both')
-        self.calculate_limp_limb_vectors_cbtn.pack(expand=True, fill='both')
+		# TODO: Uncomment this once this works
+        #self.calculate_limp_limb_vectors_cbtn.pack(expand=True, fill='both')
 
 
         self.apply_style()
