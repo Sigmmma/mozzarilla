@@ -57,7 +57,6 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
 
         self.model_animations_path = tk.StringVar(self)
         self.model_animations_dir = tk.StringVar(self, curr_dir if curr_dir else "")
-        self.preserve_uncompressed = tk.IntVar(self, True)
         self.preserve_compressed = tk.IntVar(self, True)
         self.overwrite = tk.IntVar(self, False)
 
@@ -320,7 +319,7 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
                     continue
 
                 if compress:
-                    edited |= compress_animation(anim, self.preserve_uncompressed.get())
+                    edited |= compress_animation(anim)
                 else:
                     edited |= decompress_animation(anim, self.preserve_compressed.get())
             except Exception:
