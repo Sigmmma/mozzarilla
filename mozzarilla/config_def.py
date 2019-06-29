@@ -3,6 +3,18 @@ from binilla.constants import *
 from supyr_struct.field_types import *
 from supyr_struct.defs.tag_def import TagDef
 
+mozz_color_names = color_names + ("active_tags_directory", )
+
+mozz_colors = Array("colors",
+    SUB_STRUCT=QStruct("color",
+        UInt8('r'), UInt8('g'), UInt8('b'),
+        ORIENT='h', WIDGET=ColorPickerFrame
+        ),
+    SIZE=".array_counts.color_count",
+    MAX=len(mozz_color_names), MIN=len(mozz_color_names),
+    NAME_MAP=mozz_color_names,
+    )
+
 mozz_flag_tooltips = (
     "Whether to show the hierarchy window in the main window.",
     "Whether to show the console output in the main window.",
@@ -118,6 +130,7 @@ mozzarilla = Container("mozzarilla",
         "halo_1_os_v4",
         "halo_1_misc",
         "stubbs",
+        "halo_3",
         EDITABLE=False, VISIBLE=False
         ),
     UInt16("last_tags_dir",  VISIBLE=False, EDITABLE=False),
@@ -150,7 +163,7 @@ config_def = TagDef("mozzarilla_config",
     open_tags,
     recent_tags,
     directory_paths,
-    colors,
+    mozz_colors,
     hotkeys,
     tag_window_hotkeys,
 

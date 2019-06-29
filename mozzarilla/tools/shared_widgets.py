@@ -8,6 +8,9 @@ from binilla.widgets import BinillaWidget
 from supyr_struct.defs.constants import *
 from supyr_struct.defs.util import *
 
+# injject this default color
+BinillaWidget.active_tags_directory_color = '#%02x%02x%02x' % (40, 170, 80)
+
 
 class DirectoryFrame(BinillaWidget, tk.Frame):
     app_root = None
@@ -46,6 +49,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
     tags_dir = ''
     app_root = None
     tags_dir_items = ()
+    active_tags_dir = ""
 
     def __init__(self, master, *args, **kwargs):
         kwargs.update(bg=self.default_bg_color, bd=self.listbox_depth,
@@ -94,7 +98,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         if not dir_tree['columns']:
             dir_tree['columns'] = ('size', )
             dir_tree.heading("#0", text='path')
-            dir_tree.heading("size", text='filesize')
+            dir_tree.heading("size", text='file count/size')
             dir_tree.column("#0", minwidth=100, width=100)
             dir_tree.column("size", minwidth=100, width=100, stretch=False)
 
@@ -146,13 +150,21 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         for root, subdirs, files in os.walk(directory):
             for subdir in sorted(subdirs):
                 folderpath = directory + subdir + PATHDIV
+
+                dir_info_str = ""
+                for _, subsubdirs, subfiles in os.walk(folderpath):
+                    dir_info_str = "%s files" % len(subfiles)
+                    break
+                    
                 dir_tree.insert(
                     directory, 'end', text=subdir,
-                    iid=folderpath, tags=('item',))
+                    iid=folderpath, tags=('item',),
+                    values=(dir_info_str, ))
 
                 # loop over each of the new items, give them
                 # at least one item so they can be expanded.
                 self.destroy_subitems(folderpath)
+
             for file in sorted(files):
                 try:
                     filesize = os.stat(directory + file).st_size
@@ -206,11 +218,13 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         dir_tree = self.tags_tree
         if tags_dir is None:
               tags_dir = self.app_root.tags_dir
+
         for td in app.tags_dirs:
             if td == tags_dir:
                 dir_tree.tag_configure(
-                    td, background=self.entry_highlighted_color,
+                    td, background=self.active_tags_directory_color,
                     foreground=self.text_highlighted_color)
+                self.active_tags_dir = td
             else:
                 dir_tree.tag_configure(
                     td, background=self.entry_normal_color,

@@ -25,7 +25,8 @@ from reclaimer.stubbs.handler import StubbsHandler
 
 import mozzarilla
 
-from mozzarilla.config_def import config_def, guerilla_workspace_def
+from mozzarilla.config_def import mozz_color_names, config_def,\
+     guerilla_workspace_def
 from mozzarilla.widget_picker import *
 from mozzarilla.tag_window import HaloTagWindow
 from mozzarilla.tools import \
@@ -150,6 +151,7 @@ class Mozzarilla(Binilla):
         self.handler_names = list(self.handler_names)
 
         Binilla.__init__(self, *args, **kwargs)
+        self.color_names = mozz_color_names
         try:
             try:
                 self.icon_filepath = join(this_curr_dir, 'mozzarilla.ico')
