@@ -127,7 +127,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             text="Use Open Sauce animation count limit")
         self.calculate_limp_limb_vectors_cbtn = tk.Checkbutton(
             self.settings_frame, variable=self.calculate_limp_limb_vectors,
-            text=("Calculate limp body node vectors\n"
+            text=("Calculate biped limp body node vectors\n"
                   "(requires matching gbxmodel)"), anchor="w")
 
 
