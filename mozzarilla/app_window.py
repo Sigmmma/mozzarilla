@@ -293,6 +293,21 @@ class Mozzarilla(Binilla):
         except AttributeError:
             pass
 
+        if self.config_made_anew:
+            messagebox.showinfo(
+                "Select your default tags directory",
+                "Halo tags are all relative to their 'tags' root directory. "
+                "After this prompt, you will be asked to select your tags "
+                "directory. If you choose not to, a default one will be set.",
+                parent=self)
+            self.set_tags_dir()
+            messagebox.showinfo(
+                "About tags directories",
+                "If you want to change/add/remove a tags directory, click the "
+                "Settings menu and click either set, add, or remove. You may "
+                "toggle through tags directories at any time with F5.",
+                parent=self)
+
     @property
     def data_dir(self):
         try:
