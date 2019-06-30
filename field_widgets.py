@@ -12,9 +12,10 @@ from supyr_struct.buffer import get_rawdata
 from supyr_struct.defs.audio.wav import wav_def
 from supyr_struct.defs.util import *
 
-from mozzarilla import editor_constants as e_c
 from binilla.field_widgets import *
 from binilla.widgets import *
+
+from mozzarilla import editor_constants as e_c
 
 from reclaimer.h2.constants import *
 from reclaimer.h3.util import get_virtual_dimension, get_h3_pixel_bytes_size
@@ -26,7 +27,6 @@ try:
     from reclaimer.bitmaps.p8_palette import HALO_P8_PALETTE, STUBBS_P8_PALETTE
 except ImportError:
     pass
-
 
 def extract_color(chan_char, node):
     return (node >> e_c.channel_offset_map[chan_char]) & 0xFF
@@ -289,7 +289,7 @@ class MeterImageFrame(SimpleImageFrame):
         return texture_block
 
 
-class FontCharacterDisplayFrame(BitmapDisplayFrame):
+class FontCharacterDisplayFrame(BitmapDisplayFrame, BinillaWidget):
     def __init__(self, *args, **kwargs):
         BitmapDisplayFrame.__init__(self, *args, **kwargs)
         self.labels_frame = tk.Frame(self, highlightthickness=0)
@@ -298,9 +298,8 @@ class FontCharacterDisplayFrame(BitmapDisplayFrame):
         self.font_label0 = tk.Label(self.labels_frame, text="UTF-16 character\t")
         self.font_label1 = tk.Label(self.labels_frame, text="Bitmap preview\t")
 
-        # TODO: Replace this explicit font specification with self.get_font()
-        self.preview_label = tk.Label(self.preview_frame, text="",
-                                      font=self.get_font("font_tag_preview"))
+        self.preview_label = tk.Label(self.preview_frame, text="")
+        self.preview_label.font_type = "font_tag_preview"
         for lbl in (self.font_label0, self.font_label1):
             lbl.config(width=30, anchor='w',
                        bg=self.default_bg_color, fg=self.text_normal_color,
@@ -809,10 +808,8 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
 
         self.display_comment(self)
 
-        try: title_font = self.get_font("default")
-        except AttributeError: title_font = None
         self.title_label = tk.Label(
-            self, anchor='w', justify='left', font=title_font,
+            self, anchor='w', justify='left', font=self.get_font("default"),
             width=self.title_size, text=self.gui_name,
             bg=self.default_bg_color, fg=self.text_normal_color)
         self.title_label.pack(fill="x", side="left")
