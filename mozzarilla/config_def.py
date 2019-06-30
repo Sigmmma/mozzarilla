@@ -1,18 +1,20 @@
 from binilla.config_def import *
 from binilla.constants import *
+from mozzarilla.editor_constants import mozz_color_names, mozz_font_names
 from supyr_struct.field_types import *
 from supyr_struct.defs.tag_def import TagDef
 
-mozz_color_names = color_names + ("active_tags_directory", )
 
 mozz_colors = Array("colors",
-    SUB_STRUCT=QStruct("color",
-        UInt8('r'), UInt8('g'), UInt8('b'),
-        ORIENT='h', WIDGET=ColorPickerFrame
-        ),
-    SIZE=".array_counts.color_count",
+    SUB_STRUCT=color, SIZE=".array_counts.color_count",
     MAX=len(mozz_color_names), MIN=len(mozz_color_names),
     NAME_MAP=mozz_color_names,
+    )
+
+mozz_fonts = Array("fonts",
+    SUB_STRUCT=font, SIZE=".array_counts.font_count",
+    MAX=len(mozz_font_names), MIN=len(mozz_font_names),
+    NAME_MAP=mozz_font_names
     )
 
 mozz_flag_tooltips = (
@@ -166,6 +168,7 @@ config_def = TagDef("mozzarilla_config",
     mozz_colors,
     hotkeys,
     tag_window_hotkeys,
+    mozz_fonts,
 
     mozzarilla,
     ENDIAN='<', ext=".cfg",

@@ -8,11 +8,11 @@ from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
 
 from supyr_struct.field_types import UInt8
-from supyr_struct.defs.frozen_dict import FrozenDict
 from supyr_struct.buffer import get_rawdata
 from supyr_struct.defs.audio.wav import wav_def
 from supyr_struct.defs.util import *
-from binilla import editor_constants
+
+from mozzarilla import editor_constants as e_c
 from binilla.field_widgets import *
 from binilla.widgets import *
 
@@ -28,16 +28,12 @@ except ImportError:
     pass
 
 
-channel_name_map   = FrozenDict(a='alpha', r='red', g='green', b='blue')
-channel_offset_map = FrozenDict(a=24,      r=16,    g=8,       b=0)
-
-
 def extract_color(chan_char, node):
-    return (node >> channel_offset_map[chan_char]) & 0xFF
+    return (node >> e_c.channel_offset_map[chan_char]) & 0xFF
 
 
 def inject_color(chan_char, new_val, parent, attr_index):
-    off = channel_offset_map[chan_char]
+    off = e_c.channel_offset_map[chan_char]
     node = parent[attr_index]
     chan_mask = 0xFFFFFFFF - (0xFF << off)
     parent[attr_index] = (node & chan_mask) | ((new_val & 0xFF) << off)
@@ -301,8 +297,10 @@ class FontCharacterDisplayFrame(BitmapDisplayFrame):
 
         self.font_label0 = tk.Label(self.labels_frame, text="UTF-16 character\t")
         self.font_label1 = tk.Label(self.labels_frame, text="Bitmap preview\t")
+
+        # TODO: Replace this explicit font specification with self.get_font()
         self.preview_label = tk.Label(self.preview_frame, text="",
-                                      font=("sans-serif", 12))
+                                      font=self.get_font("font_tag_preview"))
         for lbl in (self.font_label0, self.font_label1):
             lbl.config(width=30, anchor='w',
                        bg=self.default_bg_color, fg=self.text_normal_color,
@@ -744,7 +742,7 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
 
     def load_child_node_data(self):
         for chan_char in self.desc['COLOR_CHANNELS']:
-            chan = channel_name_map[chan_char]
+            chan = e_c.channel_name_map[chan_char]
             node_val = int(getattr(self, chan) * 255.0 + 0.5)
             w = self.f_widgets.get(self.f_widget_ids_map.get(chan, None), None)
             if w:
@@ -811,7 +809,7 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
 
         self.display_comment(self)
 
-        try: title_font = self.tag_window.app_root.default_font
+        try: title_font = self.get_font("default")
         except AttributeError: title_font = None
         self.title_label = tk.Label(
             self, anchor='w', justify='left', font=title_font,
@@ -824,7 +822,7 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
         self.title_label.tooltip_string = self.tooltip_string = desc.get('TOOLTIP')
 
         for chan_char in desc['COLOR_CHANNELS']:
-            chan = channel_name_map[chan_char]
+            chan = e_c.channel_name_map[chan_char]
             node_val = int(getattr(self, chan) * 255.0 + 0.5)
             # make an entry widget for each color channel
             w = HaloColorEntry(self.content, f_widget_parent=self,
