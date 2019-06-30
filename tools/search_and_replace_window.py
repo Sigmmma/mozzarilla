@@ -51,7 +51,7 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
             self.replace_frame, textvariable=self.replace_var)
         self.comment = tk.Label(
             self.comment_frame, anchor='nw', bg=self.comment_bg_color,
-            justify='left', font=self.app_root.comment_font,
+            justify='left', font=self.get_font("comment"),
             text="""Things to note:
   Only strings can be found/replaced. If you type in a number,
   a string consisting of that number will be searched/replaced.
