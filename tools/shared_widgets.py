@@ -64,6 +64,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
         self.tags_tree = tk.ttk.Treeview(
             self.tags_tree_frame, selectmode=select_mode, padding=(0, 0))
+        self.tags_tree.font_type = "treeview"
         self.scrollbar_y = tk.Scrollbar(
             self.tags_tree_frame, orient='vertical',
             command=self.tags_tree.yview)
@@ -87,9 +88,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         self.tags_tree_frame.config(bg=self.default_bg_color)
 
         dir_tree = self.tags_tree
-        dir_tree.tag_configure(
-            'item', background=self.entry_normal_color,
-            foreground=self.text_normal_color)
+        dir_tree.tag_configure('tagdir', font=self.get_font("treeview"))
         self.highlight_tags_dir()
 
     def reload(self):
@@ -124,7 +123,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
     def insert_root_dir(self, root_dir, index='end'):
         iid = self.tags_tree.insert(
             '', index, iid=root_dir, text=root_dir[:-1],
-            tags=(root_dir, 'tagdir'))
+            tags=(root_dir, 'tagdir',))
         self.tags_dir_items.append(iid)
         self.destroy_subitems(iid)
 
@@ -339,7 +338,7 @@ class DependencyFrame(HierarchyFrame):
         # add an empty node to make an "expand" button appear
         tag_path = dir_tree.item(iid)['values'][-1]
         if not exists(tag_path):
-            dir_tree.item(iid, tags=('badref', ))
+            dir_tree.item(iid, tags=('badref', 'item'))
         elif self.get_dependencies(tag_path):
             dir_tree.insert(iid, 'end')
 
