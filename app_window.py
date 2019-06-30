@@ -25,8 +25,7 @@ from reclaimer.stubbs.handler import StubbsHandler
 
 import mozzarilla
 
-from mozzarilla.config_def import mozz_color_names, config_def,\
-     guerilla_workspace_def
+from mozzarilla import editor_constants as e_c
 from mozzarilla.widget_picker import *
 from mozzarilla.tag_window import HaloTagWindow
 from mozzarilla.tools import \
@@ -73,7 +72,7 @@ class Mozzarilla(Binilla):
 
     styles_dir  = this_curr_dir + PATHDIV + "styles"
     config_path = this_curr_dir + '%smozzarilla.cfg' % PATHDIV
-    config_def  = config_def
+    guerilla_workspace_def  = None
     config_version = 2
 
     handler_classes = (
@@ -97,7 +96,7 @@ class Mozzarilla(Binilla):
         )
 
     # names of the handlers that MUST load tags from within their tags_dir
-    tags_dir_relative = set((
+    tags_dir_relative = frozenset((
         "Halo 1",
         "Halo 1 OS v3",
         "Halo 1 OS v4",
@@ -117,6 +116,8 @@ class Mozzarilla(Binilla):
         )
 
     about_messages = ()
+    color_names = e_c.mozz_color_names
+    font_names = e_c.mozz_font_names
 
     _curr_handler_index  = 0
     _curr_tags_dir_index = 0
@@ -145,13 +146,23 @@ class Mozzarilla(Binilla):
         except Exception:
             pass
 
-        self.tags_dir_relative = set(self.tags_dir_relative)
         self.tags_dirs = ["%s%stags%s" % (this_curr_dir, PATHDIV, PATHDIV)]
         self.handlers = list({} for i in range(len(self.handler_classes)))
         self.handler_names = list(self.handler_names)
 
+        tk.Tk.__init__(self, *args, **{
+            k: v for k, v in kwargs.items() if k in (
+            "screenName", "baseName", "className", "useTk", "sync", "use"
+            )})
+
+        # NOTE: Do this import AFTER Tk interpreter is set up, otherwise
+        # it will fail to get the names of the font families
+        from mozzarilla.config_def import config_def, guerilla_workspace_def
+
+        kwargs.update(config_def=config_def)
+        self.guerilla_workspace_def = guerilla_workspace_def
         Binilla.__init__(self, *args, **kwargs)
-        self.color_names = mozz_color_names
+
         try:
             try:
                 self.icon_filepath = join(this_curr_dir, 'mozzarilla.ico')
@@ -685,7 +696,7 @@ class Mozzarilla(Binilla):
             print("Specified guerilla.cfg has no corresponding tags directory.")
             return
 
-        workspace = guerilla_workspace_def.build(filepath=fp)
+        workspace = self.guerilla_workspace_def.build(filepath=fp)
         tags_dir = join(sanitize_path(tags_dir), '')
         if self.get_tags_dir_index(tags_dir) is None:
             print("Adding tags directory:\n    %s" % tags_dir)
