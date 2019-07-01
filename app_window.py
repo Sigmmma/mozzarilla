@@ -290,6 +290,7 @@ class Mozzarilla(Binilla):
 
         self.select_defs(manual=False)
         self.tool_windows = {}
+
         self._mozzarilla_initialized = True
 
         self.make_window_panes()
