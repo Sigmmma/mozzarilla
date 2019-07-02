@@ -546,8 +546,8 @@ class SbspConverter(ConverterBase, window_base_class):
             if new_tolerance >= self.min_weather_tolerance:
                 self.weather_tolerance = new_tolerance
                 return
-            else:
-                self.weather_tolerance = self.min_weather_tolerance
+
+            self.weather_tolerance = self.min_weather_tolerance
         except Exception:
             return
 
