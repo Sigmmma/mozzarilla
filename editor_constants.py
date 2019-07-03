@@ -1,6 +1,6 @@
 from binilla import editor_constants as b_e_c
 from binilla.editor_constants import *
-from binilla.widgets import BinillaWidget, FontConfig
+from binilla.widgets.binilla_widget import BinillaWidget, FontConfig
 
 from supyr_struct.defs.frozen_dict import FrozenDict
 

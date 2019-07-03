@@ -7,7 +7,8 @@ from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
 from binilla.util import sanitize_path, is_in_dir, get_cwd, PATHDIV
-from binilla.widgets import BinillaWidget, ScrollMenu
+from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.widgets.scroll_menu import ScrollMenu
 from reclaimer.hek.defs.mod2 import mod2_def
 from reclaimer.model.jms import read_jms, write_jms, MergedJmsModel, JmsModel
 from reclaimer.model.dae import jms_model_from_dae
@@ -67,7 +68,7 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         self.title("Gbxmodel compiler")
         self.resizable(1, 1)
         self.update()
-        for sub_dirs in ((), ('..', ), ('icons', )):
+        for sub_dirs in ((), ('..', '..'), ('icons', )):
             try:
                 self.iconbitmap(os.path.os.path.join(
                     *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))

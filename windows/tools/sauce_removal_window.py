@@ -1,11 +1,11 @@
+import os
 
-from os.path import dirname, join, isfile, splitext
 from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 from struct import unpack, pack
 
 from binilla.util import *
-from binilla.widgets import BinillaWidget
+from binilla.widgets.binilla_widget import BinillaWidget
 from reclaimer.halo_script.hsc_decompilation import extract_h1_scripts
 from supyr_struct.defs.constants import *
 
@@ -27,7 +27,7 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
         self.geometry("400x80+0+0")
         self.resizable(0, 0)
         self.update()
-        for sub_dirs in ((), ('..', ), ('icons', )):
+        for sub_dirs in ((), ('..', '..'), ('icons', )):
             try:
                 self.iconbitmap(os.path.join(
                     *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
@@ -81,7 +81,7 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
 
         if not dirpath:
             return
-        self.app_root.last_load_dir = dirname(dirpath)
+        self.app_root.last_load_dir = os.path.dirname(dirpath)
         self.scenario_path.set(dirpath)
 
     def destroy(self):
@@ -93,7 +93,7 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
 
     def remove_sauce(self):
         scenario_path = self.scenario_path.get()
-        if not isfile(scenario_path):
+        if not os.path.isfile(scenario_path):
             print("Scenario path does not point to a file.")
             return
 
@@ -137,8 +137,8 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
                   "directory as the scenario.")
             extract_h1_scripts(
                 tagdata,
-                splitext(scenario_path.replace("\\", "/").split("/")[-1])[0],
-                out_dir=dirname(scenario_path), engine="yelo")
+                os.path.splitext(scenario_path.replace("\\", "/").split("/")[-1])[0],
+                out_dir=os.path.dirname(scenario_path), engine="yelo")
             tagdata.script_syntax_data.data = b''
             tagdata.script_string_data.data = b''
         else:

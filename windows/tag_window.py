@@ -1,5 +1,7 @@
-from binilla.tag_window import *
+from binilla.windows.tag_window import *
 from supyr_struct.defs.constants import *
+
+__all__ = ("HaloTagWindow", )
 
 class HaloTagWindow(TagWindow):
     def __init__(self, master, tag=None, *args, **kwargs):

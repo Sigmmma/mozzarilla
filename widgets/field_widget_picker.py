@@ -1,9 +1,11 @@
 from traceback import format_exc
 
+from binilla.widgets.field_widget_picker import WidgetPicker
+from binilla.widgets.binilla_widget import BinillaWidget
+
 from mozzarilla import editor_constants as e_c
-from binilla.widget_picker import *
-from binilla.widgets import BinillaWidget
-from mozzarilla.field_widgets import *
+from binilla.widgets.field_widgets import *
+from mozzarilla.widgets.field_widgets import *
 from reclaimer.field_types import *
 
 BinillaWidget.title_width = e_c.TITLE_WIDTH

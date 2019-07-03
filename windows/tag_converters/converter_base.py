@@ -7,7 +7,7 @@ from time import time
 from threading import Thread
 from tkinter.filedialog import askdirectory, askopenfilename
 from traceback import format_exc
-from binilla.widgets import BinillaWidget
+from binilla.widgets.binilla_widget import BinillaWidget
 
 curr_dir = os.path.join(os.path.abspath(os.curdir), "")
 
@@ -30,7 +30,7 @@ class ConverterBase(BinillaWidget):
         self.title(kwargs.pop("title"))
         self.resizable(0, 0)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
+        for sub_dirs in ((), ('..', '..', '..'), ('icons', )):
             try:
                 self.iconbitmap(os.path.join(
                     *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))

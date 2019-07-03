@@ -9,7 +9,7 @@ from threading import Thread
 from struct import unpack, pack_into
 from tkinter.filedialog import askdirectory
 from traceback import format_exc
-from binilla.widgets import BinillaWidget
+from binilla.widgets.binilla_widget import BinillaWidget
 
 curr_dir = os.path.abspath(os.curdir)
 
@@ -34,7 +34,7 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
         self.title("Halo 1 & 2 bitmap source extractor")
         self.resizable(0, 0)
         self.update()
-        for sub_dirs in ((), ('..', ), ('icons', )):
+        for sub_dirs in ((), ('..', '..'), ('icons', )):
             try:
                 self.iconbitmap(os.path.join(
                     *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))

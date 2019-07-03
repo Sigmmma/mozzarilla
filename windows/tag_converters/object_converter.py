@@ -5,7 +5,7 @@ try:
 except ImportError:
     from converter_base import *
 
-from binilla.widgets import ScrollMenu
+from binilla.widgets.scroll_menu import ScrollMenu
 
 from reclaimer.os_v4_hek.defs.obje import obje_def
 from reclaimer.os_v4_hek.defs.bipd import bipd_def

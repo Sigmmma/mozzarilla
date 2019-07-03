@@ -7,7 +7,7 @@ from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
 from binilla.util import sanitize_path, is_in_dir, get_cwd, PATHDIV
-from binilla.widgets import BinillaWidget
+from binilla.widgets.binilla_widget import BinillaWidget
 from reclaimer.hek.defs.antr import antr_def
 from reclaimer.animation.jma import read_jma, write_jma,\
      JmaAnimation, JmaAnimationSet, JMA_ANIMATION_EXTENSIONS
@@ -52,7 +52,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.title("Model_animations compiler")
         self.resizable(1, 1)
         self.update()
-        for sub_dirs in ((), ('..', ), ('icons', )):
+        for sub_dirs in ((), ('..', '..'), ('icons', )):
             try:
                 self.iconbitmap(os.path.os.path.join(
                     *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
