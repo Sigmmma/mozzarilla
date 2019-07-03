@@ -31,8 +31,11 @@ games built with the Blam engine.',
     license='MIT',
     packages=[
         'mozzarilla',
-        'mozzarilla.tools',
-        'mozzarilla.tools.tag_converters',
+        'mozzarilla.widgets',
+        'mozzarilla.widgets.field_widgets',
+        'mozzarilla.windows',
+        'mozzarilla.windows.tools',
+        'mozzarilla.windows.tag_converters',
         ],
     package_data={
         '': ['*.txt', '*.md', '*.rst', '*.pyw', '*.ico', '*.png', 'msg.dat'],
