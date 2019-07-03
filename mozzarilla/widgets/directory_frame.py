@@ -1,10 +1,9 @@
 import os
 import tkinter as tk
 
-from os.path import exists, join, isdir
 from traceback import format_exc
 
-from binilla.widgets import BinillaWidget
+from binilla.widgets.binilla_widget import BinillaWidget
 from supyr_struct.defs.constants import *
 from supyr_struct.defs.util import *
 
@@ -209,7 +208,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         if tag_path is None:
             return
 
-        if isdir(tag_path):
+        if os.path.isdir(tag_path):
             self.destroy_subitems(tag_path)
 
     def highlight_tags_dir(self, tags_dir=None):
@@ -247,7 +246,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         except Exception:
             print(format_exc())
 
-        if isdir(tag_path):
+        if os.path.isdir(tag_path):
             app.last_load_dir = tag_path
             return
 
@@ -337,7 +336,7 @@ class DependencyFrame(HierarchyFrame):
 
         # add an empty node to make an "expand" button appear
         tag_path = dir_tree.item(iid)['values'][-1]
-        if not exists(tag_path):
+        if not os.path.exists(tag_path):
             dir_tree.item(iid, tags=('badref', 'item'))
         elif self.get_dependencies(tag_path):
             dir_tree.insert(iid, 'end')
@@ -353,15 +352,15 @@ class DependencyFrame(HierarchyFrame):
         dir_tree = self.tags_tree
         parent_tag_path = dir_tree.item(parent_iid)['values'][-1]
 
-        if not exists(parent_tag_path):
+        if not os.path.exists(parent_tag_path):
             return
 
         for tag_ref_block in self.get_dependencies(parent_tag_path):
             try:
                 ext = '.' + tag_ref_block.tag_class.enum_name
                 if (self.handler.treat_mode_as_mod2 and ext == '.model' and
-                    (not exists(sanitize_path(
-                        join(tags_dir, tag_ref_block.filepath + '.model'))))):
+                    (not os.path.exists(sanitize_path(
+                        os.path.join(tags_dir, tag_ref_block.filepath + '.model'))))):
                     ext = '.gbxmodel'
             except Exception:
                 ext = ''
@@ -406,7 +405,7 @@ class DependencyFrame(HierarchyFrame):
         except Exception:
             print(format_exc())
 
-        if isdir(tag_path):
+        if os.path.isdir(tag_path):
             return
 
         try:

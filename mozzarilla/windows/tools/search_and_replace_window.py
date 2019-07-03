@@ -1,7 +1,7 @@
+import os
 import tkinter as tk
-from os.path import join
 
-from binilla.widgets import BinillaWidget
+from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.util import get_cwd
 from supyr_struct.defs.constants import *
 from supyr_struct.defs.util import *
@@ -20,7 +20,7 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
         self.minsize(width=450, height=270)
         self.resizable(1, 0)
         self.update()
-        for sub_dirs in ((), ('..', ), ('icons', )):
+        for sub_dirs in ((), ('..', '..'), ('icons', )):
             try:
                 self.iconbitmap(os.path.join(
                     *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))

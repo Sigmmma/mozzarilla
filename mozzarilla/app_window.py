@@ -1,8 +1,6 @@
 import os
-import gc
 import tkinter as tk
 
-from os.path import dirname, exists, isdir, join, splitext, relpath
 from threading import Thread
 from tkinter import messagebox
 from traceback import format_exc
@@ -26,19 +24,21 @@ from reclaimer.stubbs.handler import StubbsHandler
 import mozzarilla
 
 from mozzarilla import editor_constants as e_c
-from mozzarilla.widget_picker import *
-from mozzarilla.tag_window import HaloTagWindow
-from mozzarilla.tools import \
+from mozzarilla.widgets.field_widget_picker import def_halo_widget_picker
+from mozzarilla.widgets.directory_frame import DirectoryFrame,\
+     HierarchyFrame, DependencyFrame
+from mozzarilla.windows.tag_window import HaloTagWindow
+from mozzarilla.windows.tools import \
      SearchAndReplaceWindow, SauceRemovalWindow, \
      BitmapSourceExtractorWindow, BitmapConverterWindow,\
      DependencyWindow, TagScannerWindow, DataExtractionWindow,\
-     DirectoryFrame, HierarchyFrame, DependencyFrame,\
      bitmap_from_dds, bitmap_from_multiple_dds, bitmap_from_bitmap_source, \
      AnimationsCompilerWindow, AnimationsCompressionWindow,\
      ModelCompilerWindow, physics_from_jms, hud_message_text_from_hmt,\
-     strings_from_txt, ObjectConverter, GbxmodelConverter, ModelConverter,\
-     ChicagoShaderConverter, ModelAnimationsConverter, CollisionConverter,\
-     SbspConverter
+     strings_from_txt
+from mozzarilla.windows.tag_converters import ObjectConverter,\
+     GbxmodelConverter, ModelConverter, ChicagoShaderConverter,\
+     ModelAnimationsConverter, CollisionConverter, SbspConverter
 
 
 default_hotkeys.update({
@@ -165,10 +165,10 @@ class Mozzarilla(Binilla):
 
         try:
             try:
-                self.icon_filepath = join(this_curr_dir, 'mozzarilla.ico')
+                self.icon_filepath = os.path.join(this_curr_dir, 'mozzarilla.ico')
                 self.iconbitmap(self.icon_filepath)
             except Exception:
-                self.icon_filepath = join(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
+                self.icon_filepath = os.path.join(this_curr_dir, 'icons', 'mozzarilla.ico')
                 self.iconbitmap(self.icon_filepath)
         except Exception:
             self.icon_filepath = ""
@@ -329,7 +329,7 @@ class Mozzarilla(Binilla):
             if not tags_dir:
                 return ""
 
-            return join(dirname(tags_dir.rstrip(PATHDIV)), "data")
+            return os.path.join(os.path.dirname(tags_dir.rstrip(PATHDIV)), "data")
         except IndexError:
             return None
 
@@ -343,12 +343,12 @@ class Mozzarilla(Binilla):
     @tags_dir.setter
     def tags_dir(self, new_val):
         assert isinstance(new_val, str)
-        new_val = join(sanitize_path(new_val), '')  # ensure it ends with a \
+        new_val = os.path.join(sanitize_path(new_val), '')  # ensure it ends with a \
         self.tags_dirs[self._curr_tags_dir_index] = new_val
 
     def get_tags_dir_index(self, tags_dir):
         try:
-            tags_dir = join(sanitize_path(tags_dir), '')
+            tags_dir = os.path.join(sanitize_path(tags_dir), '')
             return self.tags_dirs.index(tags_dir)
         except Exception:
             return None
@@ -376,7 +376,7 @@ class Mozzarilla(Binilla):
             if isinstance(index, str):
                 index = self.handler_names.index(index)
 
-            tags_dir = join(sanitize_path(tags_dir), '')
+            tags_dir = os.path.join(sanitize_path(tags_dir), '')
             if not self.handlers[index].get(tags_dir.lower(), None):
                 if create_if_not_exists:
                     self.create_handlers(tags_dir, index)
@@ -388,7 +388,7 @@ class Mozzarilla(Binilla):
             return None
 
     def create_handlers(self, tags_dir, handler_indices=()):
-        tags_dir = join(sanitize_path(tags_dir), '')
+        tags_dir = os.path.join(sanitize_path(tags_dir), '')
         tags_dir_key = tags_dir.lower()
         if isinstance(handler_indices, int):
             handler_indices = (handler_indices, )
@@ -487,7 +487,7 @@ class Mozzarilla(Binilla):
         if not tags_dir:
             return
 
-        tags_dir = join(sanitize_path(tags_dir), '')
+        tags_dir = os.path.join(sanitize_path(tags_dir), '')
         if self.get_tags_dir_index(tags_dir) is not None:
             if manual:
                 print("That tags directory already exists.")
@@ -535,7 +535,7 @@ class Mozzarilla(Binilla):
         if not tags_dir:
             return
 
-        tags_dir = join(sanitize_path(tags_dir), '')
+        tags_dir = os.path.join(sanitize_path(tags_dir), '')
         if tags_dir in self.tags_dirs:
             print("That tags directory already exists.")
             return
@@ -691,14 +691,14 @@ class Mozzarilla(Binilla):
         if not fp:
             return
 
-        self.last_load_dir = dirname(fp)
-        tags_dir = os.path.join(dirname(fp), "tags", "")
+        self.last_load_dir = os.path.dirname(fp)
+        tags_dir = os.path.join(os.path.dirname(fp), "tags", "")
         if not os.path.exists(tags_dir):
             print("Specified guerilla.cfg has no corresponding tags directory.")
             return
 
         workspace = self.guerilla_workspace_def.build(filepath=fp)
-        tags_dir = join(sanitize_path(tags_dir), '')
+        tags_dir = os.path.join(sanitize_path(tags_dir), '')
         if self.get_tags_dir_index(tags_dir) is None:
             print("Adding tags directory:\n    %s" % tags_dir)
             self.add_tags_dir(tags_dir=tags_dir)
@@ -760,8 +760,8 @@ class Mozzarilla(Binilla):
                     continue
                 elif is_in_dir(path, tags_dir, 0):
                     # make the path relative to the tags_dir
-                    last_load_dir = dirname(path)
-                    sanitized_paths[i] = relpath(path, tags_dir)
+                    last_load_dir = os.path.dirname(path)
+                    sanitized_paths[i] = os.path.relpath(path, tags_dir)
                     continue
 
                 print("Specified tag(s) are not located in the tags directory")
@@ -793,7 +793,7 @@ class Mozzarilla(Binilla):
         if not fp:
             return
 
-        self.last_load_dir = dirname(fp)
+        self.last_load_dir = os.path.dirname(fp)
         dsw = DefSelectorWindow(
             self, title="Which tag is this", action=lambda def_id:
             self.load_tags(filepaths=fp, def_id=def_id))
@@ -822,7 +822,7 @@ class Mozzarilla(Binilla):
 
         # change the tags filepath to be relative to the current tags directory
         if hasattr(tag, "rel_filepath"):
-            tag.filepath = join(tag.tags_dir, tag.rel_filepath)
+            tag.filepath = os.path.join(tag.tags_dir, tag.rel_filepath)
 
         return Binilla.save_tag(self, tag)
 
@@ -839,7 +839,7 @@ class Mozzarilla(Binilla):
         if filepath is None:
             ext = tag.ext
             filepath = asksaveasfilename(
-                initialdir=dirname(tag.filepath), parent=self,
+                initialdir=os.path.dirname(tag.filepath), parent=self,
                 defaultextension=ext, title="Save tag as...",
                 filetypes=[(ext[1:], "*" + ext), ('All', '*')])
         else:
@@ -859,9 +859,9 @@ class Mozzarilla(Binilla):
         tagsdir_rel = handler.tagsdir_relative
 
         try:
-            self.last_load_dir = dirname(filepath)
+            self.last_load_dir = os.path.dirname(filepath)
             if tagsdir_rel:
-                filepath = relpath(filepath, tag.tags_dir)
+                filepath = os.path.relpath(filepath, tag.tags_dir)
 
                 if tag.tags_dir != tags_dir:
                     # trying to save outside tags directory
@@ -1062,9 +1062,9 @@ class Mozzarilla(Binilla):
         self.update_tag_window_title(w)
         try:
             try:
-                w.iconbitmap(join(this_curr_dir, 'mozzarilla.ico'))
+                w.iconbitmap(os.path.join(this_curr_dir, 'mozzarilla.ico'))
             except Exception:
-                w.iconbitmap(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
+                w.iconbitmap(os.path.join(this_curr_dir, 'icons', 'mozzarilla.ico'))
         except Exception:
             pass
 

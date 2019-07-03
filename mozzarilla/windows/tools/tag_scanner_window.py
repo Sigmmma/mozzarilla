@@ -3,15 +3,13 @@ import os
 import sys
 import tkinter as tk
 
-from os.path import dirname, join, splitext, relpath
-
 from time import time
 from threading import Thread
 from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
 from binilla.util import *
-from binilla.widgets import BinillaWidget
+from binilla.widgets.binilla_widget import BinillaWidget
 from supyr_struct.defs.constants import *
 
 curr_dir = get_cwd(__file__)
@@ -59,7 +57,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                    app_root.handler_names[app_root._curr_handler_index])
         self.minsize(width=400, height=300)
         self.update()
-        for sub_dirs in ((), ('..', ), ('icons', )):
+        for sub_dirs in ((), ('..', '..'), ('icons', )):
             try:
                 self.iconbitmap(os.path.join(
                     *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
@@ -153,7 +151,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         self.transient(app_root)
 
         self.directory_path.set(handler.tagsdir)
-        self.logfile_path.set(join(handler.tagsdir, "tag_scanner.log"))
+        self.logfile_path.set(os.path.join(handler.tagsdir, "tag_scanner.log"))
         self.apply_style()
         self.update()
         w, h = self.winfo_reqwidth(), self.winfo_reqheight()
@@ -182,7 +180,8 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         try:
             if tag is None:
                 return handler.build_tag(
-                    filepath=sanitize_path(join(self.tags_dir, filepath))
+                    filepath=sanitize_path(
+                        os.path.join(self.tags_dir, filepath))
                     )
         except Exception:
             pass
@@ -201,10 +200,10 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         if not dirpath.endswith(PATHDIV):
             dirpath += PATHDIV
 
-        self.app_root.last_load_dir = dirname(dirpath)
+        self.app_root.last_load_dir = os.path.dirname(dirpath)
         tags_dir = self.handler.tagsdir
         if not (is_in_dir(dirpath, tags_dir, 0) or
-                join(dirpath.lower()) == join(tags_dir.lower())):
+                os.path.join(dirpath.lower()) == os.path.join(tags_dir.lower())):
             print("Specified directory is not located within the tags directory")
             return
 
@@ -214,7 +213,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         if self._scanning:
             return
         filepath = asksaveasfilename(
-            initialdir=dirname(self.logfile_entry.get()),
+            initialdir=os.path.dirname(self.logfile_entry.get()),
             title="Save scan log to...", parent=self,
             filetypes=(("tag scanner log", "*.log"), ('All', '*')))
 
@@ -222,7 +221,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             return
 
         filepath = sanitize_path(filepath)
-        self.app_root.last_load_dir = dirname(filepath)
+        self.app_root.last_load_dir = os.path.dirname(filepath)
 
         self.logfile_path.set(filepath)
 
@@ -262,7 +261,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         logpath = sanitize_path(self.logfile_path.get())
 
         if not (is_in_dir(dirpath, tags_dir, 0) or
-                join(dirpath.lower()) == join(tags_dir.lower())):
+                os.path.join(dirpath.lower()) == os.path.join(tags_dir.lower())):
             print("Specified directory is not located within the tags directory")
             return
 
@@ -290,12 +289,12 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         print("Locating tags...")
 
         for root, directories, files in os.walk(dirpath):
-            root = sanitize_path(join(root, ""))
+            root = sanitize_path(os.path.join(root, ""))
 
-            rel_root = relpath(root, tags_dir)
+            rel_root = os.path.relpath(root, tags_dir)
 
             for filename in files:
-                filepath = join(rel_root, sanitize_path(filename))
+                filepath = os.path.join(rel_root, sanitize_path(filename))
 
                 if time() - c_time > p_int:
                     c_time = time()
@@ -307,7 +306,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                     return
 
                 tag_paths = all_tag_paths.get(
-                    ext_id_map.get(splitext(filename)[-1].lower()))
+                    ext_id_map.get(os.path.splitext(filename)[-1].lower()))
 
                 if tag_paths is not None:
                     tag_paths.append(filepath)
@@ -333,7 +332,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                     print(' '*4 + filepath.lstrip("." + PATHDIV))
                     self.app_root.update_idletasks()
 
-                tag = self.get_tag(join(tags_dir, filepath))
+                tag = self.get_tag(os.path.join(tags_dir, filepath))
                 if tag is None:
                     print("    Could not load '%s'" % filepath)
                     continue
