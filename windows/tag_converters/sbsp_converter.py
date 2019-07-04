@@ -71,19 +71,9 @@ def get_bsp_surface_edge_loops(bsp, ignore_flags=False):
     return edge_loops
 
 
-def make_bsp_jms_verts(bsp, node_transform=None):
-    verts = []
-    if node_transform:
-        dx, dy, dz, _, rotation = transform[0], transform[1], transform[2]
-        for vert in bsp.vertices.STEPTREE:
-            trans = rotation * Matrix(vert[:3])
-            verts.append(JmsVertex(
-                0, (x + trans[0])*100, (y + trans[1])*100, (z + trans[2])*100))
-    else:
-        for vert in bsp.vertices.STEPTREE:
-            verts.append(JmsVertex(
-                0, vert[0]*100, vert[1]*100, vert[2]*100))
-
+def make_bsp_jms_verts(bsp, transform=None):
+    verts = [JmsVertex(0, v[0]*100, v[1]*100, v[2]*100)
+             for v in bsp.vertices.STEPTREE]
     return verts
 
 

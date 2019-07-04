@@ -8,9 +8,10 @@ from threading import Thread
 from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import *
+from binilla.util import sanitize_path, get_cwd, ProcController, do_subprocess
 from binilla.widgets.binilla_widget import BinillaWidget
-from supyr_struct.defs.constants import *
+from supyr_struct.defs.constants import PATHDIV
+from supyr_struct.defs.util import is_in_dir
 
 curr_dir = get_cwd(__file__)
 
