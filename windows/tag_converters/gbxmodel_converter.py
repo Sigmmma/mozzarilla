@@ -1,3 +1,4 @@
+from traceback import format_exc
 try:
     from . import model_converter
 except ImportError:

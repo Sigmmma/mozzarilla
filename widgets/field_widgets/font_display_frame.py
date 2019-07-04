@@ -2,8 +2,7 @@ import tkinter as tk
 
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.bitmap_display_frame import BitmapDisplayFrame
-from binilla.widgets.field_widgets.container_frame import ContainerFrame
-from binilla.widgets.field_widgets.simple_image_frame import SimpleImageFrame
+from binilla.widgets.field_widgets import ContainerFrame, SimpleImageFrame
 
 try:
     import arbytmap

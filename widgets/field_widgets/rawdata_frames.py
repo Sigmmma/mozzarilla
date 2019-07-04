@@ -8,7 +8,7 @@ from supyr_struct.buffer import get_rawdata
 from supyr_struct.defs.audio.wav import wav_def
 from supyr_struct.defs.util import sanitize_path
 
-from binilla.widgets.field_widgets import RawdataFrame
+from binilla.widgets.field_widgets import FieldWidget, RawdataFrame
 
 
 class HaloRawdataFrame(RawdataFrame):
