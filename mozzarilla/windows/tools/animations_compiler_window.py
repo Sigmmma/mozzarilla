@@ -6,7 +6,7 @@ from tkinter import messagebox
 from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import sanitize_path, is_in_dir, get_cwd, PATHDIV
+from binilla.util import sanitize_path, get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
 from reclaimer.hek.defs.antr import antr_def
 from reclaimer.animation.jma import read_jma, write_jma,\
@@ -15,6 +15,8 @@ from reclaimer.animation.animation_compilation import \
      compile_model_animations, ANIMATION_COMPILE_MODE_NEW,\
      ANIMATION_COMPILE_MODE_PRESERVE, ANIMATION_COMPILE_MODE_ADDITIVE
 from reclaimer.animation.util import partial_mod2_def
+from supyr_struct.defs.constants import PATHDIV
+from supyr_struct.defs.util import is_in_dir
 
 if __name__ == "__main__":
     window_base_class = tk.Tk

@@ -1,8 +1,11 @@
-from binilla.config_def import *
-from binilla.constants import *
+from binilla.config_def import color, font, method_enums, modifier_enums,\
+     hotkey_enums, config_header, filepath, array_counts, app_window,\
+     widgets, open_tags, recent_tags, directory_paths
+from binilla.constants import GUI_NAME, NAME, TOOLTIP, VALUE
+from binilla.widgets.field_widgets.array_frame import DynamicArrayFrame
 from mozzarilla.editor_constants import mozz_color_names, mozz_font_names
-from supyr_struct.field_types import *
 from supyr_struct.defs.tag_def import TagDef
+from supyr_struct.field_types import *
 
 
 mozz_colors = Array("colors",

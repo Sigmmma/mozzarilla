@@ -1,10 +1,14 @@
+import array
+import weakref
 import tkinter as tk
+
+from traceback import format_exc
 
 from reclaimer.bitmaps.meter_image import meter_image_def
 
+from binilla.widgets.scroll_menu import ScrollMenu
 from binilla.widgets.bitmap_display_frame import BitmapDisplayFrame
-from binilla.widgets.field_widgets.container_frame import ContainerFrame
-from binilla.widgets.field_widgets.simple_image_frame import SimpleImageFrame
+from binilla.widgets.field_widgets import ContainerFrame, SimpleImageFrame
 
 try:
     import arbytmap

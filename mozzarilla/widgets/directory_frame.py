@@ -4,8 +4,8 @@ import tkinter as tk
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
-from supyr_struct.defs.constants import *
-from supyr_struct.defs.util import *
+from supyr_struct.defs.constants import PATHDIV
+from supyr_struct.defs.util import sanitize_path
 
 # injject this default color
 BinillaWidget.active_tags_directory_color = '#%02x%02x%02x' % (40, 170, 80)

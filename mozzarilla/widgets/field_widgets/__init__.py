@@ -1,7 +1,7 @@
 from traceback import format_exc
 
 from binilla.widgets import field_widgets
-from binilla.constants import DYN_NAME_PATH
+from binilla.constants import DYN_NAME_PATH, DYN_I
 from binilla.widgets.field_widgets.enum_frame import DynamicEnumFrame
 
 __all__ = (

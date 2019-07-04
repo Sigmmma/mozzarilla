@@ -4,16 +4,14 @@ from binilla.widgets.field_widget_picker import WidgetPicker
 from binilla.widgets.binilla_widget import BinillaWidget
 
 from mozzarilla import editor_constants as e_c
-from binilla.widgets.field_widgets import *
-from mozzarilla.widgets.field_widgets import *
+from mozzarilla.widgets.field_widgets import DependencyFrame, EntryFrame
 from reclaimer.field_types import *
 
 BinillaWidget.title_width = e_c.TITLE_WIDTH
 BinillaWidget.def_string_entry_width = e_c.DEF_STRING_ENTRY_WIDTH
 BinillaWidget.max_string_entry_width = e_c.MAX_STRING_ENTRY_WIDTH
 
-__all__ = ("WidgetPicker", "def_widget_picker", "add_widget",
-           "MozzarillaWidgetPicker", "def_halo_widget_picker")
+__all__ = ("WidgetPicker", "MozzarillaWidgetPicker", "def_halo_widget_picker")
 
 class MozzarillaWidgetPicker(WidgetPicker):
     pass

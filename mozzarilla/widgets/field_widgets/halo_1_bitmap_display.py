@@ -1,8 +1,9 @@
 import tkinter as tk
+import weakref
 
 from array import array
-from supyr_struct.defs.util import *
 
+from binilla.widgets.scroll_menu import ScrollMenu
 from binilla.widgets.field_widgets import ContainerFrame
 from binilla.widgets.bitmap_display_frame import BitmapDisplayFrame,\
      BitmapDisplayButton

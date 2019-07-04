@@ -1,6 +1,8 @@
 import tkinter as tk
 
-from binilla.constants import DYN_NAME_PATH
+from traceback import format_exc
+
+from binilla.constants import DYN_NAME_PATH, DYN_I
 from binilla.widgets.field_widgets.array_frame import DynamicArrayFrame
 
 

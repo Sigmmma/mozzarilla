@@ -6,7 +6,8 @@ from tkinter import messagebox
 from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import sanitize_path, get_cwd, PATHDIV
+from supyr_struct.defs.constants import PATHDIV
+from binilla.util import sanitize_path, get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
 from reclaimer.hek.defs.antr import antr_def as halo_antr_def
 from reclaimer.stubbs.defs.antr import antr_def as stubbs_antr_def
@@ -17,6 +18,9 @@ if __name__ == "__main__":
     window_base_class = tk.Tk
 else:
     window_base_class = tk.Toplevel
+
+
+curr_dir = get_cwd(__file__)
 
 
 class AnimationsCompressionWindow(window_base_class, BinillaWidget):
@@ -42,7 +46,7 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         #self.resizable(1, 1)
         self.resizable(0, 0)
         self.update()
-        curr_dir = getattr(app_root, "tags_dir", get_cwd(__file__))
+        anims_dir = getattr(app_root, "tags_dir", get_cwd(__file__))
 
         for sub_dirs in ((), ('..', '..'), ('icons', )):
             try:
@@ -51,11 +55,10 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
                     ))
                 break
             except Exception:
-                print(format_exc())
-
+                pass
 
         self.model_animations_path = tk.StringVar(self)
-        self.model_animations_dir = tk.StringVar(self, curr_dir if curr_dir else "")
+        self.model_animations_dir = tk.StringVar(self, anims_dir if anims_dir else "")
         self.preserve_compressed = tk.IntVar(self, True)
         self.overwrite = tk.IntVar(self, False)
 
@@ -263,7 +266,7 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
             self.model_animations_dir_browse(True)
             antr_dir = self.model_animations_dir.get()
             if not antr_dir and self.warn_cancel():
-                print("    Model_animations %sion cancelled." % state)
+                print("    Model_animations %sion cancelled." % compress)
                 return
 
         for root, _, files in os.walk(antr_dir):

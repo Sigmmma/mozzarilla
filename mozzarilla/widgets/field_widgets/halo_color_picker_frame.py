@@ -4,9 +4,8 @@ from traceback import format_exc
 
 from supyr_struct.field_types import UInt8
 
-from binilla.widgets.field_widgets.field_widget import FieldWidget
-from binilla.widgets.field_widgets.entry_frame import NumberEntryFrame
-from binilla.widgets.field_widgets.color_picker_frame import ColorPickerFrame 
+from binilla.widgets.field_widgets import FieldWidget, NumberEntryFrame,\
+     ContainerFrame, ColorPickerFrame 
 
 from mozzarilla import editor_constants as e_c
 
