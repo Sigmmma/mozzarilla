@@ -3,7 +3,7 @@ import os
 from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 
-from supyr_struct.defs.util import sanitize_path
+from supyr_struct.util import sanitize_path
 
 from reclaimer.strings.strings_compilation import compile_unicode_string_list,\
      compile_string_list

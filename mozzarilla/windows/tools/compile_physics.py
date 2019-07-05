@@ -5,7 +5,8 @@ from traceback import format_exc
 
 from reclaimer.model.jms import read_jms
 from reclaimer.physics.physics_compilation import compile_physics
-from supyr_struct.defs.util import sanitize_path
+
+from supyr_struct.util import sanitize_path
 
 
 def physics_from_jms(app, fp=None):

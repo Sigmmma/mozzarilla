@@ -9,14 +9,16 @@ from traceback import format_exc
 from binilla.util import sanitize_path, get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.scroll_menu import ScrollMenu
+
 from reclaimer.hek.defs.mod2 import mod2_def
 from reclaimer.model.jms import read_jms, write_jms, MergedJmsModel, JmsModel
 from reclaimer.model.dae import jms_model_from_dae
 from reclaimer.model.obj import jms_model_from_obj
 from reclaimer.model.model_compilation import compile_gbxmodel
 from reclaimer.model.util import generate_shader
+
 from supyr_struct.defs.constants import PATHDIV
-from supyr_struct.defs.util import is_in_dir
+from supyr_struct.util import is_in_dir
 
 if __name__ == "__main__":
     window_base_class = tk.Tk

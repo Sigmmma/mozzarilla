@@ -3,8 +3,6 @@ import tkinter as tk
 
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.util import get_cwd
-from supyr_struct.defs.constants import *
-from supyr_struct.defs.util import *
 
 curr_dir = get_cwd(__file__)
 

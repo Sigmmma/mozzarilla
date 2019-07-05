@@ -1,10 +1,15 @@
 #!/usr/bin/env python3
 
 try:
-    from .converter_base import *
+    from .converter_base import ConverterBase
 except ImportError:
-    from converter_base import *
+    from converter_base import ConverterBase
 
+import os
+import threadsafe_tkinter as tk
+
+from tkinter.filedialog import askopenfilename
+from traceback import format_exc
 from struct import pack_into, pack
 
 from reclaimer.hek.defs.coll import coll_def

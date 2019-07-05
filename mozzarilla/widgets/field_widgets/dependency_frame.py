@@ -6,7 +6,7 @@ from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 
 from supyr_struct.defs.constants import PATHDIV
-from supyr_struct.defs.util import sanitize_path
+from supyr_struct.util import sanitize_path
 
 from binilla.widgets.field_widgets.container_frame import ContainerFrame
 from mozzarilla.widgets.field_widgets.halo_1_bitmap_display import HaloBitmapDisplayButton

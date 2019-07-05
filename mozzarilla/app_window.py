@@ -9,7 +9,7 @@ from tkinter.filedialog import askopenfilename, askopenfilenames,\
 from traceback import format_exc
 
 from reclaimer.constants import PATHDIV, inject_halo_constants
-from supyr_struct.defs.util import is_in_dir
+from supyr_struct.util import is_in_dir
 
 # before we do anything, we need to inject these constants so any definitions
 # that are built that use them will have them in their descriptor entries.
@@ -761,6 +761,7 @@ class Mozzarilla(Binilla):
         # make sure all the chosen tag paths are relative
         # to the current tags directory if they must be
         last_load_dir = self.last_load_dir
+        tags_dir = os.path.realpath(tags_dir)
         if self.handler_name in self.tags_dir_relative:
             for i in range(len(sanitized_paths)):
                 path = sanitized_paths[i]

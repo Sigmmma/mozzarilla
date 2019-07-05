@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
 try:
-    from .converter_base import *
+    from .converter_base import ConverterBase
 except ImportError:
-    from converter_base import *
+    from converter_base import ConverterBase
+
+import os
+import threadsafe_tkinter as tk
 
 from math import sqrt
+from traceback import format_exc
 
-from supyr_struct.defs.util import fcc
 from reclaimer.hek.defs.mod2    import fast_mod2_def as mod2_def
 from reclaimer.stubbs.defs.mode import fast_mode_def as mode_def
 

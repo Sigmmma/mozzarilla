@@ -4,12 +4,12 @@ from struct import unpack
 from tkinter.filedialog import askopenfilenames
 from traceback import format_exc
 
-from supyr_struct.defs.util import sanitize_path
-from supyr_struct.defs.constants import PATHDIV
-
 from reclaimer.bitmaps.bitmap_decompilation import extract_bitmap_tiff_data
 from reclaimer.bitmaps.bitmap_compilation import add_bitmap_to_bitmap_tag,\
      compile_bitmap_from_dds_files
+
+from supyr_struct.defs.constants import PATHDIV
+from supyr_struct.util import sanitize_path
 
 
 def bitmap_from_dds(app, fps=()):
