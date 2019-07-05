@@ -214,7 +214,7 @@ class Mozzarilla(Binilla):
         self.main_menu.delete(0, "end")  # clear the menu
         self.main_menu.add_cascade(label="File",    menu=self.file_menu)
         self.main_menu.add_cascade(label="Settings", menu=self.settings_menu)
-        self.main_menu.add_cascade(label="Windows", menu=self.windows_menu)
+        self.main_menu.add_cascade(label="Tag Windows", menu=self.windows_menu)
         if self.debug_mode:
             self.main_menu.add_cascade(label="Debug", menu=self.debug_menu)
         self.main_menu.add_cascade(label="Tag set", menu=self.defs_menu)
