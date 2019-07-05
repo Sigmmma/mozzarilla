@@ -8,6 +8,7 @@ from traceback import format_exc
 
 from binilla.util import sanitize_path, get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
+
 from reclaimer.hek.defs.antr import antr_def
 from reclaimer.animation.jma import read_jma, write_jma,\
      JmaAnimation, JmaAnimationSet, JMA_ANIMATION_EXTENSIONS
@@ -15,8 +16,9 @@ from reclaimer.animation.animation_compilation import \
      compile_model_animations, ANIMATION_COMPILE_MODE_NEW,\
      ANIMATION_COMPILE_MODE_PRESERVE, ANIMATION_COMPILE_MODE_ADDITIVE
 from reclaimer.animation.util import partial_mod2_def
+
 from supyr_struct.defs.constants import PATHDIV
-from supyr_struct.defs.util import is_in_dir
+from supyr_struct.util import is_in_dir
 
 if __name__ == "__main__":
     window_base_class = tk.Tk
@@ -221,7 +223,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.animation_delta_tolerance_spinbox.pack(padx=5, pady=5, anchor="w")
 
         self.use_os_animation_count_limit_cbtn.pack(expand=True, fill='both')
-		# TODO: Uncomment this once this works
+	# TODO: Uncomment this once this works
         #self.calculate_limp_limb_vectors_cbtn.pack(expand=True, fill='both')
 
 

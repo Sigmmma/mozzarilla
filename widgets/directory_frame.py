@@ -5,7 +5,7 @@ from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
 from supyr_struct.defs.constants import PATHDIV
-from supyr_struct.defs.util import sanitize_path
+from supyr_struct.util import sanitize_path
 
 # injject this default color
 BinillaWidget.active_tags_directory_color = '#%02x%02x%02x' % (40, 170, 80)
@@ -21,10 +21,8 @@ class DirectoryFrame(BinillaWidget, tk.Frame):
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
         tk.Frame.__init__(self, master, *args, **kwargs)
 
-        #self.controls_frame = tk.Frame(self, highlightthickness=0, height=100)
         self.hierarchy_frame = HierarchyFrame(self, app_root=self.app_root)
 
-        #self.controls_frame.pack(fill='both')
         self.hierarchy_frame.pack(fill='both', expand=True)
         self.apply_style()
 
@@ -56,6 +54,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         kwargs.setdefault('app_root', master)
 
         select_mode = kwargs.pop('select_mode', 'browse')
+
         self.app_root = kwargs.pop('app_root')
         tk.Frame.__init__(self, master, *args, **kwargs)
 
@@ -63,7 +62,6 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
         self.tags_tree = tk.ttk.Treeview(
             self.tags_tree_frame, selectmode=select_mode, padding=(0, 0))
-        self.tags_tree.font_type = "treeview"
         self.scrollbar_y = tk.Scrollbar(
             self.tags_tree_frame, orient='vertical',
             command=self.tags_tree.yview)
@@ -76,7 +74,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
         self.tags_tree_frame.pack(fill='both', side='left', expand=True)
 
-        # pack in this order so scrollbars aren't shrunk
+        # pack in this order so scrollbars aren't shrunk when resizing
         self.scrollbar_y.pack(side='right', fill='y')
         self.tags_tree.pack(side='right', fill='both', expand=True)
 
@@ -85,9 +83,11 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
     def apply_style(self, seen=None):
         self.tags_tree_frame.config(bg=self.default_bg_color)
+        self.tags_tree.tag_configure(
+            'item', background=self.entry_normal_color,
+            foreground=self.text_normal_color)
 
         dir_tree = self.tags_tree
-        dir_tree.tag_configure('tagdir', font=self.get_font("treeview"))
         self.highlight_tags_dir()
 
     def reload(self):

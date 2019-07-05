@@ -6,13 +6,15 @@ from tkinter import messagebox
 from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from supyr_struct.defs.constants import PATHDIV
 from binilla.util import sanitize_path, get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
+
 from reclaimer.hek.defs.antr import antr_def as halo_antr_def
 from reclaimer.stubbs.defs.antr import antr_def as stubbs_antr_def
 from reclaimer.animation.animation_compression import \
      compress_animation, decompress_animation
+
+from supyr_struct.defs.constants import PATHDIV
 
 if __name__ == "__main__":
     window_base_class = tk.Tk

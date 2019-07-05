@@ -9,6 +9,7 @@ from threading import Thread
 from struct import unpack, pack_into
 from tkinter.filedialog import askdirectory
 from traceback import format_exc
+
 from binilla.widgets.binilla_widget import BinillaWidget
 
 curr_dir = os.path.abspath(os.curdir)

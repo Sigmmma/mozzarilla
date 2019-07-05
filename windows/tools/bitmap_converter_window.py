@@ -2,6 +2,7 @@ import ctypes
 import os
 import gc
 import sys
+import tkinter as tk
 import weakref
 import arbytmap as ab
 
@@ -13,9 +14,11 @@ from traceback import format_exc
 
 from reclaimer.bitmaps.p8_palette import HALO_P8_PALETTE, STUBBS_P8_PALETTE
 from reclaimer.hek.defs.bitm import bitm_def
-from reclaimer.field_types import *
+from reclaimer.constants import TYPE_NAME_MAP, FORMAT_NAME_MAP,\
+     I_FORMAT_NAME_MAP, PATHDIV
 
-from binilla.util import *
+from binilla.util import get_cwd, sanitize_path, do_subprocess, ProcController
+     
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.scroll_menu import ScrollMenu
 from mozzarilla.widgets.field_widgets import HaloBitmapDisplayFrame,\

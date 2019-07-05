@@ -8,9 +8,11 @@ from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.util import get_cwd
-from supyr_struct.defs.constants import *
-from supyr_struct.defs.util import *
+
 from reclaimer.halo_script.hsc import get_h1_scenario_script_object_type_strings
+
+from supyr_struct.defs.constants import PATHDIV
+from supyr_struct.util import sanitize_path, is_in_dir
 
 curr_dir = get_cwd(__file__)
 
