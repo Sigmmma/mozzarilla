@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 
 try:
-    from .converter_base import *
+    from .converter_base import ConverterBase
 except ImportError:
-    from converter_base import *
+    from converter_base import ConverterBase
+
+import os
+import threadsafe_tkinter as tk
+
+from traceback import format_exc
 
 from reclaimer.hek.defs.antr import antr_def
 from reclaimer.os_hek.defs.magy import magy_def

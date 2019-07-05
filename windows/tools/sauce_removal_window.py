@@ -1,13 +1,14 @@
 import os
+import tkinter as tk
 
 from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 from struct import unpack, pack
 
-from binilla.util import *
+from binilla.util import get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
+
 from reclaimer.halo_script.hsc_decompilation import extract_h1_scripts
-from supyr_struct.defs.constants import *
 
 curr_dir = get_cwd(__file__)
 

@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 
 try:
-    from .converter_base import *
+    from .converter_base import ConverterBase
 except ImportError:
-    from converter_base import *
+    from converter_base import ConverterBase
+import os
+import threadsafe_tkinter as tk
+
+from traceback import format_exc
 
 from binilla.widgets.scroll_menu import ScrollMenu
 

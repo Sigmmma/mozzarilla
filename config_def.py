@@ -8,6 +8,11 @@ from supyr_struct.defs.tag_def import TagDef
 from supyr_struct.field_types import *
 
 
+__all__ = (
+    "get", "config_def", "guerilla_workspace_def"
+    )
+
+
 mozz_colors = Array("colors",
     SUB_STRUCT=color, SIZE=".array_counts.color_count",
     MAX=len(mozz_color_names), MIN=len(mozz_color_names),

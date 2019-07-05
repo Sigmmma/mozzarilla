@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 
 try:
-    from .converter_base import *
+    from .converter_base import ConverterBase
 except ImportError:
-    from converter_base import *
+    from converter_base import ConverterBase
+
+import os
+import threadsafe_tkinter as tk
 
 from copy import deepcopy
+from traceback import format_exc
 
 from reclaimer.model.jms import JmsNode, JmsMaterial, JmsMarker, JmsVertex,\
      JmsModel, MergedJmsModel, edge_loop_to_tris
@@ -14,6 +18,7 @@ from reclaimer.util.matrices import euler_to_quaternion, Ray
 from reclaimer.util.geometry import planes_to_verts_and_edge_loops
 from reclaimer.hek.defs.sbsp import sbsp_def
 from reclaimer.hek.defs.mod2 import mod2_def
+
 from supyr_struct.defs.block_def import BlockDef
 
 window_base_class = tk.Toplevel

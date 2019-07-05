@@ -8,8 +8,8 @@ from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.util import get_cwd
-from supyr_struct.defs.constants import *
-from supyr_struct.defs.util import *
+
+from supyr_struct.util import sanitize_path, is_in_dir
 from mozzarilla.widgets.directory_frame import DirectoryFrame,\
      HierarchyFrame, DependencyFrame
 
