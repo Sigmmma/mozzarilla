@@ -82,7 +82,7 @@ class Mozzarilla(Binilla):
     styles_dir  = this_curr_dir + PATHDIV + "styles"
     config_path = this_curr_dir + '%smozzarilla.cfg' % PATHDIV
     guerilla_workspace_def  = None
-    config_version = 2
+    config_version = 3
 
     handler_classes = (
         HaloHandler,
@@ -166,8 +166,10 @@ class Mozzarilla(Binilla):
 
         # NOTE: Do this import AFTER Tk interpreter is set up, otherwise
         # it will fail to get the names of the font families
-        from mozzarilla.config_def import config_def, guerilla_workspace_def
+        from mozzarilla.defs.config_def import config_def, config_v2_def
+        from mozzarilla.defs.guerilla_workspace_def import guerilla_workspace_def
 
+        self.old_config_defs = (config_v2_def, )
         kwargs.update(config_def=config_def)
         self.guerilla_workspace_def = guerilla_workspace_def
         Binilla.__init__(self, *args, **kwargs)
@@ -1187,3 +1189,6 @@ class Mozzarilla(Binilla):
 
     def strings_from_txt(self, e=None):
         strings_from_txt(self)
+
+    def upgrade_config_version(self, old_config):
+        pass

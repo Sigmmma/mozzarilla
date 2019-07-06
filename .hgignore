@@ -4,3 +4,4 @@ mozzarilla.cfg
 *.log
 data/*
 tags/*
+*.cfg

@@ -82,10 +82,8 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         self.apply_style()
 
     def apply_style(self, seen=None):
+        BinillaWidget.apply_style(self, seen)
         self.tags_tree_frame.config(bg=self.default_bg_color)
-        self.tags_tree.tag_configure(
-            'item', background=self.entry_normal_color,
-            foreground=self.text_normal_color)
 
         dir_tree = self.tags_tree
         self.highlight_tags_dir()
@@ -225,7 +223,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                 self.active_tags_dir = td
             else:
                 dir_tree.tag_configure(
-                    td, background=self.entry_normal_color,
+                    td, background=self.default_bg_color,
                     foreground=self.text_normal_color)
 
     def activate_item(self, e=None):
@@ -271,7 +269,7 @@ class DependencyFrame(HierarchyFrame):
         HierarchyFrame.apply_style(self, seen)
         self.tags_tree.tag_configure(
             'badref', foreground=self.invalid_path_color,
-            background=self.entry_normal_color)
+            background=self.default_bg_color)
 
     def get_item_tags_dir(*args, **kwargs): pass
 
