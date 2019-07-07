@@ -14,9 +14,6 @@ class ReflexiveFrame(DynamicArrayFrame):
         DynamicArrayFrame.__init__(self, *args, **kwargs)
 
         btn_kwargs = dict(
-            bg=self.button_color, fg=self.text_normal_color,
-            disabledforeground=self.text_disabled_color,
-            bd=self.button_depth,
             state=tk.DISABLED if self.disabled else tk.NORMAL
             )
 
