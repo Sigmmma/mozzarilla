@@ -72,12 +72,14 @@ mozz_colors = Array("colors",
     SUB_STRUCT=color, SIZE="array_counts.color_count",
     MAX=len(mozz_color_names), MIN=len(mozz_color_names),
     NAME_MAP=mozz_color_names,
+    GUI_NAME="Colors"
     )
 
 mozz_fonts = Array("fonts",
     SUB_STRUCT=font, SIZE="array_counts.font_count",
     MAX=len(mozz_font_names), MIN=len(mozz_font_names),
-    NAME_MAP=mozz_font_names
+    NAME_MAP=mozz_font_names,
+    GUI_NAME="Fonts"
     )
 
 mozz_hotkey = Struct("hotkey",

@@ -23,8 +23,7 @@ class MeterImageDisplayFrame(BitmapDisplayFrame):
             w.pack_forget()
 
         self.preview_label = tk.Label(self, text="Bitmap preview\t")
-        self.image_canvas = tk.Canvas(self, highlightthickness=0,
-                                      bg=self.bitmap_canvas_bg_color)
+        self.image_canvas = tk.Canvas(self, highlightthickness=0)
         self.channel_menu = ScrollMenu(self, menu_width=9, can_scroll=True,
                                        variable=self.channel_index)
         self.save_button = tk.Button(self, width=11, text="Save as...",
@@ -41,6 +40,10 @@ class MeterImageDisplayFrame(BitmapDisplayFrame):
                                fill='x', expand=True)
 
         self.apply_style()
+
+    def apply_style(self, seen=None):
+        BitmapDisplayFrame.apply_style(self, seen)
+        self.image_canvas.config(bg=self.bitmap_canvas_bg_color)
 
 
 class MeterImageFrame(SimpleImageFrame):

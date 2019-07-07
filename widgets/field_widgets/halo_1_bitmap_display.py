@@ -160,7 +160,7 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
         labels.append(tk.Label(self.controls_frame1, text="Sprite index"))
         for lbl in labels:
             lbl.config(width=15, anchor='w',
-                       bg=self.default_bg_color, fg=self.text_normal_color,
+                       bg=self.default_bg_color,
                        disabledforeground=self.text_disabled_color)
 
         self.sequence_menu = ScrollMenu(self.controls_frame0, menu_width=7,
