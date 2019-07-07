@@ -23,14 +23,12 @@ class FontCharacterDisplayFrame(BitmapDisplayFrame, BinillaWidget):
         self.preview_label.font_type = "font_tag_preview"
         for lbl in (self.font_label0, self.font_label1):
             lbl.config(width=30, anchor='w',
-                       bg=self.default_bg_color, fg=self.text_normal_color,
                        disabledforeground=self.text_disabled_color)
 
         for w in (self.hsb, self.vsb, self.root_canvas):
             w.pack_forget()
 
-        self.image_canvas = tk.Canvas(self.preview_frame, highlightthickness=0,
-                                      bg=self.bitmap_canvas_bg_color)
+        self.image_canvas = tk.Canvas(self.preview_frame, highlightthickness=0)
         padx = self.horizontal_padx
         pady = self.horizontal_pady
 
@@ -42,6 +40,10 @@ class FontCharacterDisplayFrame(BitmapDisplayFrame, BinillaWidget):
             w.pack(fill='x', padx=padx, pady=pady)
 
         self.apply_style()
+
+    def apply_style(self, seen=None):
+        BitmapDisplayFrame.apply_style(self, seen)
+        self.image_canvas.config(bg=self.bitmap_canvas_bg_color)
 
 
 class FontCharacterFrame(SimpleImageFrame):
