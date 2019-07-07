@@ -1,7 +1,8 @@
-from binilla.config_def import color, font, method_enums, modifier_enums,\
+from binilla.defs.config_def import method_enums, modifier_enums,\
      hotkey_enums, config_header, filepath, array_counts, app_window,\
      widgets, open_tags, recent_tags, directory_paths, theme_name,\
-     config_version
+     config_version, tag_window_hotkeys
+from binilla.defs.style_def import appearance, color, font
 from binilla.constants import GUI_NAME, NAME, TOOLTIP, VALUE
 from binilla.widgets.field_widgets.array_frame import DynamicArrayFrame
 from mozzarilla.editor_constants import mozz_color_names, mozz_font_names
@@ -11,19 +12,6 @@ from supyr_struct.field_types import *
 
 __all__ = (
     "get", "config_def",
-    )
-
-
-mozz_colors = Array("colors",
-    SUB_STRUCT=color, SIZE=".array_counts.color_count",
-    MAX=len(mozz_color_names), MIN=len(mozz_color_names),
-    NAME_MAP=mozz_color_names,
-    )
-
-mozz_fonts = Array("fonts",
-    SUB_STRUCT=font, SIZE=".array_counts.font_count",
-    MAX=len(mozz_font_names), MIN=len(mozz_font_names),
-    NAME_MAP=mozz_font_names
     )
 
 mozz_flag_tooltips = (
@@ -80,7 +68,19 @@ new_method_enums = (
 
 method_enums += new_method_enums
 
-hotkey = Struct("hotkey",
+mozz_colors = Array("colors",
+    SUB_STRUCT=color, SIZE="array_counts.color_count",
+    MAX=len(mozz_color_names), MIN=len(mozz_color_names),
+    NAME_MAP=mozz_color_names,
+    )
+
+mozz_fonts = Array("fonts",
+    SUB_STRUCT=font, SIZE="array_counts.font_count",
+    MAX=len(mozz_font_names), MIN=len(mozz_font_names),
+    NAME_MAP=mozz_font_names
+    )
+
+mozz_hotkey = Struct("hotkey",
     BitStruct("combo",
         UBitEnum("modifier", GUI_NAME="", *modifier_enums, SIZE=4),
         UBitEnum("key", GUI_NAME="and", *hotkey_enums, SIZE=28),
@@ -89,18 +89,11 @@ hotkey = Struct("hotkey",
     UEnum32("method", *method_enums)
     )
 
-mozz_config_version = Struct("config_version",
-    LUEnum32("id", ('Mozz', 'zzoM'), VISIBLE=False, DEFAULT='zzoM'),
-    UInt32("version", DEFAULT=3, VISIBLE=False, EDITABLE=False),
+mozz_hotkeys = Array(
+    "hotkeys", SUB_STRUCT=mozz_hotkey, DYN_NAME_PATH='.method.enum_name',
+    SIZE="array_counts.hotkey_count", WIDGET=DynamicArrayFrame,
+    GUI_NAME="Main window hotkeys"
     )
-
-hotkeys = Array(
-    "hotkeys", SUB_STRUCT=hotkey, DYN_NAME_PATH='.method.enum_name',
-    SIZE=".array_counts.hotkey_count", WIDGET=DynamicArrayFrame)
-
-tag_window_hotkeys = Array(
-    "tag_window_hotkeys", SUB_STRUCT=hotkey, DYN_NAME_PATH='.method.enum_name',
-    SIZE=".array_counts.tag_window_hotkey_count", WIDGET=DynamicArrayFrame)
 
 open_mozz_tag = Container("open_tag",
     Struct("header",
@@ -154,37 +147,66 @@ mozzarilla = Container("mozzarilla",
     UInt16("open_mozz_tag_count", VISIBLE=False, EDITABLE=False),
     Pad(64 - 2*3),
 
-    Array("tags_dirs", SUB_STRUCT=filepath, SIZE=".tags_dirs_count",
+    Array("tags_dirs", SUB_STRUCT=filepath, SIZE="mozzarilla.tags_dirs_count",
         MIN=1,  VISIBLE=False),
-    Array("load_dirs", SUB_STRUCT=filepath, SIZE=".load_dirs_count",
+    Array("load_dirs", SUB_STRUCT=filepath, SIZE="mozzarilla.load_dirs_count",
         NAME_MAP=("last_data_load_dir", "jms_load_dir", "bitmap_load_dir"),
         MIN=3, VISIBLE=False
         ),
     Array("open_mozz_tags",
-        SUB_STRUCT=open_mozz_tag, SIZE=".open_mozz_tag_count", VISIBLE=False
+        SUB_STRUCT=open_mozz_tag, SIZE="mozzarilla.open_mozz_tag_count", VISIBLE=False
         ),
-    COMMENT="\nThese are settings specific to Mozzarilla.\n"
+    COMMENT="\nThese are settings specific to Mozzarilla.\n",
+    GUI_NAME="Mozzarilla"
     )
 
-config_v2_def = TagDef("mozzarilla_v2_config",
-    mozz_config_version,
-    config_header,
-    array_counts,
-    app_window,
-    widgets,
-    open_tags,
-    recent_tags,
-    directory_paths,
-    mozz_colors,
-    hotkeys,
-    tag_window_hotkeys,
+mozz_config_version = Struct("config_version",
+    UEnum32("id", ('Mozz', 'zzoM'), VISIBLE=False, DEFAULT='zzoM'),
+    UInt32("version", DEFAULT=3, VISIBLE=False, EDITABLE=False),
+    )
 
-    mozzarilla,
-    ENDIAN='<', ext=".cfg",
+mozz_appearance = Container("appearance",
+    theme_name,
+    widgets,
+    mozz_colors,
+    mozz_fonts,
+    GUI_NAME="Appearance"
+    )
+
+mozz_all_hotkeys = Container("all_hotkeys",
+    mozz_hotkeys,
+    tag_window_hotkeys,
+    GUI_NAME="Hotkeys"
     )
 
 config_def = TagDef("mozzarilla_config",
-    mozz_config_version,
+    mozz_config_version,  # not visible
+    config_header,
+    array_counts,  # not visible
+    app_window,
+    open_tags,  # not visible
+    recent_tags,  # not visible
+    directory_paths,  # not visible
+    mozz_appearance,
+    mozz_all_hotkeys,
+
+    mozzarilla,
+    ENDIAN='<', ext=".cfg",
+    )
+
+mozz_config_version_def = TagDef(mozz_config_version)
+
+def get(): return config_def
+
+
+# OLD STRUCT VERSIONS
+mozz_v2_config_version = Struct("config_version",
+    UEnum32("id", ('Mozz', 'zzoM'), VISIBLE=False, DEFAULT='zzoM'),
+    UInt32("version", DEFAULT=2, VISIBLE=False, EDITABLE=False),
+    )
+
+v2_config_def = TagDef("mozzarilla_v2_config",
+    mozz_v2_config_version,
     config_header,
     array_counts,
     app_window,
@@ -193,13 +215,9 @@ config_def = TagDef("mozzarilla_config",
     recent_tags,
     directory_paths,
     mozz_colors,
-    hotkeys,
+    mozz_hotkeys,
     tag_window_hotkeys,
-    mozz_fonts,
-    theme_name,
 
     mozzarilla,
     ENDIAN='<', ext=".cfg",
     )
-
-def get(): return config_def

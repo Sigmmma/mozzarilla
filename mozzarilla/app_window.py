@@ -166,12 +166,15 @@ class Mozzarilla(Binilla):
 
         # NOTE: Do this import AFTER Tk interpreter is set up, otherwise
         # it will fail to get the names of the font families
-        from mozzarilla.defs.config_def import config_def, config_v2_def
+        from mozzarilla.defs.config_def import config_def, v2_config_def,\
+             mozz_config_version_def
         from mozzarilla.defs.guerilla_workspace_def import guerilla_workspace_def
 
-        self.old_config_defs = (config_v2_def, )
-        kwargs.update(config_def=config_def)
+        kwargs.update(
+            config_def=config_def, config_version_def=mozz_config_version_def,
+            config_defs={1: v2_config_def, 2: v2_config_def, 3: config_def})
         self.guerilla_workspace_def = guerilla_workspace_def
+
         Binilla.__init__(self, *args, **kwargs)
 
         try:
@@ -927,7 +930,8 @@ class Mozzarilla(Binilla):
         data = self.config_file.data
 
         # make sure these have as many entries as they're supposed to
-        for block in (data.directory_paths, data.widgets.depths, data.colors):
+        for block in (data.directory_paths, data.appearance.colors,
+                      data.appearance.widgets.depths):
             block.extend(len(block.NAME_MAP))
 
         tags_dirs = data.mozzarilla.tags_dirs
@@ -937,8 +941,8 @@ class Mozzarilla(Binilla):
 
         self.update_config()
 
-        c_hotkeys = data.hotkeys
-        c_tag_window_hotkeys = data.tag_window_hotkeys
+        c_hotkeys = data.all_hotkeys.hotkeys
+        c_tag_window_hotkeys = data.all_hotkeys.tag_window_hotkeys
 
         for k_set, b in ((default_hotkeys, c_hotkeys),
                          (default_tag_window_hotkeys, c_tag_window_hotkeys)):
@@ -1190,5 +1194,19 @@ class Mozzarilla(Binilla):
     def strings_from_txt(self, e=None):
         strings_from_txt(self)
 
-    def upgrade_config_version(self, old_config):
-        pass
+    def upgrade_config_version(self, filepath):
+        old_version = self.config_version_def.build(filepath=filepath).data.version
+        if old_version in (1, 2):
+            new_config = self.upgrade_config_v2_to_v3(
+                self.config_defs[2].build(filepath=filepath),
+                self.config_defs[3].build())
+        else:
+            raise ValueError("Config header version is not valid")
+
+        return new_config
+
+    def upgrade_config_v2_to_v3(self, old_config, new_config):
+        Binilla.upgrade_config_v1_to_v2(self, old_config, new_config)
+        new_config.data.mozzarilla.parse(initdata=old_config.data.mozzarilla)
+
+        return new_config
