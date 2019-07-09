@@ -1,4 +1,5 @@
 import tkinter as tk
+import tkinter.ttk as ttk
 
 from traceback import format_exc
 
@@ -13,16 +14,14 @@ class ReflexiveFrame(DynamicArrayFrame):
     def __init__(self, *args, **kwargs):
         DynamicArrayFrame.__init__(self, *args, **kwargs)
 
-        btn_kwargs = dict(
-            state=tk.DISABLED if self.disabled else tk.NORMAL
-            )
+        btn_state = tk.DISABLED if self.disabled else tk.NORMAL
 
-        self.import_all_btn = tk.Button(
-            self.title, width=8, text='Import all',
-            command=self.import_all_nodes, **btn_kwargs)
-        self.export_all_btn = tk.Button(
-            self.buttons, width=8, text='Export all',
-            command=self.export_all_nodes, **btn_kwargs)
+        self.import_all_btn = ttk.Button(
+            self.title, width=11, text='Import all',
+            command=self.import_all_nodes, state=btn_state)
+        self.export_all_btn = ttk.Button(
+            self.buttons, width=11, text='Export all',
+            command=self.export_all_nodes, state=btn_state)
 
         # unpack all the buttons
         for w in (self.export_btn, self.import_btn,

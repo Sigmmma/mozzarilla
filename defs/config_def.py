@@ -1,13 +1,16 @@
-from binilla.defs.config_def import method_enums, modifier_enums,\
+from binilla.defs.config_def import method_enums, modifier_enums, depths,\
      hotkey_enums, config_header, filepath, array_counts, app_window,\
-     widgets, open_tags, recent_tags, directory_paths, theme_name,\
-     config_version, tag_window_hotkeys
+     open_tags, recent_tags, directory_paths, theme_name, config_version,\
+     tag_window_hotkeys, padding, v1_widths_and_heights, widths_and_heights
 from binilla.defs.style_def import appearance, color, font
 from binilla.constants import GUI_NAME, NAME, TOOLTIP, VALUE
 from binilla.widgets.field_widgets.array_frame import DynamicArrayFrame
-from mozzarilla.editor_constants import mozz_color_names, mozz_font_names
+
 from supyr_struct.defs.tag_def import TagDef
 from supyr_struct.field_types import *
+
+from mozzarilla.editor_constants import v2_mozz_color_names, mozz_color_names,\
+     mozz_font_names
 
 
 __all__ = (
@@ -169,7 +172,9 @@ mozz_config_version = Struct("config_version",
 
 mozz_appearance = Container("appearance",
     theme_name,
-    widgets,
+    widths_and_heights,
+    padding,
+    depths,
     mozz_colors,
     mozz_fonts,
     GUI_NAME="Appearance"
@@ -203,8 +208,15 @@ def get(): return config_def
 
 # OLD STRUCT VERSIONS
 mozz_v2_config_version = Struct("config_version",
-    UEnum32("id", ('Mozz', 'zzoM'), VISIBLE=False, DEFAULT='zzoM'),
-    UInt32("version", DEFAULT=2, VISIBLE=False, EDITABLE=False),
+    UEnum32("id", ('Mozz', 'zzoM'), DEFAULT='zzoM'),
+    UInt32("version", DEFAULT=2),
+    )
+
+v2_mozz_colors = Array("colors",
+    SUB_STRUCT=color, SIZE="array_counts.color_count",
+    MAX=len(v2_mozz_color_names), MIN=len(v2_mozz_color_names),
+    NAME_MAP=v2_mozz_color_names,
+    GUI_NAME="Colors"
     )
 
 v2_config_def = TagDef("mozzarilla_v2_config",
@@ -212,11 +224,13 @@ v2_config_def = TagDef("mozzarilla_v2_config",
     config_header,
     array_counts,
     app_window,
-    widgets,
+    v1_widths_and_heights,
+    padding,
+    depths,
     open_tags,
     recent_tags,
     directory_paths,
-    mozz_colors,
+    v2_mozz_colors,
     mozz_hotkeys,
     tag_window_hotkeys,
 
