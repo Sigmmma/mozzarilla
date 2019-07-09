@@ -1,6 +1,7 @@
 import array
 import weakref
 import tkinter as tk
+import tkinter.ttk as ttk
 
 from traceback import format_exc
 
@@ -26,8 +27,8 @@ class MeterImageDisplayFrame(BitmapDisplayFrame):
         self.image_canvas = tk.Canvas(self, highlightthickness=0)
         self.channel_menu = ScrollMenu(self, menu_width=9, can_scroll=True,
                                        variable=self.channel_index)
-        self.save_button = tk.Button(self, width=11, text="Save as...",
-                                     command=self.save_as)
+        self.save_button = ttk.Button(self, width=11, text="Save as...",
+                                      command=self.save_as)
 
         padx = self.horizontal_padx
         pady = self.horizontal_pady
@@ -78,7 +79,7 @@ class MeterImageFrame(SimpleImageFrame):
                 pixels[off: off + line.width * 4] = line.line_data
 
             # need it packed otherwise channel swapping wont occur
-            texture_block.append([[array("I", pixels)], tex_info])
+            texture_block.append([[array.array("I", pixels)], tex_info])
 
         return texture_block
     

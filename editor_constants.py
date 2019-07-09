@@ -1,9 +1,11 @@
 from binilla import editor_constants as b_e_c
 from binilla.editor_constants import *
-from binilla.widgets.binilla_widget import BinillaWidget, FontConfig
+from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.widgets.font_config import FontConfig
 
 from supyr_struct.defs.frozen_dict import FrozenDict
 
+v2_mozz_color_names = v1_color_names + ("active_tags_directory", )
 mozz_color_names = color_names + ("active_tags_directory", )
 mozz_font_names = font_names + ("font_tag_preview", )
 
@@ -32,3 +34,4 @@ BinillaWidget.font_settings.update(
         )
     )
 del b_e_c
+del FontConfig

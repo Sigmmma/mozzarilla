@@ -1,5 +1,6 @@
 import os
 import tkinter as tk
+import tkinter.ttk as ttk
 
 from copy import copy
 from tkinter.filedialog import askopenfilename
@@ -217,15 +218,10 @@ class DependencyFrame(ContainerFrame):
         picker = self.widget_picker
         tag_window = self.tag_window
 
-        btn_kwargs = dict(
-            bg=self.button_color, activebackground=self.button_color,
-            fg=self.text_normal_color, bd=self.button_depth,
-            disabledforeground=self.text_disabled_color,
-            )
-        self.browse_btn = tk.Button(
-            self, width=3, text='...', command=self.browse_tag, **btn_kwargs)
-        self.open_btn = tk.Button(
-            self, width=5, text='Open', command=self.open_tag, **btn_kwargs)
+        self.browse_btn = ttk.Button(
+            self, width=3, text='...', command=self.browse_tag)
+        self.open_btn = ttk.Button(
+            self, width=5, text='Open', command=self.open_tag)
         self.preview_btn = None
         try:
             names = self.desc[0]['NAME_MAP'].keys()
@@ -242,7 +238,7 @@ class DependencyFrame(ContainerFrame):
                 app_root = None
             self.preview_btn = HaloBitmapDisplayButton(
                 self, width=7, text="Preview", command=self.bitmap_preview,
-                tags_dir=tags_dir, **btn_kwargs)
+                tags_dir=tags_dir)
 
         padx, pady, side= self.horizontal_padx, self.horizontal_pady, 'top'
         if self.desc.get('ORIENT', 'v') in 'hH':
