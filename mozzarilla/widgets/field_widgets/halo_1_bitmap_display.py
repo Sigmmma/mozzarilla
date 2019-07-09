@@ -159,9 +159,7 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
         labels.append(tk.Label(self.controls_frame0, text="Sequence index"))
         labels.append(tk.Label(self.controls_frame1, text="Sprite index"))
         for lbl in labels:
-            lbl.config(width=15, anchor='w',
-                       bg=self.default_bg_color,
-                       disabledforeground=self.text_disabled_color)
+            lbl.config(width=15, anchor='w')
 
         self.sequence_menu = ScrollMenu(self.controls_frame0, menu_width=7,
                                         variable=self.sequence_index)
@@ -178,6 +176,7 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
         self.write_trace(self.sprite_index,   self.sprite_changed)
 
         self.change_textures(textures)
+        self.apply_style()
 
     def sequence_changed(self, *args):
         tag = self.bitmap_tag
@@ -314,11 +313,8 @@ class HaloBitmapTagFrame(ContainerFrame):
         except AttributeError:
             tags_dir = ""
         self.preview_btn = self.bitmap_display_button_class(
-            self, width=15, text="Preview", bd=self.button_depth,
-            tags_dir=tags_dir, command=self.bitmap_preview,
-            bg=self.button_color, fg=self.text_normal_color,
-            activebackground=self.button_color,
-            disabledforeground=self.text_disabled_color)
+            self, width=15, text="Preview",
+            tags_dir=tags_dir, command=self.bitmap_preview,)
 
         self.preview_btn.pack(anchor='center', pady=10)
         ContainerFrame.pose_fields(self)

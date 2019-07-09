@@ -19,6 +19,7 @@ class DirectoryFrame(BinillaWidget, tk.Frame):
         self.app_root = kwargs.pop('app_root')
 
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
+        BinillaWidget.__init__(self)
         tk.Frame.__init__(self, master, *args, **kwargs)
 
         self.hierarchy_frame = HierarchyFrame(self, app_root=self.app_root)
@@ -56,6 +57,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         select_mode = kwargs.pop('select_mode', 'browse')
 
         self.app_root = kwargs.pop('app_root')
+        BinillaWidget.__init__(self)
         tk.Frame.__init__(self, master, *args, **kwargs)
 
         self.tags_tree_frame = tk.Frame(self, highlightthickness=0)

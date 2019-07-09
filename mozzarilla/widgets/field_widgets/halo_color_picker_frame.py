@@ -114,6 +114,7 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
         )
 
     def __init__(self, *args, **kwargs):
+        #TYPE INITIALIZING IS FUCKING SHIT UP
         FieldWidget.__init__(self, *args, **kwargs)
         kwargs.update(relief='flat', bd=0, highlightthickness=0,
                       bg=self.default_bg_color)
@@ -244,6 +245,8 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
         self.load_child_node_data()
         for wid in self.f_widget_ids:
             self.f_widgets[wid].reload()
+
+    apply_style = FieldWidget.apply_style
 
     def pose_fields(self):
         ContainerFrame.pose_fields(self)

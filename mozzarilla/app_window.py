@@ -931,7 +931,7 @@ class Mozzarilla(Binilla):
 
         # make sure these have as many entries as they're supposed to
         for block in (data.directory_paths, data.appearance.colors,
-                      data.appearance.widgets.depths):
+                      data.appearance.depths):
             block.extend(len(block.NAME_MAP))
 
         tags_dirs = data.mozzarilla.tags_dirs
@@ -1039,9 +1039,10 @@ class Mozzarilla(Binilla):
         if not self._initialized:
             return
 
-        Binilla.apply_style(self, seen)
-        try:
+        with self.style_change_lock:
             try:
+                Binilla.apply_style(self, seen)
+
                 mozz = self.config_file.data.mozzarilla
                 show_hierarchy = mozz.flags.show_hierarchy_window
                 show_console = mozz.flags.show_console_window
@@ -1052,6 +1053,7 @@ class Mozzarilla(Binilla):
                 if show_hierarchy:
                     self.directory_frame.pack(fill='both', expand=True)
                     self.window_panes.add(self.directory_frame)
+
                 if show_console:
                     self.io_frame.pack(fill='both', expand=True)
                     self.window_panes.add(self.io_frame)
@@ -1063,10 +1065,9 @@ class Mozzarilla(Binilla):
                         self.window_panes.sash_place(0, sash_pos, 1)
                     except Exception:
                         pass
-            except Exception:
-                print(format_exc())
-        except AttributeError: print(format_exc())
-        except Exception: print(format_exc())
+            except AttributeError: print(format_exc())
+            except Exception: print(format_exc())
+            except Exception: print(format_exc())
 
     def make_tag_window(self, tag, *, focus=True, window_cls=None,
                         is_new_tag=False):
