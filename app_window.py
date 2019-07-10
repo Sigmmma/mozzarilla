@@ -316,7 +316,7 @@ class Mozzarilla(Binilla):
             self.directory_frame.highlight_tags_dir(self.tags_dir)
 
         try:
-            if self.config_file.data.header.flags.load_last_workspace:
+            if self.config_file.data.general.flags.load_last_workspace:
                 self.load_last_workspace()
         except AttributeError:
             pass
@@ -1198,7 +1198,7 @@ class Mozzarilla(Binilla):
     def upgrade_config_version(self, filepath):
         old_version = self.config_version_def.build(filepath=filepath).data.version
         if old_version in (1, 2):
-            new_config = mozzarilla.defs.upgrade_config.upgrade_config_v2_to_v3(
+            new_config = mozzarilla.defs.upgrade_config.upgrade_v2_to_v3(
                 self.config_defs[2].build(filepath=filepath),
                 self.config_defs[3].build())
         else:

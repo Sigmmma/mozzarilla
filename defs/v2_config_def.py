@@ -1,4 +1,4 @@
-from binilla.defs.v1_config_def import v1_config_header, v1_array_counts,\
+from binilla.defs.v1_config_def import v1_general, v1_array_counts,\
      tag_window_hotkeys, padding, directory_paths, v1_app_window, \
      recent_tags, open_tags
 from binilla.defs.v1_style_def import v1_widths_and_heights,\
@@ -7,8 +7,7 @@ from binilla.defs.v1_style_def import v1_widths_and_heights,\
 from supyr_struct.defs.tag_def import TagDef
 from supyr_struct.field_types import *
 
-from mozzarilla.defs.config_def import config_header, array_counts,\
-     mozz_hotkeys, mozzarilla
+from mozzarilla.defs.config_def import mozz_hotkeys, mozzarilla
 from mozzarilla.editor_constants import v2_mozz_color_names
 
 
@@ -16,7 +15,7 @@ __all__ = (
     "get", "v2_config_def",
     )
 
-mozz_v2_config_version = Struct("config_version",
+mozz_v2_version_info = Struct("version_info",
     UEnum32("id", ('Mozz', 'zzoM'), DEFAULT='zzoM'),
     UInt32("version", DEFAULT=2),
     )
@@ -29,8 +28,8 @@ v2_mozz_colors = Array("colors",
     )
 
 v2_config_def = TagDef("mozzarilla_v2_config",
-    mozz_v2_config_version,
-    v1_config_header,
+    mozz_v2_version_info,
+    v1_general,
     v1_array_counts,
     v1_app_window,
     v1_widths_and_heights,

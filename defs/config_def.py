@@ -1,6 +1,6 @@
 from binilla.defs.config_def import method_enums, modifier_enums, depths,\
-     hotkey_enums, config_header, filepath, array_counts, app_window,\
-     open_tags, recent_tags, directory_paths, theme_name, config_version,\
+     hotkey_enums, general, filepath, array_counts, app_window,\
+     open_tags, recent_tags, directory_paths, theme_name,\
      tag_window_hotkeys, padding, widths_and_heights
 from binilla.defs.style_def import appearance, color, font
 from binilla.constants import GUI_NAME, NAME, TOOLTIP, VALUE
@@ -164,9 +164,12 @@ mozzarilla = Container("mozzarilla",
     GUI_NAME="Mozzarilla"
     )
 
-mozz_config_version = Struct("config_version",
+mozz_version_info = Struct("version_info",
     UEnum32("id", ('Mozz', 'zzoM'), VISIBLE=False, DEFAULT='zzoM'),
     UInt32("version", DEFAULT=3, VISIBLE=False, EDITABLE=False),
+    Timestamp32("date_created", EDITABLE=False),
+    Timestamp32("date_modified", EDITABLE=False),
+    SIZE=16, VISIBLE=False
     )
 
 mozz_appearance = Container("appearance",
@@ -186,8 +189,8 @@ mozz_all_hotkeys = Container("all_hotkeys",
     )
 
 config_def = TagDef("mozzarilla_config",
-    mozz_config_version,  # not visible
-    config_header,
+    mozz_version_info,  # not visible
+    general,
     array_counts,  # not visible
     app_window,
     open_tags,  # not visible
@@ -200,6 +203,6 @@ config_def = TagDef("mozzarilla_config",
     ENDIAN='<', ext=".cfg",
     )
 
-mozz_config_version_def = TagDef(mozz_config_version)
+mozz_config_version_def = TagDef(mozz_version_info)
 
 def get(): return config_def
