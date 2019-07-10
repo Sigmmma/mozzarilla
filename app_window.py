@@ -166,8 +166,8 @@ class Mozzarilla(Binilla):
 
         # NOTE: Do this import AFTER Tk interpreter is set up, otherwise
         # it will fail to get the names of the font families
-        from mozzarilla.defs.config_def import config_def, v2_config_def,\
-             mozz_config_version_def
+        from mozzarilla.defs.config_def import config_def, mozz_config_version_def
+        from mozzarilla.defs.v2_config_def import v2_config_def
         from mozzarilla.defs.guerilla_workspace_def import guerilla_workspace_def
 
         kwargs.update(
@@ -1198,16 +1198,10 @@ class Mozzarilla(Binilla):
     def upgrade_config_version(self, filepath):
         old_version = self.config_version_def.build(filepath=filepath).data.version
         if old_version in (1, 2):
-            new_config = self.upgrade_config_v2_to_v3(
+            new_config = mozzarilla.defs.upgrade_config.upgrade_config_v2_to_v3(
                 self.config_defs[2].build(filepath=filepath),
                 self.config_defs[3].build())
         else:
             raise ValueError("Config header version is not valid")
-
-        return new_config
-
-    def upgrade_config_v2_to_v3(self, old_config, new_config):
-        Binilla.upgrade_config_v1_to_v2(self, old_config, new_config)
-        new_config.data.mozzarilla.parse(initdata=old_config.data.mozzarilla)
 
         return new_config
