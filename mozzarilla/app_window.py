@@ -316,7 +316,7 @@ class Mozzarilla(Binilla):
             self.directory_frame.highlight_tags_dir(self.tags_dir)
 
         try:
-            if self.config_file.data.general.flags.load_last_workspace:
+            if self.config_file.data.app_window.flags.load_last_workspace:
                 self.load_last_workspace()
         except AttributeError:
             pass

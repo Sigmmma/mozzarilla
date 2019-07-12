@@ -1,6 +1,6 @@
 from binilla.defs.config_def import method_enums, modifier_enums, depths,\
-     hotkey_enums, general, filepath, array_counts, app_window,\
-     open_tags, recent_tags, directory_paths, theme_name,\
+     hotkey_enums, array_counts, app_window, tag_windows, tag_printing,\
+     filepath, open_tags, recent_tags, directory_paths, theme_name,\
      tag_window_hotkeys, padding, widths_and_heights
 from binilla.defs.style_def import appearance, color, font
 from binilla.constants import GUI_NAME, NAME, TOOLTIP, VALUE
@@ -152,7 +152,7 @@ mozzarilla = Container("mozzarilla",
     Pad(64 - 2*3),
 
     Array("tags_dirs", SUB_STRUCT=filepath, SIZE="mozzarilla.tags_dirs_count",
-        MIN=1,  VISIBLE=False),
+        MIN=1, VISIBLE=False),
     Array("load_dirs", SUB_STRUCT=filepath, SIZE="mozzarilla.load_dirs_count",
         NAME_MAP=("last_data_load_dir", "jms_load_dir", "bitmap_load_dir"),
         MIN=3, VISIBLE=False
@@ -160,7 +160,7 @@ mozzarilla = Container("mozzarilla",
     Array("open_mozz_tags",
         SUB_STRUCT=open_mozz_tag, SIZE="mozzarilla.open_mozz_tag_count", VISIBLE=False
         ),
-    COMMENT="\nThese are settings specific to Mozzarilla.\n",
+    COMMENT="\nThese are settings specific to Mozzarilla.",
     GUI_NAME="Mozzarilla"
     )
 
@@ -179,20 +179,25 @@ mozz_appearance = Container("appearance",
     depths,
     mozz_colors,
     mozz_fonts,
-    GUI_NAME="Appearance"
+    GUI_NAME="Appearance", COMMENT=(
+        "\nThese settings control how everything looks. Colors, fonts, etc."
+        "\nThese settings are what get saved to/loaded from style files.")
     )
 
 mozz_all_hotkeys = Container("all_hotkeys",
     mozz_hotkeys,
     tag_window_hotkeys,
-    GUI_NAME="Hotkeys"
+    GUI_NAME="Hotkeys", COMMENT=(
+        "\nThese hotkeys control what operations to bind to keystroke"
+        "\ncombinations for the main window and the tag windows.")
     )
 
 config_def = TagDef("mozzarilla_config",
     mozz_version_info,  # not visible
-    general,
     array_counts,  # not visible
     app_window,
+    tag_windows,
+    tag_printing,
     open_tags,  # not visible
     recent_tags,  # not visible
     directory_paths,  # not visible
