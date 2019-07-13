@@ -601,6 +601,11 @@ class Mozzarilla(Binilla):
         for tags_dir in tags_dirs:
             self.add_tags_dir(tags_dir=tags_dir.path, manual=False)
 
+        backup_dir_basename = config_data.tag_backup.folder_basename
+        for handler_set in self.handlers:
+            for handler in handler_set.values():
+                handler.backup_dir_basename = backup_dir_basename
+
         self.switch_tags_dir(
             index=min(mozz.last_tags_dir, len(self.tags_dirs)), manual=False)
 
