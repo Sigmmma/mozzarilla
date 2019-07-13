@@ -1,7 +1,7 @@
 from binilla.defs.config_def import method_enums, modifier_enums, depths,\
      hotkey_enums, array_counts, app_window, tag_windows, tag_printing,\
      filepath, open_tags, recent_tags, directory_paths, theme_name,\
-     tag_window_hotkeys, padding, widths_and_heights
+     tag_window_hotkeys, padding, widths_and_heights, tag_backup
 from binilla.defs.style_def import appearance, color, font
 from binilla.constants import GUI_NAME, NAME, TOOLTIP, VALUE
 from binilla.widgets.field_widgets.array_frame import DynamicArrayFrame
@@ -198,6 +198,7 @@ config_def = TagDef("mozzarilla_config",
     app_window,
     tag_windows,
     tag_printing,
+    tag_backup,
     open_tags,  # not visible
     recent_tags,  # not visible
     directory_paths,  # not visible
