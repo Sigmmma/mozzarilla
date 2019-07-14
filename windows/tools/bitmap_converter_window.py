@@ -1341,6 +1341,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
     type_count = 4
 
     def __init__(self, master, **options):
+        BinillaWidget.__init__(self, master, **options)
         tk.Frame.__init__(self, master, **options)
 
         self.formats_shown = [True] * self.format_count
