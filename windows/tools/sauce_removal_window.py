@@ -21,6 +21,7 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
     def __init__(self, app_root, *args, **kwargs): 
         self.handler = app_root.get_handler("Halo 1 OS v4")
         self.app_root = app_root
+        BinillaWidget.__init__(self, app_root, *args, **kwargs)
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
 

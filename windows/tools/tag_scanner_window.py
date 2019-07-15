@@ -52,6 +52,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
     def __init__(self, app_root, *args, **kwargs): 
         self.handler = handler = app_root.handler
         self.app_root = app_root
+        BinillaWidget.__init__(self, app_root, *args, **kwargs)
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
 
