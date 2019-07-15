@@ -628,9 +628,9 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         self.convert_button.pack(side='left', expand=True, fill='both', padx=3)
         self.cancel_button.pack(side='left', expand=True, fill='both', padx=3)
 
-        self.log_file_frame.pack(expand=True, fill='x')
         self.scan_dir_frame.pack(expand=True, fill='x')
         self.data_dir_frame.pack(expand=True, fill='x')
+        self.log_file_frame.pack(expand=True, fill='x')
         self.global_params_frame.pack(expand=True, fill='x')
         self.params_frame.pack(expand=True, fill='x')
 
