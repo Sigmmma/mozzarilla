@@ -12,6 +12,7 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
     def __init__(self, app_root, *args, **kwargs):
         self.app_root = app_root
         kwargs.update(width=450, height=270, bd=0, highlightthickness=0)
+        BinillaWidget.__init__(self, app_root, *args, **kwargs)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
 
         self.title("Search and Replace")
