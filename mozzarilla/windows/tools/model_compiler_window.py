@@ -698,6 +698,21 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
                 print("    Warning, not all node list checksums match.")
                 break
 
+        # make sure the highest lod for each permutation is set as superhigh
+        # this is necessary, as only superhigh jms markers are used
+        jms_models_by_name = {}
+        for jms_model in jms_models:
+            lod_models = jms_models_by_name.setdefault(
+                jms_model.perm_name, [None]*5)
+            lod_index = {"high":1, "medium":2, "low":3, "superlow":4}.get(
+                jms_model.lod_level, 0)
+            lod_models[lod_index] = jms_model
+
+        for lod_models in jms_models_by_name.values():
+            for jms_model in lod_models:
+                if jms_model is not None:
+                    jms_model.lod_level = "superhigh"
+                    break
 
         print("Merging jms data...")
         self.app_root.update()
