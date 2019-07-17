@@ -1,3 +1,4 @@
+import copy
 import os
 import tkinter as tk
 
@@ -9,6 +10,8 @@ from supyr_struct.defs.audio.wav import wav_def
 from supyr_struct.util import sanitize_path
 
 from binilla.widgets.field_widgets import FieldWidget, RawdataFrame
+
+from reclaimer.meta.wrappers.byteswapping import byteswap_pcm16_samples
 
 
 class HaloRawdataFrame(RawdataFrame):
@@ -97,7 +100,6 @@ class SoundSampleFrame(HaloRawdataFrame):
 
         try:
             curr_size = self.parent.get_size(attr_index=index)
-
             if ext == '.wav':
                 # if the file is wav, we need to give it a header
                 wav_file = wav_def.build(filepath=filepath)
@@ -106,38 +108,42 @@ class SoundSampleFrame(HaloRawdataFrame):
                 channel_count = sound_data.encoding.data + 1
                 sample_rate = 22050 * (sound_data.sample_rate.data + 1)
                 wav_fmt = wav_file.data.format
+                typ = wav_fmt.fmt.enum_name
+                block_align = (2 if typ == "pcm" else 36) * wav_fmt.channels
 
-                if wav_fmt.fmt.enum_name not in ('ima_adpcm', 'xbox_adpcm',
-                                                 'pcm'):
+                if typ not in ('ima_adpcm', 'xbox_adpcm', 'pcm'):
                     raise TypeError(
                         "Wav file audio format must be either ImaADPCM " +
                         "XboxADPCM, or PCM, not %s" % wav_fmt.fmt.enum_name)
-
-                if sound_data.encoding.data + 1 != wav_fmt.channels:
+                elif sound_data.encoding.data + 1 != wav_fmt.channels:
                     raise TypeError(
                         "Wav file channel count does not match this sound " +
                         "tags channel count. Expected %s, not %s" %
                         (channel_count, wav_fmt.channels))
-
-                if sample_rate != wav_fmt.sample_rate:
+                elif sample_rate != wav_fmt.sample_rate:
                     raise TypeError(
                         "Wav file sample rate does not match this sound " +
                         "tags sample rate. Expected %skHz, not %skHz" %
                         (sample_rate, wav_fmt.sample_rate))
-
-                if 36 * channel_count != wav_fmt.block_align:
+                elif block_align != wav_fmt.block_align:
                     raise TypeError(
                         "Wav file block size does not match this sound " +
                         "tags block size. Expected %sbytes, not %sbytes" %
-                        (36 * channel_count, wav_fmt.block_align))
+                        (block_align, wav_fmt.block_align))
 
                 rawdata = wav_file.data.wav_data.audio_data
+                do_pcm_byteswap = (typ == 'pcm')
             else:
                 rawdata = get_rawdata(filepath=filepath, writable=False)
+                do_pcm_byteswap = False
 
             undo_node = self.node
             self.parent.set_size(len(rawdata), attr_index=index)
             self.parent.parse(rawdata=rawdata, attr_index=index)
+
+            if do_pcm_byteswap:
+                byteswap_pcm16_samples(self.parent)
+
             self.node = self.parent[index]
 
             self.set_edited()
@@ -195,14 +201,16 @@ class SoundSampleFrame(HaloRawdataFrame):
                 if self.parent.parent.compression.enum_name == 'none':
                     typ = "pcm"
 
+                audio_data = copy.deepcopy(self.parent)
                 if typ == "pcm":
                     wav_fmt.fmt.set_to('pcm')
                     wav_fmt.block_align = 2 * wav_fmt.channels
+                    byteswap_pcm16_samples(audio_data)
                 else:
                     wav_fmt.fmt.set_to('ima_adpcm')
                     wav_fmt.block_align = 36 * wav_fmt.channels
 
-                wav_file.data.wav_data.audio_data = self.node
+                wav_file.data.wav_data.audio_data = audio_data.data
                 wav_file.data.wav_header.filesize = wav_file.data.binsize - 12
 
                 wav_file.serialize(temp=False, backup=False, int_test=False)

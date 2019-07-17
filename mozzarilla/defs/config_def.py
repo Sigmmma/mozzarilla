@@ -5,6 +5,7 @@ from binilla.defs.config_def import method_enums, modifier_enums, depths,\
 from binilla.defs.style_def import appearance, color, font
 from binilla.constants import GUI_NAME, NAME, TOOLTIP, VALUE
 from binilla.widgets.field_widgets.array_frame import DynamicArrayFrame
+from binilla.defs import config_tooltips as ttip
 
 from supyr_struct.defs.tag_def import TagDef
 from supyr_struct.field_types import *
@@ -88,9 +89,9 @@ mozz_hotkey = Struct("hotkey",
     BitStruct("combo",
         UBitEnum("modifier", GUI_NAME="", *modifier_enums, SIZE=4),
         UBitEnum("key", GUI_NAME="and", *hotkey_enums, SIZE=28),
-        SIZE=4, ORIENT='h',
+        SIZE=4, ORIENT='h', TOOLTIP=ttip.hotkey_combo
         ),
-    UEnum32("method", *method_enums)
+    UEnum32("method", *method_enums, TOOLTIP=ttip.hotkey_method)
     )
 
 mozz_hotkeys = Array(

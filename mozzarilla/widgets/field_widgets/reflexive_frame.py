@@ -31,7 +31,10 @@ class ReflexiveFrame(DynamicArrayFrame):
             w.forget()
 
         # pack all the buttons(and new ones)
-        for w in (self.export_all_btn, self.import_all_btn,
+        # due to extra frame padding, this needs one less pixel on x
+        self.import_all_btn.pack(side="right", padx=(0, 3), pady=(2, 2))
+
+        for w in (self.export_all_btn,
                   self.shift_down_btn, self.shift_up_btn,
                   self.export_btn, self.import_btn,
                   self.delete_all_btn, self.delete_btn,
