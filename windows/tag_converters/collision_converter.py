@@ -2,7 +2,7 @@
 
 try:
     from .converter_base import ConverterBase
-except ImportError:
+except (ImportError, SystemError):
     from converter_base import ConverterBase
 
 import os
@@ -447,8 +447,8 @@ class CollisionConverter(ConverterBase, window_base_class):
         if isinstance(self, tk.Toplevel):
             kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
 
-        ConverterBase.__init__(self, app_root, *args, **kwargs)
         window_base_class.__init__(self, app_root, *args, **kwargs)
+        ConverterBase.__init__(self, app_root, *args, **kwargs)
         self.setup_window(*args, **kwargs)
 
     def setup_window(self, *args, **kwargs):
