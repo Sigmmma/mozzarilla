@@ -1,29 +1,32 @@
 import ctypes
+import os
 import gc
 import sys
+import tkinter as tk
 import weakref
 import arbytmap as ab
 
-from array import array
 from copy import deepcopy
-from os.path import getsize, splitext, dirname, join, normpath, exists, isfile, relpath
 from threading import Thread
 from tkinter.filedialog import asksaveasfilename, askdirectory
-from time import sleep, time
+from time import time
 from traceback import format_exc
 
 from reclaimer.bitmaps.p8_palette import HALO_P8_PALETTE, STUBBS_P8_PALETTE
 from reclaimer.hek.defs.bitm import bitm_def
-from reclaimer.field_types import *
+from reclaimer.constants import TYPE_NAME_MAP, FORMAT_NAME_MAP,\
+     I_FORMAT_NAME_MAP, PATHDIV
 
-from binilla.util import *
-from binilla.widgets import BinillaWidget, ScrollMenu
-from mozzarilla.field_widgets import HaloBitmapDisplayFrame, HaloBitmapDisplayBase
+from binilla.util import get_cwd, sanitize_path, do_subprocess, ProcController
+     
+from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.widgets.scroll_menu import ScrollMenu
+from mozzarilla.widgets.field_widgets import HaloBitmapDisplayFrame,\
+     HaloBitmapDisplayBase
 
+window_base_class = tk.Toplevel
 if __name__ == "__main__":
-    bitmap_converter_base_class = tk.Tk
-else:
-    bitmap_converter_base_class = tk.Toplevel
+    window_base_class = tk.Tk
 
 
 curr_dir = get_cwd(__file__)
@@ -312,7 +315,7 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
         if extract_ext and conv_flags.extract_path:
             path = conv_flags.extract_path
             if tag.bitmap_count() > 1:
-                path = join(path, str(i))
+                path = os.path.join(path, str(i))
             arb.save_to_file(output_path=path, ext=extract_ext)
 
         if do_conversion:
@@ -338,7 +341,7 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
     return True
 
 
-class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
+class BitmapConverterWindow(window_base_class, BinillaWidget):
     app_root = None
     tag_list_frame = None
     loaded_tags_dir = ''
@@ -371,13 +374,14 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
     bitm_def = bitm_def
 
     def __init__(self, app_root, *args, **kwargs):
-        BinillaWidget.__init__(self, *args, **kwargs)
-        if bitmap_converter_base_class == tk.Toplevel:
+        if isinstance(self, tk.Toplevel):
             kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
             self.app_root = app_root
         else:
             self.app_root = self
-        bitmap_converter_base_class.__init__(self, app_root, *args, **kwargs)
+
+        window_base_class.__init__(self, app_root, *args, **kwargs)
+        BinillaWidget.__init__(self, app_root, *args, **kwargs)
 
         self.conversion_flags = {}
         self.bitmap_tag_infos = {}
@@ -386,13 +390,14 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         self.title("Bitmap converter")
         self.resizable(0, 1)
         self.update()
-        try:
+        for sub_dirs in ((), ('..', '..'), ('icons', )):
             try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+                self.iconbitmap(os.path.join(
+                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
+                    ))
+                break
             except Exception:
-                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
+                pass
 
         # make the tkinter variables
         self.read_only = tk.BooleanVar(self)
@@ -623,9 +628,9 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         self.convert_button.pack(side='left', expand=True, fill='both', padx=3)
         self.cancel_button.pack(side='left', expand=True, fill='both', padx=3)
 
-        self.log_file_frame.pack(expand=True, fill='x')
         self.scan_dir_frame.pack(expand=True, fill='x')
         self.data_dir_frame.pack(expand=True, fill='x')
+        self.log_file_frame.pack(expand=True, fill='x')
         self.global_params_frame.pack(expand=True, fill='x')
         self.params_frame.pack(expand=True, fill='x')
 
@@ -755,7 +760,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             self.app_root.tool_windows.pop(self.window_name, None)
         except AttributeError:
             pass
-        bitmap_converter_base_class.destroy(self)
+        super(type(self), self).destroy()
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
@@ -770,7 +775,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
     def _show_log_in_text_editor(self):
         try:
             log_path = self.log_file_path.get()
-            if not exists(log_path):
+            if not os.path.exists(log_path):
                 return
 
             do_subprocess(TEXT_EDITOR_NAME, (), (log_path, ),
@@ -820,14 +825,15 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
 
             flags.platform = info.platform
             flags.swizzled = info.swizzled
-            flags.extract_path = splitext(join(data_dir, fp))[0]
+            flags.extract_path = os.path.splitext(
+                os.path.join(data_dir, fp))[0]
 
     def scan_pressed(self):
         if self._processing:
             return
 
         new_tags_dir = self.scan_dir_path.get()
-        if not exists(new_tags_dir):
+        if not os.path.exists(new_tags_dir):
             print("The specified directory to scan does not exist.")
             return
 
@@ -857,13 +863,13 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
                 if not root.endswith(PATHDIV):
                     root += PATHDIV
 
-                rel_root = relpath(root, scan_dir)
+                rel_root = os.path.relpath(root, scan_dir)
 
                 for filename in files:
-                    if splitext(filename)[-1].lower() != ".bitmap":
+                    if os.path.splitext(filename)[-1].lower() != ".bitmap":
                         continue
 
-                    fp = join(sanitize_path(rel_root), filename)
+                    fp = os.path.join(sanitize_path(rel_root), filename)
 
                     if time() - c_time > p_int:
                         c_time = time()
@@ -877,13 +883,14 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
                         return
 
                     try:
-                        bitm_tag = self.bitm_def.build(filepath=join(root, filename))
+                        bitm_tag = self.bitm_def.build(
+                            filepath=os.path.join(root, filename))
                     except Exception:
                         print(format_exc())
                         bitm_tag = None
 
                     if not bitm_tag:
-                        print("Could not load: %s" % join(root, filename))
+                        print("Could not load: %s" % os.path.join(root, filename))
                         continue
 
                     self.bitmap_tag_infos[fp] = BitmapTagInfo(bitm_tag)
@@ -941,7 +948,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
                     extracting = conv_flags.extract_to != 0
                     converting = get_will_be_converted(conv_flags, bitmap_info)
                     if pruning or converting or extracting:
-                        tag = self.bitm_def.build(filepath=join(tags_dir, fp))
+                        tag = self.bitm_def.build(filepath=os.path.join(tags_dir, fp))
                         if pruning:
                             tag.data.tagdata.compressed_color_plate_data.data = bytearray()
 
@@ -1159,7 +1166,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
 
         self.scan_dir_path.set(dirpath)
         if self.app_root:
-            self.app_root.last_load_dir = dirname(dirpath)
+            self.app_root.last_load_dir = os.path.dirname(dirpath)
 
     def data_dir_browse(self):
         if self._processing:
@@ -1182,8 +1189,8 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
             if not flags:
                 continue
 
-            flags.extract_path = join(
-                dirpath, relpath(flags.extract_path, curr_data_dir))
+            flags.extract_path = os.path.join(
+                dirpath, os.path.relpath(flags.extract_path, curr_data_dir))
 
         self.data_dir_path.set(dirpath)
 
@@ -1191,7 +1198,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         if self._processing:
             return
 
-        load_dir = dirname(self.log_file_path.get())
+        load_dir = os.path.dirname(self.log_file_path.get())
         if not load_dir:
             load_dir = self.app_root.last_load_dir
         fp = asksaveasfilename(
@@ -1201,12 +1208,12 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         if not fp:
             return
 
-        if not splitext(fp)[-1]:
+        if not os.path.splitext(fp)[-1]:
             fp += ".log"
 
         self.log_file_path.set(sanitize_path(fp))
         if self.app_root:
-            self.app_root.last_load_dir = dirname(self.log_file_path.get())
+            self.app_root.last_load_dir = os.path.dirname(self.log_file_path.get())
 
     def get_will_be_processed(self, tag_path):
         info = self.bitmap_tag_infos.get(tag_path)
@@ -1227,7 +1234,7 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         while attempts < 2:
             log_file_path = self.log_file_path.get()
             try:
-                if not exists(dirname(log_file_path)):
+                if not os.path.exists(os.path.dirname(log_file_path)):
                     log_file_path = None
 
                 if not log_file_path.endswith(".log"):
@@ -1246,7 +1253,8 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
         total_size = 0
         tiff_data_size = 0
         for filename, info in self.bitmap_tag_infos.items():
-            total_size += getsize(normpath(join(self.loaded_tags_dir, filename)))
+            total_size += os.path.getsize(os.path.normpath(
+                os.path.join(self.loaded_tags_dir, filename)))
             tiff_data_size += info.tiff_data_size
 
         logstr += "%s bitmaps total\n%sKB of bitmap data\n%sKB of TIFF data" % (
@@ -1269,8 +1277,9 @@ class BitmapConverterWindow(bitmap_converter_base_class, BinillaWidget):
                     tag_info_strs[typ][fmt] = {}
 
         for filename, info in self.bitmap_tag_infos.items():
-            fp = normpath(join(self.loaded_tags_dir, filename))
-            filesize = (getsize(fp) - info.tiff_data_size) // 1024
+            fp = os.path.normpath(
+                os.path.join(self.loaded_tags_dir, filename))
+            filesize = (os.path.getsize(fp) - info.tiff_data_size) // 1024
             tagstr = ("\n\t\t" + fp +
                       "\n\t\t\tCompiled tag size\t= %sKB\n" %
                       ("less than 1" if filesize <= 0 else str(filesize)))
@@ -1332,6 +1341,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
     type_count = 4
 
     def __init__(self, master, **options):
+        BinillaWidget.__init__(self, master, **options)
         tk.Frame.__init__(self, master, **options)
 
         self.formats_shown = [True] * self.format_count
@@ -1548,7 +1558,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
         display_frame = self.master.bitmap_display_windows.get(tag_path)
         if display_frame is None or display_frame() is None:
             tags_dir = self.master.loaded_tags_dir
-            tag = self.master.bitm_def.build(filepath=join(tags_dir, tag_path))
+            tag = self.master.bitm_def.build(filepath=os.path.join(tags_dir, tag_path))
 
             if not tag:
                 print("Could not load the tag: %s" % tag_path)
@@ -1770,4 +1780,9 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
 
 if __name__ == "__main__":
-    BitmapConverterWindow(None).mainloop()
+    try:
+        BitmapConverterWindow(None).mainloop()
+        raise SystemExit(0)
+    except Exception:
+        print(format_exc())
+        input()

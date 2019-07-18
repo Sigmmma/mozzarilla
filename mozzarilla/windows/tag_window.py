@@ -1,5 +1,7 @@
-from binilla.tag_window import *
-from supyr_struct.defs.constants import *
+from binilla.windows.tag_window import TagWindow
+
+__all__ = ("HaloTagWindow", )
+
 
 class HaloTagWindow(TagWindow):
     def __init__(self, master, tag=None, *args, **kwargs):
@@ -21,3 +23,11 @@ class HaloTagWindow(TagWindow):
             pass
 
         TagWindow.save(self, **kwargs)
+
+    @property
+    def use_scenario_names_for_script_names(self):
+        try:
+            return bool(self.app_root.config_file.data.mozzarilla.\
+                        flags.use_scenario_names_in_scripts)
+        except Exception:
+            return False

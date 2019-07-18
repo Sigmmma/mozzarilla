@@ -1,20 +1,25 @@
 from traceback import format_exc
 
-from binilla import editor_constants as e_c
-from binilla.widget_picker import *
-from binilla.widgets import BinillaWidget
-from .field_widgets import *
-from reclaimer.field_types import *
+from binilla.widgets.field_widget_picker import WidgetPicker
+from binilla.widgets.binilla_widget import BinillaWidget
 
-e_c.TITLE_WIDTH = 28
-e_c.DEF_STRING_ENTRY_WIDTH = 30
-e_c.DEF_STRING_ENTRY_WIDTH = 30
+from mozzarilla import editor_constants as e_c
+from mozzarilla.widgets.field_widgets import DependencyFrame, EntryFrame
+from reclaimer.field_types import StrTagRef, TagRef, ZoneAsset, StringID, \
+     StrUtf16, FlStrUTF16Data, StrLatin1Enum, FlFloat, FlStrUTF16,\
+     FlUInt16, FlSInt16, FlUEnum16, FlSEnum16, FlBool16,\
+     FlUInt32, FlSInt32, FlUEnum32, FlSEnum32, FlBool32,\
+     TagIndex, RawdataRef, Reflexive, RawReflexive
+from supyr_struct.field_types import Struct, Array, Float, StrUtf16,\
+     UInt16, SInt16, UEnum16, SEnum16, Bool16,\
+     UInt32, SInt32, UEnum32, SEnum32, Bool32
+     
+
 BinillaWidget.title_width = e_c.TITLE_WIDTH
 BinillaWidget.def_string_entry_width = e_c.DEF_STRING_ENTRY_WIDTH
 BinillaWidget.max_string_entry_width = e_c.MAX_STRING_ENTRY_WIDTH
 
-__all__ = ("WidgetPicker", "def_widget_picker", "add_widget",
-           "MozzarillaWidgetPicker", "def_halo_widget_picker")
+__all__ = ("WidgetPicker", "MozzarillaWidgetPicker", "def_halo_widget_picker")
 
 class MozzarillaWidgetPicker(WidgetPicker):
     pass
@@ -53,7 +58,7 @@ dhwp.copy_widget(StrLatin1Enum, SEnum32)
 #           Halo 2
 #############################
 try:
-    from reclaimer.h2.field_types import *
+    from reclaimer.h2.field_types import H2TagRef, H2RawdataRef, H2Reflexive
     dhwp.copy_widget(H2TagRef, TagRef)
     dhwp.copy_widget(H2RawdataRef, RawdataRef)
     dhwp.copy_widget(H2Reflexive, Reflexive)
@@ -65,7 +70,7 @@ except Exception:
 #           Halo 3
 #############################
 try:
-    from reclaimer.h3.field_types import *
+    from reclaimer.h3.field_types import H3TagRef, H3RawdataRef, H3Reflexive
     dhwp.copy_widget(H3TagRef, TagRef)
     dhwp.copy_widget(H3RawdataRef, RawdataRef)
     dhwp.copy_widget(H3Reflexive, Reflexive)
