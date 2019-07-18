@@ -1,10 +1,8 @@
+import os
 import tkinter as tk
-from os.path import join
 
-from binilla.widgets import BinillaWidget
+from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.util import get_cwd
-from supyr_struct.defs.constants import *
-from supyr_struct.defs.util import *
 
 curr_dir = get_cwd(__file__)
 
@@ -15,18 +13,20 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
         self.app_root = app_root
         kwargs.update(width=450, height=270, bd=0, highlightthickness=0)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
+        BinillaWidget.__init__(self, app_root, *args, **kwargs)
 
         self.title("Search and Replace")
         self.minsize(width=450, height=270)
         self.resizable(1, 0)
         self.update()
-        try:
+        for sub_dirs in ((), ('..', '..'), ('icons', )):
             try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+                self.iconbitmap(os.path.join(
+                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
+                    ))
+                break
             except Exception:
-                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
+                pass
 
         # make the tkinter variables
         self.find_var = tk.StringVar(self)
@@ -50,7 +50,7 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
             self.replace_frame, textvariable=self.replace_var)
         self.comment = tk.Label(
             self.comment_frame, anchor='nw', bg=self.comment_bg_color,
-            justify='left', font=self.app_root.comment_font,
+            justify='left', font=self.get_font("comment"),
             text="""Things to note:
   Only strings can be found/replaced. If you type in a number,
   a string consisting of that number will be searched/replaced.

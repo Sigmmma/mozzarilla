@@ -1,12 +1,14 @@
 import os
 import tkinter as tk
 
-from os.path import exists, join, isdir
 from traceback import format_exc
 
-from binilla.widgets import BinillaWidget
-from supyr_struct.defs.constants import *
-from supyr_struct.defs.util import *
+from binilla.widgets.binilla_widget import BinillaWidget
+from supyr_struct.defs.constants import PATHDIV
+from supyr_struct.util import sanitize_path
+
+# injject this default color
+BinillaWidget.active_tags_directory_color = '#%02x%02x%02x' % (40, 170, 80)
 
 
 class DirectoryFrame(BinillaWidget, tk.Frame):
@@ -17,12 +19,11 @@ class DirectoryFrame(BinillaWidget, tk.Frame):
         self.app_root = kwargs.pop('app_root')
 
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
+        BinillaWidget.__init__(self)
         tk.Frame.__init__(self, master, *args, **kwargs)
 
-        #self.controls_frame = tk.Frame(self, highlightthickness=0, height=100)
         self.hierarchy_frame = HierarchyFrame(self, app_root=self.app_root)
 
-        #self.controls_frame.pack(fill='both')
         self.hierarchy_frame.pack(fill='both', expand=True)
         self.apply_style()
 
@@ -46,6 +47,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
     tags_dir = ''
     app_root = None
     tags_dir_items = ()
+    active_tags_dir = ""
 
     def __init__(self, master, *args, **kwargs):
         kwargs.update(bg=self.default_bg_color, bd=self.listbox_depth,
@@ -53,7 +55,9 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         kwargs.setdefault('app_root', master)
 
         select_mode = kwargs.pop('select_mode', 'browse')
+
         self.app_root = kwargs.pop('app_root')
+        BinillaWidget.__init__(self)
         tk.Frame.__init__(self, master, *args, **kwargs)
 
         self.tags_tree_frame = tk.Frame(self, highlightthickness=0)
@@ -72,7 +76,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
         self.tags_tree_frame.pack(fill='both', side='left', expand=True)
 
-        # pack in this order so scrollbars aren't shrunk
+        # pack in this order so scrollbars aren't shrunk when resizing
         self.scrollbar_y.pack(side='right', fill='y')
         self.tags_tree.pack(side='right', fill='both', expand=True)
 
@@ -80,12 +84,10 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         self.apply_style()
 
     def apply_style(self, seen=None):
+        BinillaWidget.apply_style(self, seen)
         self.tags_tree_frame.config(bg=self.default_bg_color)
 
         dir_tree = self.tags_tree
-        dir_tree.tag_configure(
-            'item', background=self.entry_normal_color,
-            foreground=self.text_normal_color)
         self.highlight_tags_dir()
 
     def reload(self):
@@ -94,7 +96,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         if not dir_tree['columns']:
             dir_tree['columns'] = ('size', )
             dir_tree.heading("#0", text='path')
-            dir_tree.heading("size", text='filesize')
+            dir_tree.heading("size", text='file count/size')
             dir_tree.column("#0", minwidth=100, width=100)
             dir_tree.column("size", minwidth=100, width=100, stretch=False)
 
@@ -120,7 +122,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
     def insert_root_dir(self, root_dir, index='end'):
         iid = self.tags_tree.insert(
             '', index, iid=root_dir, text=root_dir[:-1],
-            tags=(root_dir, 'tagdir'))
+            tags=(root_dir, 'tagdir',))
         self.tags_dir_items.append(iid)
         self.destroy_subitems(iid)
 
@@ -146,13 +148,21 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         for root, subdirs, files in os.walk(directory):
             for subdir in sorted(subdirs):
                 folderpath = directory + subdir + PATHDIV
+
+                dir_info_str = ""
+                for _, subsubdirs, subfiles in os.walk(folderpath):
+                    dir_info_str = "%s files" % len(subfiles)
+                    break
+                    
                 dir_tree.insert(
                     directory, 'end', text=subdir,
-                    iid=folderpath, tags=('item',))
+                    iid=folderpath, tags=('item',),
+                    values=(dir_info_str, ))
 
                 # loop over each of the new items, give them
                 # at least one item so they can be expanded.
                 self.destroy_subitems(folderpath)
+
             for file in sorted(files):
                 try:
                     filesize = os.stat(directory + file).st_size
@@ -198,7 +208,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         if tag_path is None:
             return
 
-        if isdir(tag_path):
+        if os.path.isdir(tag_path):
             self.destroy_subitems(tag_path)
 
     def highlight_tags_dir(self, tags_dir=None):
@@ -206,11 +216,13 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         dir_tree = self.tags_tree
         if tags_dir is None:
               tags_dir = self.app_root.tags_dir
+
         for td in app.tags_dirs:
             if td == tags_dir:
                 dir_tree.tag_configure(
-                    td, background=self.entry_highlighted_color,
+                    td, background=self.active_tags_directory_color,
                     foreground=self.text_highlighted_color)
+                self.active_tags_dir = td
             else:
                 dir_tree.tag_configure(
                     td, background=self.entry_normal_color,
@@ -234,7 +246,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         except Exception:
             print(format_exc())
 
-        if isdir(tag_path):
+        if os.path.isdir(tag_path):
             app.last_load_dir = tag_path
             return
 
@@ -259,7 +271,7 @@ class DependencyFrame(HierarchyFrame):
         HierarchyFrame.apply_style(self, seen)
         self.tags_tree.tag_configure(
             'badref', foreground=self.invalid_path_color,
-            background=self.entry_normal_color)
+            background=self.default_bg_color)
 
     def get_item_tags_dir(*args, **kwargs): pass
 
@@ -324,8 +336,8 @@ class DependencyFrame(HierarchyFrame):
 
         # add an empty node to make an "expand" button appear
         tag_path = dir_tree.item(iid)['values'][-1]
-        if not exists(tag_path):
-            dir_tree.item(iid, tags=('badref', ))
+        if not os.path.exists(tag_path):
+            dir_tree.item(iid, tags=('badref', 'item'))
         elif self.get_dependencies(tag_path):
             dir_tree.insert(iid, 'end')
 
@@ -340,15 +352,15 @@ class DependencyFrame(HierarchyFrame):
         dir_tree = self.tags_tree
         parent_tag_path = dir_tree.item(parent_iid)['values'][-1]
 
-        if not exists(parent_tag_path):
+        if not os.path.exists(parent_tag_path):
             return
 
         for tag_ref_block in self.get_dependencies(parent_tag_path):
             try:
                 ext = '.' + tag_ref_block.tag_class.enum_name
                 if (self.handler.treat_mode_as_mod2 and ext == '.model' and
-                    (not exists(sanitize_path(
-                        join(tags_dir, tag_ref_block.filepath + '.model'))))):
+                    (not os.path.exists(sanitize_path(
+                        os.path.join(tags_dir, tag_ref_block.filepath + '.model'))))):
                     ext = '.gbxmodel'
             except Exception:
                 ext = ''
@@ -393,7 +405,7 @@ class DependencyFrame(HierarchyFrame):
         except Exception:
             print(format_exc())
 
-        if isdir(tag_path):
+        if os.path.isdir(tag_path):
             return
 
         try:

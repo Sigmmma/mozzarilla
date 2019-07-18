@@ -2,23 +2,28 @@ import os
 import tkinter as tk
 import time
 
-from os.path import splitext, dirname, join, relpath, basename, isfile, exists
 from tkinter import messagebox
 from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import sanitize_path, is_in_dir, get_cwd, PATHDIV
-from binilla.widgets import BinillaWidget, ScrollMenu
+from binilla.util import sanitize_path, get_cwd
+from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.widgets.scroll_menu import ScrollMenu
+
 from reclaimer.hek.defs.mod2 import mod2_def
 from reclaimer.model.jms import read_jms, write_jms, MergedJmsModel, JmsModel
 from reclaimer.model.dae import jms_model_from_dae
 from reclaimer.model.obj import jms_model_from_obj
-from reclaimer.model.model_compilation import compile_gbxmodel, generate_shader
+from reclaimer.model.model_compilation import compile_gbxmodel
+from reclaimer.model.util import generate_shader
+
+from supyr_struct.defs.constants import PATHDIV
+from supyr_struct.util import is_in_dir
 
 if __name__ == "__main__":
-    model_compiler_base_class = tk.Tk
+    window_base_class = tk.Tk
 else:
-    model_compiler_base_class = tk.Toplevel
+    window_base_class = tk.Toplevel
 
 curr_dir = get_cwd(__file__)
 
@@ -36,7 +41,7 @@ shader_types = (
 shader_type_map = {"shader_" + shader_types[i]: i
                    for i in range(len(shader_types))}
 
-class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
+class ModelCompilerWindow(window_base_class, BinillaWidget):
     app_root = None
     tags_dir = ''
 
@@ -55,25 +60,26 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
     _jms_tree_iids = ()
 
     def __init__(self, app_root, *args, **kwargs):
-        if model_compiler_base_class == tk.Toplevel:
+        if window_base_class == tk.Toplevel:
             kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
             self.app_root = app_root
         else:
             self.app_root = self
 
+        window_base_class.__init__(self, app_root, *args, **kwargs)
         BinillaWidget.__init__(self, *args, **kwargs)
-        model_compiler_base_class.__init__(self, app_root, *args, **kwargs)
 
         self.title("Gbxmodel compiler")
-        self.resizable(1, 0)
+        self.resizable(1, 1)
         self.update()
-        try:
+        for sub_dirs in ((), ('..', '..'), ('icons', )):
             try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+                self.iconbitmap(os.path.os.path.join(
+                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
+                    ))
+                break
             except Exception:
-                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
+                pass
 
 
         self.superhigh_lod_cutoff = tk.StringVar(self)
@@ -192,13 +198,13 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
 
         self.load_button = tk.Button(
-            self.buttons_frame, text="Load models",
+            self.buttons_frame, text="Load\nmodels",
             command=self.load_models)
         self.save_button = tk.Button(
-            self.buttons_frame, text="Save models as JMS",
+            self.buttons_frame, text="Save as JMS",
             command=self.save_models)
         self.compile_button = tk.Button(
-            self.buttons_frame, text="Compile Gbxmodel",
+            self.buttons_frame, text="Compile\ngbxmodel",
             command=self.compile_gbxmodel)
 
         self.populate_model_info_tree()
@@ -331,10 +337,11 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                             values=(mat.tiff_path, ))
 
 
+        regions = list(sorted(self.merged_jms.regions))
         regions_iid = jms_tree.insert('', 'end', text="Regions", tags=('item',),
-                                      values=(len(self.merged_jms.regions),))
+                                      values=(len(regions),))
         self._jms_tree_iids.append(regions_iid)
-        for region in sorted(self.merged_jms.regions):
+        for region in regions:
             jms_tree.insert(regions_iid, 'end', text=region, tags=('item',),)
 
 
@@ -356,7 +363,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 iid = jms_tree.insert(
                     markers_iid, 'end', tags=('item',), text=marker.name)
                 perm_name = marker.permutation
-                region_name = jms_model.regions[marker.region]
+                region_name = regions[marker.region]
                 parent_name = ""
                 if marker.parent >= 0:
                     parent_name = nodes[marker.parent].name
@@ -392,34 +399,34 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             return
 
         tags_dir = self.tags_dir.get()
-        data_dir = join(dirname(dirname(tags_dir)), "data", "")
+        data_dir = os.path.join(os.path.dirname(os.path.dirname(tags_dir)), "data", "")
         jms_dir = self.jms_dir.get()
         if tags_dir and not jms_dir:
             jms_dir = data_dir
 
         dirpath = askdirectory(
             initialdir=jms_dir, parent=self,
-            title="Select the folder of jms/obj models to compile...")
+            title="Select the folder of models to compile...")
 
-        dirpath = join(sanitize_path(dirpath), "")
+        dirpath = os.path.join(sanitize_path(dirpath), "")
         if not dirpath:
             return
 
-        if tags_dir and data_dir and basename(dirpath).lower() == "models":
-            object_dir = dirname(dirpath)
+        if tags_dir and data_dir and os.path.basename(dirpath).lower() == "models":
+            object_dir = os.path.dirname(dirpath)
 
             if object_dir and is_in_dir(object_dir, data_dir):
-                tag_path = join(object_dir, basename(object_dir))
-                tag_path = join(tags_dir, relpath(tag_path, data_dir))
+                tag_path = os.path.join(object_dir, os.path.basename(object_dir))
+                tag_path = os.path.join(tags_dir, os.path.relpath(tag_path, data_dir))
                 self.gbxmodel_path.set(tag_path + ".gbxmodel")
 
-        self.app_root.last_load_dir = dirname(dirpath)
+        self.app_root.last_load_dir = os.path.dirname(dirpath)
         self.jms_dir.set(dirpath)
         if not self.tags_dir.get():
             path_pieces = self.app_root.last_load_dir.split(
                 "%sdata%s" % (PATHDIV, PATHDIV))
             if len(path_pieces) > 1:
-                self.tags_dir.set(join(path_pieces[0], "tags"))
+                self.tags_dir.set(os.path.join(path_pieces[0], "tags"))
 
     def tags_dir_browse(self):
         if self._compiling or self._loading or self._saving:
@@ -430,24 +437,24 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             initialdir=old_tags_dir, parent=self,
             title="Select the root of the tags directory")
 
-        tags_dir = sanitize_path(join(tags_dir, ""))
+        tags_dir = sanitize_path(os.path.join(tags_dir, ""))
         if not tags_dir:
             return
 
         mod2_path = self.gbxmodel_path.get()
         if old_tags_dir and mod2_path and not is_in_dir(mod2_path, tags_dir):
             # adjust mod2 filepath to be relative to the new tags directory
-            mod2_path = join(tags_dir, relpath(mod2_path, old_tags_dir))
+            mod2_path = os.path.join(tags_dir, os.path.relpath(mod2_path, old_tags_dir))
             self.gbxmodel_path.set(mod2_path)
 
-        self.app_root.last_load_dir = dirname(tags_dir)
+        self.app_root.last_load_dir = os.path.dirname(tags_dir)
         self.tags_dir.set(tags_dir)
 
     def gbxmodel_path_browse(self, force=False):
         if not force and (self._compiling or self._loading or self._saving):
             return
 
-        mod2_dir = dirname(self.gbxmodel_path.get())
+        mod2_dir = os.path.dirname(self.gbxmodel_path.get())
         if self.tags_dir.get() and not mod2_dir:
             mod2_dir = self.tags_dir.get()
 
@@ -459,16 +466,16 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             return
 
         fp = sanitize_path(fp)
-        if not splitext(fp)[-1]:
+        if not os.path.splitext(fp)[-1]:
             fp += ".gbxmodel"
 
-        self.app_root.last_load_dir = dirname(fp)
+        self.app_root.last_load_dir = os.path.dirname(fp)
         self.gbxmodel_path.set(fp)
 
-        path_pieces = join(self.app_root.last_load_dir, '').split(
+        path_pieces = os.path.join(self.app_root.last_load_dir, '').split(
             "%stags%s" % (PATHDIV, PATHDIV))
         if len(path_pieces) > 1:
-            self.tags_dir.set(join(path_pieces[0], "tags"))
+            self.tags_dir.set(os.path.join(path_pieces[0], "tags"))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
@@ -529,11 +536,11 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         if self._compiling or self._loading or self._saving:
             return
 
-        tags_dir = sanitize_path(join(self.tags_dir.get(), ""))
-        if not tags_dir or not exists(tags_dir):
+        tags_dir = sanitize_path(os.path.join(self.tags_dir.get(), ""))
+        if not tags_dir or not os.path.exists(tags_dir):
             return
 
-        shader_dir = dirname(join(tags_dir, self.shader_path_string_var.get()))
+        shader_dir = os.path.dirname(os.path.join(tags_dir, self.shader_path_string_var.get()))
 
         shader_exts = tuple((typ, "*.shader_%s" % typ)
                             for typ in shader_types)
@@ -543,14 +550,14 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             filetypes=shader_exts + (('All', '*'), )
             )
 
-        fp, ext = splitext(sanitize_path(fp))
+        fp, ext = os.path.splitext(sanitize_path(fp))
         if fp:
             if not is_in_dir(fp, tags_dir):
                 print("Specified shader is not located in the tags directory.")
                 return
 
             ext = ext.strip(".").lower()
-            self.shader_path_string_var.set(relpath(fp, tags_dir))
+            self.shader_path_string_var.set(os.path.relpath(fp, tags_dir))
             mat = self.get_material(self.shader_names_menu.sel_index)
             if mat and ext in shader_type_map:
                 self.shader_types_menu.sel_index = shader_type_map[ext]
@@ -558,8 +565,11 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
 
     def get_shader_names(self, opt_index=None):
-        if opt_index == "active":
+        if opt_index == "<ACTIVE>":
             opt_index = self.shader_names_menu.sel_index
+
+        if isinstance(opt_index, str):
+            opt_index = -1
 
         if opt_index is not None:
             return self.merged_jms.materials[opt_index].\
@@ -579,7 +589,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
             self.app_root.tool_windows.pop(self.window_name, None)
         except AttributeError:
             pass
-        model_compiler_base_class.destroy(self)
+        window_base_class.destroy(self)
 
     def load_models(self):
         if not self._compiling and not self._loading and not self._saving:
@@ -622,10 +632,10 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
         fps = []
         for _, __, files in os.walk(models_dir):
             for fname in files:
-                ext = splitext(fname)[-1].lower()
+                ext = os.path.splitext(fname)[-1].lower()
                 #if ext in ".jms.obj.dae":
                 if ext in ".jms.obj":
-                    fps.append(join(models_dir, fname))
+                    fps.append(os.path.join(models_dir, fname))
 
             break
 
@@ -644,8 +654,8 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 print("    %s" % fp.replace('/', '\\').split("\\")[-1])
                 self.app_root.update()
 
-                model_name = basename(fp).split('.')[0]
-                ext = splitext(fp)[-1].lower()
+                model_name = os.path.basename(fp).split('.')[0]
+                ext = os.path.splitext(fp)[-1].lower()
 
                 jms_model = None
                 if ext == ".jms":
@@ -688,6 +698,21 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 print("    Warning, not all node list checksums match.")
                 break
 
+        # make sure the highest lod for each permutation is set as superhigh
+        # this is necessary, as only superhigh jms markers are used
+        jms_models_by_name = {}
+        for jms_model in jms_models:
+            lod_models = jms_models_by_name.setdefault(
+                jms_model.perm_name, [None]*5)
+            lod_index = {"high":1, "medium":2, "low":3, "superlow":4}.get(
+                jms_model.lod_level, 0)
+            lod_models[lod_index] = jms_model
+
+        for lod_models in jms_models_by_name.values():
+            for jms_model in lod_models:
+                if jms_model is not None:
+                    jms_model.lod_level = "superhigh"
+                    break
 
         print("Merging jms data...")
         self.app_root.update()
@@ -710,12 +735,12 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         shaders_dir = ""
         if mod2_path:
-            shaders_dir = join(dirname(mod2_path), "shaders", '')
+            shaders_dir = os.path.join(os.path.dirname(mod2_path), "shaders", '')
         tags_dir = self.tags_dir.get()
-        has_local_shaders = exists(shaders_dir) and exists(tags_dir)
+        has_local_shaders = os.path.exists(shaders_dir) and os.path.exists(tags_dir)
         if errors_occurred:
             print("    Errors occurred while loading jms files.")
-        elif isfile(mod2_path):
+        elif os.path.isfile(mod2_path):
             try:
                 self.mod2_tag = mod2_def.build(filepath=mod2_path)
 
@@ -747,12 +772,12 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                     # fill in any missing shader paths with ones found nearby
                     for _, __, files in os.walk(shaders_dir):
                         for filename in files:
-                            name, ext = splitext(filename)
+                            name, ext = os.path.splitext(filename)
                             ext = ext.lower()
                             if ext.startswith(".shader"):
                                 local_shaders.setdefault(
                                     name.split("\\")[-1].lower(), []).append(
-                                        join(shaders_dir, filename))
+                                        os.path.join(shaders_dir, filename))
                         break
 
                     for mat in merged_jms.materials:
@@ -763,8 +788,8 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                         # shader type isnt set. Try to detect its location and
                         # type if possible, or set it to a default value if not
                         shader_path = shader_path.lower().replace("/", "\\")
-                        name, ext = splitext(shader_path)
-                        mat.shader_path = relpath(name, tags_dir).strip("\\")
+                        name, ext = os.path.splitext(shader_path)
+                        mat.shader_path = os.path.relpath(name, tags_dir).strip("\\")
                         mat.shader_type = ext.strip(".")
 
             except Exception:
@@ -784,8 +809,8 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
                 if not assume_shaders_dir:
                     try:
-                        shader_path = relpath(
-                            join(shaders_dir, shader_path), tags_dir)
+                        shader_path = os.path.relpath(
+                            os.path.join(shaders_dir, shader_path), tags_dir)
                         shader_path = shader_path.strip("\\")
                     except ValueError:
                         assume_shaders_dir = True
@@ -795,14 +820,14 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 assume_shaders_dir = False
 
             if assume_shaders_dir or shader_path.startswith("..\\"):
-                shader_path = "shaders\\" + basename(shader_path)
+                shader_path = "shaders\\" + os.path.basename(shader_path)
 
             mat.shader_path = shader_path.lstrip("..\\")
 
 
         if not self.mod2_tag:
-            print("    Existing gbxmodel not detected or could not be loaded.\n"
-                  "        A new gbxmodel will be created.")
+            print("    Existing gbxmodel tag not detected or could not be loaded.\n"
+                  "        A new gbxmodel tag will be created.")
 
         print("Finished loading models. Took %s seconds.\n" %
               str(time.time() - start).split('.')[0])
@@ -821,7 +846,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
                 if not jms_model.is_random_perm:
                     fname = "~" + fname
 
-                write_jms(join(models_dir, fname), jms_model)
+                write_jms(os.path.join(models_dir, fname), jms_model)
 
         print("Finished saving models. Took %s seconds.\n" %
               str(time.time() - start).split('.')[0])
@@ -883,7 +908,7 @@ class ModelCompilerWindow(model_compiler_base_class, BinillaWidget):
 
         tags_dir = self.tags_dir.get()
         if tags_dir:
-            data_dir = join(dirname(dirname(tags_dir)), "data", "")
+            data_dir = os.path.join(os.path.dirname(os.path.dirname(tags_dir)), "data", "")
             for mat in self.merged_jms.materials:
                 try:
                     generate_shader(mat, tags_dir, data_dir)

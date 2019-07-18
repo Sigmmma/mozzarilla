@@ -1,21 +1,28 @@
 import os
-import gc
+import re
 import tkinter as tk
 
-from os.path import dirname, exists, isdir, join, splitext, relpath
 from threading import Thread
 from tkinter import messagebox
+from tkinter.filedialog import askopenfilename, askopenfilenames,\
+     askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from reclaimer.constants import *
+from reclaimer.constants import PATHDIV, inject_halo_constants
+from supyr_struct.util import is_in_dir
 
 # before we do anything, we need to inject these constants so any definitions
 # that are built that use them will have them in their descriptor entries.
 inject_halo_constants()
 
 from binilla.handler import Handler
-from binilla.app_window import *
-from binilla.util import do_subprocess, is_main_frozen, get_cwd
+from binilla.app_window import Binilla, default_hotkeys,\
+     default_tag_window_hotkeys
+from binilla.util import do_subprocess, ProcController, is_main_frozen,\
+     get_cwd, sanitize_path
+from binilla.windows.def_selector_window import DefSelectorWindow
+from binilla.windows.tag_window import read_hotkey_string
+
 from reclaimer.hek.handler import HaloHandler
 from reclaimer.h3.handler import Halo3Handler
 from reclaimer.os_v3_hek.handler import OsV3HaloHandler
@@ -25,16 +32,22 @@ from reclaimer.stubbs.handler import StubbsHandler
 
 import mozzarilla
 
-from mozzarilla.config_def import config_def, guerilla_workspace_def
-from mozzarilla.widget_picker import *
-from mozzarilla.tag_window import HaloTagWindow
-from mozzarilla.tools import \
-     SearchAndReplaceWindow, SauceRemovalWindow, BitmapConverterWindow,\
+from mozzarilla import editor_constants as e_c
+from mozzarilla.widgets.field_widget_picker import def_halo_widget_picker
+from mozzarilla.widgets.directory_frame import DirectoryFrame,\
+     HierarchyFrame, DependencyFrame
+from mozzarilla.windows.tag_window import HaloTagWindow
+from mozzarilla.windows.tools import \
+     SearchAndReplaceWindow, SauceRemovalWindow, \
+     BitmapSourceExtractorWindow, BitmapConverterWindow,\
      DependencyWindow, TagScannerWindow, DataExtractionWindow,\
-     DirectoryFrame, HierarchyFrame, DependencyFrame,\
      bitmap_from_dds, bitmap_from_multiple_dds, bitmap_from_bitmap_source, \
-     ModelCompilerWindow, physics_from_jms,\
-     hud_message_text_from_hmt, strings_from_txt
+     AnimationsCompilerWindow, AnimationsCompressionWindow,\
+     ModelCompilerWindow, physics_from_jms, hud_message_text_from_hmt,\
+     strings_from_txt
+from mozzarilla.windows.tag_converters import ObjectConverter,\
+     GbxmodelConverter, ModelConverter, ChicagoShaderConverter,\
+     ModelAnimationsConverter, CollisionConverter, SbspConverter
 
 
 default_hotkeys.update({
@@ -68,8 +81,8 @@ class Mozzarilla(Binilla):
 
     styles_dir  = this_curr_dir + PATHDIV + "styles"
     config_path = this_curr_dir + '%smozzarilla.cfg' % PATHDIV
-    config_def  = config_def
-    config_version = 2
+    guerilla_workspace_def  = None
+    config_version = 3
 
     handler_classes = (
         HaloHandler,
@@ -92,7 +105,7 @@ class Mozzarilla(Binilla):
         )
 
     # names of the handlers that MUST load tags from within their tags_dir
-    tags_dir_relative = set((
+    tags_dir_relative = frozenset((
         "Halo 1",
         "Halo 1 OS v3",
         "Halo 1 OS v4",
@@ -112,6 +125,8 @@ class Mozzarilla(Binilla):
         )
 
     about_messages = ()
+    color_names = e_c.mozz_color_names
+    font_names = e_c.mozz_font_names
 
     _curr_handler_index  = 0
     _curr_tags_dir_index = 0
@@ -140,22 +155,45 @@ class Mozzarilla(Binilla):
         except Exception:
             pass
 
-        self.tags_dir_relative = set(self.tags_dir_relative)
         self.tags_dirs = ["%s%stags%s" % (this_curr_dir, PATHDIV, PATHDIV)]
         self.handlers = list({} for i in range(len(self.handler_classes)))
         self.handler_names = list(self.handler_names)
 
+        tk.Tk.__init__(self, *args, **{
+            k: v for k, v in kwargs.items() if k in (
+            "screenName", "baseName", "className", "useTk", "sync", "use"
+            )})
+
+        # NOTE: Do this import AFTER Tk interpreter is set up, otherwise
+        # it will fail to get the names of the font families
+        from mozzarilla.defs.config_def import config_def, mozz_config_version_def
+        from mozzarilla.defs.v2_config_def import v2_config_def
+        from mozzarilla.defs.guerilla_workspace_def import guerilla_workspace_def
+
+        kwargs.update(
+            config_def=config_def, config_version_def=mozz_config_version_def,
+            config_defs={1: v2_config_def, 2: v2_config_def, 3: config_def})
+        self.guerilla_workspace_def = guerilla_workspace_def
+
         Binilla.__init__(self, *args, **kwargs)
-        try:
+
+        self.app_bitmap_filepath = os.path.join(this_curr_dir, 'mozzarilla.png')
+        if not os.path.isfile(self.app_bitmap_filepath):
+            self.app_bitmap_filepath = os.path.join(this_curr_dir, 'icons', 'mozzarilla.png')
+        if not os.path.isfile(self.app_bitmap_filepath):
+            self.app_bitmap_filepath = ""
+
+        if not e_c.IS_LNX:
             try:
-                self.icon_filepath = join(this_curr_dir, 'mozzarilla.ico')
-                self.iconbitmap(self.icon_filepath)
+                try:
+                    self.icon_filepath = os.path.join(this_curr_dir, 'mozzarilla.ico')
+                    self.iconbitmap(self.icon_filepath)
+                except Exception:
+                    self.icon_filepath = os.path.join(this_curr_dir, 'icons', 'mozzarilla.ico')
+                    self.iconbitmap(self.icon_filepath)
             except Exception:
-                self.icon_filepath = join(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
-                self.iconbitmap(self.icon_filepath)
-        except Exception:
-            self.icon_filepath = ""
-            print("Could not load window icon.")
+                self.icon_filepath = ""
+                print("Could not load window icon.")
 
         self.file_menu.insert_command("Exit", label="Load guerilla config",
                                       command=self.load_guerilla_config)
@@ -183,11 +221,12 @@ class Mozzarilla(Binilla):
         self.compile_menu = tk.Menu(self.main_menu, tearoff=0)
         self.defs_menu = tk.Menu(self.main_menu, tearoff=0,
                                  postcommand=self.generate_defs_menu)
+        self.converters_menu = tk.Menu(self.tools_menu, tearoff=0)
         
         self.main_menu.delete(0, "end")  # clear the menu
         self.main_menu.add_cascade(label="File",    menu=self.file_menu)
         self.main_menu.add_cascade(label="Settings", menu=self.settings_menu)
-        self.main_menu.add_cascade(label="Windows", menu=self.windows_menu)
+        self.main_menu.add_cascade(label="Tag Windows", menu=self.windows_menu)
         if self.debug_mode:
             self.main_menu.add_cascade(label="Debug", menu=self.debug_menu)
         self.main_menu.add_cascade(label="Tag set", menu=self.defs_menu)
@@ -203,31 +242,61 @@ class Mozzarilla(Binilla):
             pass
 
         self.tools_menu.add_command(
-            label="Tag dependency viewer / zipper", command=self.show_dependency_viewer)
-        self.tools_menu.add_command(
-            label="Tags directory error locator", command=self.show_tag_scanner)
-        self.tools_menu.add_separator()
-        self.tools_menu.add_command(
             label="Search and replace", command=self.show_search_and_replace)
         self.tools_menu.add_command(
-            label="Scenario Open Sauce remover",
+            label="Scenario 'Open Sauce' remover",
             command=self.show_sauce_removal_window)
         self.tools_menu.add_separator()
         self.tools_menu.add_command(
             label="Bitmap converter",
             command=self.show_bitmap_converter_window)
+        self.tools_menu.add_command(
+            label="Bitmap source extractor",
+            command=self.show_bitmap_source_extractor)
         self.tools_menu.add_separator()
+        self.tools_menu.add_command(
+            label="Model_animations decompressor",
+            command=self.show_animations_compression_window)
+        self.tools_menu.add_separator()
+        self.tools_menu.add_command(
+            label="Tags directory error locator", command=self.show_tag_scanner)
+        self.tools_menu.add_command(
+            label="Tag dependency viewer / zipper", command=self.show_dependency_viewer)
         self.tools_menu.add_command(
             label="Tag data extraction",
             command=self.show_data_extraction_window)
+        self.tools_menu.add_separator()
+        self.tools_menu.add_cascade(
+            label="Tag converters", menu=self.converters_menu)
+
+        self.converters_menu.add_command(
+            label="scenario_structure_bsp  to  gbxmodel", command=self.show_sbsp_converter)
+        self.converters_menu.add_command(
+            label="model_collision_geometry  to  gbxmodel", command=self.show_collision_converter)
+        self.converters_menu.add_command(
+            label="model  to  gbxmodel", command=self.show_model_converter)
+        self.converters_menu.add_separator()
+        self.converters_menu.add_command(
+            label="object  to  object", command=self.show_object_converter)
+        self.converters_menu.add_separator()
+        self.converters_menu.add_command(
+            label="gbxmodel  to  model", command=self.show_gbxmodel_converter)
+        self.converters_menu.add_separator()
+        self.converters_menu.add_command(
+            label="chicago_extended  to  chicago (shaders)", command=self.show_chicago_shader_converter)
+        self.converters_menu.add_separator()
+        self.converters_menu.add_command(
+            label="model_animations_yelo  to  model_animations", command=self.show_animations_converter)
 
         self.compile_menu.add_command(
             label="Bitmap from dds texture(s)", command=self.bitmap_from_multiple_dds)
         self.compile_menu.add_command(
-            label="Bitmap(s) from dds texture", command=self.bitmap_from_dds)
+            label="Bitmap(s) from dds texture(s)", command=self.bitmap_from_dds)
         self.compile_menu.add_command(
             label="Bitmap(s) from bitmap source", command=self.bitmap_from_bitmap_source)
         self.compile_menu.add_separator()
+        self.compile_menu.add_command(
+            label="Model_animations from jma", command=self.show_animations_compiler_window)
         self.compile_menu.add_command(
             label="Gbxmodel from jms", command=self.show_model_compiler_window)
         self.compile_menu.add_command(
@@ -242,6 +311,7 @@ class Mozzarilla(Binilla):
 
         self.select_defs(manual=False)
         self.tool_windows = {}
+
         self._mozzarilla_initialized = True
 
         self.make_window_panes()
@@ -253,10 +323,25 @@ class Mozzarilla(Binilla):
             self.directory_frame.highlight_tags_dir(self.tags_dir)
 
         try:
-            if self.config_file.data.header.flags.load_last_workspace:
+            if self.config_file.data.app_window.flags.load_last_workspace:
                 self.load_last_workspace()
         except AttributeError:
             pass
+
+        if self.config_made_anew:
+            messagebox.showinfo(
+                "Select your default tags directory",
+                "Halo tags are all relative to their 'tags' root directory. "
+                "After this prompt, you will be asked to select your tags "
+                "directory. If you choose not to, a default one will be set.",
+                parent=self)
+            self.set_tags_dir()
+            messagebox.showinfo(
+                "About tags directories",
+                "If you want to change/add/remove a tags directory, click the "
+                "Settings menu and click either set, add, or remove. You may "
+                "toggle through tags directories at any time with F5.",
+                parent=self)
 
     @property
     def data_dir(self):
@@ -265,7 +350,7 @@ class Mozzarilla(Binilla):
             if not tags_dir:
                 return ""
 
-            return join(dirname(tags_dir.rstrip(PATHDIV)), "data")
+            return os.path.join(os.path.dirname(tags_dir.rstrip(PATHDIV)), "data")
         except IndexError:
             return None
 
@@ -279,12 +364,12 @@ class Mozzarilla(Binilla):
     @tags_dir.setter
     def tags_dir(self, new_val):
         assert isinstance(new_val, str)
-        new_val = join(sanitize_path(new_val), '')  # ensure it ends with a \
+        new_val = os.path.join(sanitize_path(new_val), '')  # ensure it ends with a \
         self.tags_dirs[self._curr_tags_dir_index] = new_val
 
     def get_tags_dir_index(self, tags_dir):
         try:
-            tags_dir = join(sanitize_path(tags_dir), '')
+            tags_dir = os.path.join(sanitize_path(tags_dir), '')
             return self.tags_dirs.index(tags_dir)
         except Exception:
             return None
@@ -312,7 +397,7 @@ class Mozzarilla(Binilla):
             if isinstance(index, str):
                 index = self.handler_names.index(index)
 
-            tags_dir = join(sanitize_path(tags_dir), '')
+            tags_dir = os.path.join(sanitize_path(tags_dir), '')
             if not self.handlers[index].get(tags_dir.lower(), None):
                 if create_if_not_exists:
                     self.create_handlers(tags_dir, index)
@@ -324,7 +409,7 @@ class Mozzarilla(Binilla):
             return None
 
     def create_handlers(self, tags_dir, handler_indices=()):
-        tags_dir = join(sanitize_path(tags_dir), '')
+        tags_dir = os.path.join(sanitize_path(tags_dir), '')
         tags_dir_key = tags_dir.lower()
         if isinstance(handler_indices, int):
             handler_indices = (handler_indices, )
@@ -339,7 +424,7 @@ class Mozzarilla(Binilla):
             if handlers_by_dir.get(tags_dir_key, None):
                 continue
 
-            handler = self.handler_classes[i](debug=self.debug)
+            handler = self.handler_classes[i](debug=self.debug, case_sensitive=e_c.IS_LNX)
             handler.tagsdir = tags_dir
             handlers_by_dir[tags_dir_key] = handler
 
@@ -423,7 +508,7 @@ class Mozzarilla(Binilla):
         if not tags_dir:
             return
 
-        tags_dir = join(sanitize_path(tags_dir), '')
+        tags_dir = os.path.join(sanitize_path(tags_dir), '')
         if self.get_tags_dir_index(tags_dir) is not None:
             if manual:
                 print("That tags directory already exists.")
@@ -471,7 +556,7 @@ class Mozzarilla(Binilla):
         if not tags_dir:
             return
 
-        tags_dir = join(sanitize_path(tags_dir), '')
+        tags_dir = os.path.join(sanitize_path(tags_dir), '')
         if tags_dir in self.tags_dirs:
             print("That tags directory already exists.")
             return
@@ -522,6 +607,11 @@ class Mozzarilla(Binilla):
         self._curr_tags_dir_index = 0
         for tags_dir in tags_dirs:
             self.add_tags_dir(tags_dir=tags_dir.path, manual=False)
+
+        backup_dir_basename = config_data.tag_backup.folder_basename
+        for handler_set in self.handlers:
+            for handler in handler_set.values():
+                handler.backup_dir_basename = backup_dir_basename
 
         self.switch_tags_dir(
             index=min(mozz.last_tags_dir, len(self.tags_dirs)), manual=False)
@@ -627,14 +717,14 @@ class Mozzarilla(Binilla):
         if not fp:
             return
 
-        self.last_load_dir = dirname(fp)
-        tags_dir = os.path.join(dirname(fp), "tags", "")
+        self.last_load_dir = os.path.dirname(fp)
+        tags_dir = os.path.join(os.path.dirname(fp), "tags", "")
         if not os.path.exists(tags_dir):
             print("Specified guerilla.cfg has no corresponding tags directory.")
             return
 
-        workspace = guerilla_workspace_def.build(filepath=fp)
-        tags_dir = join(sanitize_path(tags_dir), '')
+        workspace = self.guerilla_workspace_def.build(filepath=fp)
+        tags_dir = os.path.join(sanitize_path(tags_dir), '')
         if self.get_tags_dir_index(tags_dir) is None:
             print("Adding tags directory:\n    %s" % tags_dir)
             self.add_tags_dir(tags_dir=tags_dir)
@@ -688,6 +778,7 @@ class Mozzarilla(Binilla):
         # make sure all the chosen tag paths are relative
         # to the current tags directory if they must be
         last_load_dir = self.last_load_dir
+        tags_dir = os.path.realpath(tags_dir)
         if self.handler_name in self.tags_dir_relative:
             for i in range(len(sanitized_paths)):
                 path = sanitized_paths[i]
@@ -696,8 +787,8 @@ class Mozzarilla(Binilla):
                     continue
                 elif is_in_dir(path, tags_dir, 0):
                     # make the path relative to the tags_dir
-                    last_load_dir = dirname(path)
-                    sanitized_paths[i] = relpath(path, tags_dir)
+                    last_load_dir = os.path.dirname(path)
+                    sanitized_paths[i] = os.path.relpath(path, tags_dir)
                     continue
 
                 print("Specified tag(s) are not located in the tags directory")
@@ -729,7 +820,7 @@ class Mozzarilla(Binilla):
         if not fp:
             return
 
-        self.last_load_dir = dirname(fp)
+        self.last_load_dir = os.path.dirname(fp)
         dsw = DefSelectorWindow(
             self, title="Which tag is this", action=lambda def_id:
             self.load_tags(filepaths=fp, def_id=def_id))
@@ -758,7 +849,7 @@ class Mozzarilla(Binilla):
 
         # change the tags filepath to be relative to the current tags directory
         if hasattr(tag, "rel_filepath"):
-            tag.filepath = join(tag.tags_dir, tag.rel_filepath)
+            tag.filepath = os.path.join(tag.tags_dir, tag.rel_filepath)
 
         return Binilla.save_tag(self, tag)
 
@@ -775,7 +866,7 @@ class Mozzarilla(Binilla):
         if filepath is None:
             ext = tag.ext
             filepath = asksaveasfilename(
-                initialdir=dirname(tag.filepath), parent=self,
+                initialdir=os.path.dirname(tag.filepath), parent=self,
                 defaultextension=ext, title="Save tag as...",
                 filetypes=[(ext[1:], "*" + ext), ('All', '*')])
         else:
@@ -795,9 +886,9 @@ class Mozzarilla(Binilla):
         tagsdir_rel = handler.tagsdir_relative
 
         try:
-            self.last_load_dir = dirname(filepath)
+            self.last_load_dir = os.path.dirname(filepath)
             if tagsdir_rel:
-                filepath = relpath(filepath, tag.tags_dir)
+                filepath = os.path.relpath(filepath, tag.tags_dir)
 
                 if tag.tags_dir != tags_dir:
                     # trying to save outside tags directory
@@ -851,7 +942,8 @@ class Mozzarilla(Binilla):
         data = self.config_file.data
 
         # make sure these have as many entries as they're supposed to
-        for block in (data.directory_paths, data.widgets.depths, data.colors):
+        for block in (data.directory_paths, data.appearance.colors,
+                      data.appearance.depths):
             block.extend(len(block.NAME_MAP))
 
         tags_dirs = data.mozzarilla.tags_dirs
@@ -861,8 +953,8 @@ class Mozzarilla(Binilla):
 
         self.update_config()
 
-        c_hotkeys = data.hotkeys
-        c_tag_window_hotkeys = data.tag_window_hotkeys
+        c_hotkeys = data.all_hotkeys.hotkeys
+        c_tag_window_hotkeys = data.all_hotkeys.tag_window_hotkeys
 
         for k_set, b in ((default_hotkeys, c_hotkeys),
                          (default_tag_window_hotkeys, c_tag_window_hotkeys)):
@@ -959,9 +1051,10 @@ class Mozzarilla(Binilla):
         if not self._initialized:
             return
 
-        Binilla.apply_style(self, seen)
-        try:
+        with self.style_change_lock:
             try:
+                Binilla.apply_style(self, seen)
+
                 mozz = self.config_file.data.mozzarilla
                 show_hierarchy = mozz.flags.show_hierarchy_window
                 show_console = mozz.flags.show_console_window
@@ -972,6 +1065,7 @@ class Mozzarilla(Binilla):
                 if show_hierarchy:
                     self.directory_frame.pack(fill='both', expand=True)
                     self.window_panes.add(self.directory_frame)
+
                 if show_console:
                     self.io_frame.pack(fill='both', expand=True)
                     self.window_panes.add(self.io_frame)
@@ -983,10 +1077,9 @@ class Mozzarilla(Binilla):
                         self.window_panes.sash_place(0, sash_pos, 1)
                     except Exception:
                         pass
-            except Exception:
-                print(format_exc())
-        except AttributeError: print(format_exc())
-        except Exception: print(format_exc())
+            except AttributeError: print(format_exc())
+            except Exception: print(format_exc())
+            except Exception: print(format_exc())
 
     def make_tag_window(self, tag, *, focus=True, window_cls=None,
                         is_new_tag=False):
@@ -998,9 +1091,9 @@ class Mozzarilla(Binilla):
         self.update_tag_window_title(w)
         try:
             try:
-                w.iconbitmap(join(this_curr_dir, 'mozzarilla.ico'))
+                w.iconbitmap(os.path.join(this_curr_dir, 'mozzarilla.ico'))
             except Exception:
-                w.iconbitmap(join(this_curr_dir, 'icons', 'mozzarilla.ico'))
+                w.iconbitmap(os.path.join(this_curr_dir, 'icons', 'mozzarilla.ico'))
         except Exception:
             pass
 
@@ -1028,7 +1121,7 @@ class Mozzarilla(Binilla):
         self.directory_frame.pack(expand=True, fill='both')
 
     def show_tool_window(self, window_name, window_class,
-                         needs_tag_refs=False):
+                         needs_tag_refs=False, **kw):
         w = self.tool_windows.get(window_name)
         if w is not None:
             try: del self.tool_windows[window_name]
@@ -1041,22 +1134,42 @@ class Mozzarilla(Binilla):
             print("Change the current tag set.")
             return
 
-        self.tool_windows[window_name] = w = window_class(self)
+        self.tool_windows[window_name] = w = window_class(self, **kw)
         w.window_name = window_name
         self.place_window_relative(w, 30, 50); w.focus_set()
 
+    def show_chicago_shader_converter(self, e=None):
+        self.show_tool_window("chicago_shader_converter", ChicagoShaderConverter)
+    def show_object_converter(self, e=None):
+        self.show_tool_window("object_converter_window", ObjectConverter)
+    def show_model_converter(self, e=None):
+        self.show_tool_window("model_converter_window", ModelConverter)
+    def show_gbxmodel_converter(self, e=None):
+        self.show_tool_window("gbxmodel_converter_window", GbxmodelConverter)
+    def show_collision_converter(self, e=None):
+        self.show_tool_window("collision_converter_window", CollisionConverter)
+    def show_animations_converter(self, e=None):
+        self.show_tool_window("animations_converter_window", ModelAnimationsConverter)
+    def show_sbsp_converter(self, e=None):
+        self.show_tool_window("sbsp_converter_window", SbspConverter)
+
     def show_dependency_viewer(self, e=None):
         self.show_tool_window("dependency_window", DependencyWindow, True)
-
     def show_tag_scanner(self, e=None):
         self.show_tool_window("tag_scanner_window", TagScannerWindow, True)
 
     def show_bitmap_converter_window(self, e=None):
-        self.show_tool_window("show_bitmap_converter_window", BitmapConverterWindow)
+        self.show_tool_window("bitmap_converter_window", BitmapConverterWindow)
+    def show_bitmap_source_extractor(self, e=None):
+        self.show_tool_window("bitmap_source_extractor_window", BitmapSourceExtractorWindow)
 
     def show_data_extraction_window(self, e=None):
         self.show_tool_window("data_extraction_window", DataExtractionWindow, True)
 
+    def show_animations_compression_window(self, e=None):
+        self.show_tool_window("animations_compression_window", AnimationsCompressionWindow, False)
+    def show_animations_compiler_window(self, e=None):
+        self.show_tool_window("animations_compiler_window", AnimationsCompilerWindow, True)
     def show_model_compiler_window(self, e=None):
         self.show_tool_window("model_compiler_window", ModelCompilerWindow, True)
 
@@ -1093,3 +1206,14 @@ class Mozzarilla(Binilla):
 
     def strings_from_txt(self, e=None):
         strings_from_txt(self)
+
+    def upgrade_config_version(self, filepath):
+        old_version = self.config_version_def.build(filepath=filepath).data.version
+        if old_version in (1, 2):
+            new_config = mozzarilla.defs.upgrade_config.upgrade_v2_to_v3(
+                self.config_defs[2].build(filepath=filepath),
+                self.config_defs[3].build())
+        else:
+            raise ValueError("Config header version is not valid")
+
+        return new_config
