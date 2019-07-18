@@ -1,13 +1,14 @@
+import os
+import tkinter as tk
 
-from os.path import dirname, join, isfile, splitext
 from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 from struct import unpack, pack
 
-from binilla.util import *
-from binilla.widgets import BinillaWidget
-from reclaimer.data_extraction import extract_h1_scnr_data
-from supyr_struct.defs.constants import *
+from binilla.util import get_cwd
+from binilla.widgets.binilla_widget import BinillaWidget
+
+from reclaimer.halo_script.hsc_decompilation import extract_h1_scripts
 
 curr_dir = get_cwd(__file__)
 
@@ -22,18 +23,20 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
         self.app_root = app_root
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
+        BinillaWidget.__init__(self, app_root, *args, **kwargs)
 
         self.title("Scenario Open Sauce remover")
         self.geometry("400x80+0+0")
         self.resizable(0, 0)
         self.update()
-        try:
+        for sub_dirs in ((), ('..', '..'), ('icons', )):
             try:
-                self.iconbitmap(join(curr_dir, '..', 'mozzarilla.ico'))
+                self.iconbitmap(os.path.join(
+                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
+                    ))
+                break
             except Exception:
-                self.iconbitmap(join(curr_dir, 'icons', 'mozzarilla.ico'))
-        except Exception:
-            print("Could not load window icon.")
+                pass
 
         # make the tkinter variables
         self.scenario_path = tk.StringVar(self)
@@ -80,7 +83,7 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
 
         if not dirpath:
             return
-        self.app_root.last_load_dir = dirname(dirpath)
+        self.app_root.last_load_dir = os.path.dirname(dirpath)
         self.scenario_path.set(dirpath)
 
     def destroy(self):
@@ -92,7 +95,7 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
 
     def remove_sauce(self):
         scenario_path = self.scenario_path.get()
-        if not isfile(scenario_path):
+        if not os.path.isfile(scenario_path):
             print("Scenario path does not point to a file.")
             return
 
@@ -134,10 +137,10 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
             print("    WARNING: Scripts are too large to fit in a " +
                   "normal scenario. Extracting scripts to the same " +
                   "directory as the scenario.")
-            extract_h1_scnr_data(
+            extract_h1_scripts(
                 tagdata,
-                splitext(scenario_path.replace("\\", "/").split("/")[-1])[0],
-                out_dir=dirname(scenario_path), engine="yelo")
+                os.path.splitext(scenario_path.replace("\\", "/").split("/")[-1])[0],
+                out_dir=os.path.dirname(scenario_path), engine="yelo")
             tagdata.script_syntax_data.data = b''
             tagdata.script_string_data.data = b''
         else:
