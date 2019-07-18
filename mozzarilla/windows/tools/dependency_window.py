@@ -25,10 +25,10 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
     def __init__(self, app_root, *args, **kwargs): 
         self.handler = app_root.handler
         self.app_root = app_root
-        BinillaWidget.__init__(self, app_root, *args, **kwargs)
         kwargs.update(width=400, height=500, bd=0,
                       highlightthickness=0, bg=self.default_bg_color)
         tk.Toplevel.__init__(self, app_root, *args, **kwargs)
+        BinillaWidget.__init__(self, app_root, *args, **kwargs)
         self.title("[%s] Tag dependency viewer / zipper" %
                    app_root.handler_names[app_root._curr_handler_index])
         self.minsize(width=400, height=100)

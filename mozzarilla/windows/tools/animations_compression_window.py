@@ -40,8 +40,8 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         else:
             self.app_root = self
 
-        BinillaWidget.__init__(self, *args, **kwargs)
         window_base_class.__init__(self, app_root, *args, **kwargs)
+        BinillaWidget.__init__(self, *args, **kwargs)
 
         #self.title("Model_animations compressor/decompressor")
         self.title("Model_animations decompressor")
