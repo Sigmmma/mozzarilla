@@ -177,16 +177,23 @@ class Mozzarilla(Binilla):
 
         Binilla.__init__(self, *args, **kwargs)
 
-        try:
+        self.app_bitmap_filepath = os.path.join(this_curr_dir, 'mozzarilla.png')
+        if not os.path.isfile(self.app_bitmap_filepath):
+            self.app_bitmap_filepath = os.path.join(this_curr_dir, 'icons', 'mozzarilla.png')
+        if not os.path.isfile(self.app_bitmap_filepath):
+            self.app_bitmap_filepath = ""
+
+        if not e_c.IS_LNX:
             try:
-                self.icon_filepath = os.path.join(this_curr_dir, 'mozzarilla.ico')
-                self.iconbitmap(self.icon_filepath)
+                try:
+                    self.icon_filepath = os.path.join(this_curr_dir, 'mozzarilla.ico')
+                    self.iconbitmap(self.icon_filepath)
+                except Exception:
+                    self.icon_filepath = os.path.join(this_curr_dir, 'icons', 'mozzarilla.ico')
+                    self.iconbitmap(self.icon_filepath)
             except Exception:
-                self.icon_filepath = os.path.join(this_curr_dir, 'icons', 'mozzarilla.ico')
-                self.iconbitmap(self.icon_filepath)
-        except Exception:
-            self.icon_filepath = ""
-            print("Could not load window icon.")
+                self.icon_filepath = ""
+                print("Could not load window icon.")
 
         self.file_menu.insert_command("Exit", label="Load guerilla config",
                                       command=self.load_guerilla_config)
@@ -417,7 +424,7 @@ class Mozzarilla(Binilla):
             if handlers_by_dir.get(tags_dir_key, None):
                 continue
 
-            handler = self.handler_classes[i](debug=self.debug)
+            handler = self.handler_classes[i](debug=self.debug, case_sensitive=e_c.IS_LNX)
             handler.tagsdir = tags_dir
             handlers_by_dir[tags_dir_key] = handler
 
