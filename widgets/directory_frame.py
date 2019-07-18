@@ -225,7 +225,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                 self.active_tags_dir = td
             else:
                 dir_tree.tag_configure(
-                    td, background=self.default_bg_color,
+                    td, background=self.entry_normal_color,
                     foreground=self.text_normal_color)
 
     def activate_item(self, e=None):
