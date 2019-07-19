@@ -137,7 +137,7 @@ def make_mirror_jms_models(clusters, nodes, make_fans=True):
 
 def make_fog_plane_jms_models(fog_planes, nodes, make_fans=True, optimize=False):
     jms_models = []
-    materials = [JmsMaterial("fog_plane", "<none>", "fog_plane$")]
+    materials = [JmsMaterial("+unused$", "<none>", "+unused$")]
 
     plane_index = 0
     for fog_plane in fog_planes:
@@ -167,7 +167,7 @@ def make_cluster_portal_jms_models(planes, clusters, cluster_portals, nodes,
     jms_models = []
     materials = [
         JmsMaterial("+portal", "<none>", "+portal"),
-        JmsMaterial("+ai_deaf_portal&", "<none>", "+ai_deaf_portal&")
+        JmsMaterial("+portal&", "<none>", "+portal&")
         ]
 
     cluster_index = 0
