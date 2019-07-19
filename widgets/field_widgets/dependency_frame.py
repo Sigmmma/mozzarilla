@@ -327,3 +327,7 @@ class DependencyFrame(ContainerFrame):
                     w.config(state=tk.DISABLED if disable else tk.NORMAL)
 
         ContainerFrame.set_disabled(self, disable)
+
+    def apply_style(self, seen=None):
+        ContainerFrame.apply_style(self, seen)
+        self.validate_filepath()
