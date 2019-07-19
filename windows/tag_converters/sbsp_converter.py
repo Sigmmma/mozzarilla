@@ -137,7 +137,7 @@ def make_mirror_jms_models(clusters, nodes, make_fans=True):
 
 def make_fog_plane_jms_models(fog_planes, nodes, make_fans=True, optimize=False):
     jms_models = []
-    materials = [JmsMaterial("fog_plane", "<none>", "$fog_plane")]
+    materials = [JmsMaterial("fog_plane", "<none>", "fog_plane$")]
 
     plane_index = 0
     for fog_plane in fog_planes:
@@ -167,7 +167,7 @@ def make_cluster_portal_jms_models(planes, clusters, cluster_portals, nodes,
     jms_models = []
     materials = [
         JmsMaterial("+portal", "<none>", "+portal"),
-        JmsMaterial("+&ai_deaf_portal", "<none>", "+&ai_deaf_portal")
+        JmsMaterial("+ai_deaf_portal&", "<none>", "+ai_deaf_portal&")
         ]
 
     cluster_index = 0
@@ -249,8 +249,8 @@ def make_bsp_coll_jms_models(bsps, materials, nodes, node_transforms=(),
                 if len(mat_info) > 4: material.breakable = mat_info[4]
                 material.collision_only = not material.large_collideable
                 material.double_sided &= not material.large_collideable
-                material.name = material.properties + material.name
-                material.shader_path = material.properties + material.shader_path
+                material.name = material.name + material.properties
+                material.shader_path = material.shader_path + material.properties 
                 material.properties = ""
 
             mat_info_to_mat_id[mat_info] = len(coll_materials)
