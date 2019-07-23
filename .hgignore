@@ -1,7 +1,8 @@
 syntax: glob
 *__pycache__*
-mozzarilla.cfg
-*.log
 data/*
 tags/*
 *.cfg
+*.log
+*.backup
+*.BACKUP
