@@ -39,19 +39,21 @@ from mozzarilla.widgets.field_widgets.reflexive_frame import ReflexiveFrame
 
 
 # replace the DynamicEnumFrame with one that has a specialized option generator
-def halo_dynamic_enum_cache_options(self):
+def halo_dynamic_enum_generate_options(self, opt_index=None):
     desc = self.desc
-    options = {0: "-1: NONE"}
+    options = {0: "-1. NONE"}
 
     dyn_name_path = desc.get(DYN_NAME_PATH)
     if self.node is None:
-        return
+        if opt_index is None:
+            return options
+        return None
     elif not dyn_name_path:
         print("Missing DYN_NAME_PATH path in dynamic enumerator.")
         print(self.parent.get_root().def_id, self.name)
-        print("Tell Moses about this.")
-        self.option_cache = options
-        return
+        if opt_index is None:
+            return options
+        return None
 
     try:
         p_out, p_in = dyn_name_path.split(DYN_I)
@@ -59,7 +61,14 @@ def halo_dynamic_enum_cache_options(self):
         # We are ALWAYS going to go to the parent, so we need to slice
         if p_out.startswith('..'): p_out = p_out.split('.', 1)[-1]
         array = self.parent.get_neighbor(p_out)
-        for i in range(len(array)):
+
+        options_to_generate = range(len(array))
+        if opt_index is not None:
+            options_to_generate = (
+                (opt_index - 1, ) if opt_index - 1 in
+                options_to_generate else ())
+
+        for i in options_to_generate:
             name = array[i].get_neighbor(p_in)
             if isinstance(name, list):
                 name = repr(name).strip("[").strip("]")
@@ -71,15 +80,18 @@ def halo_dynamic_enum_cache_options(self):
                 options[i + 1] = '%s. %s' % (
                     i, name.replace('/', '\\').split('\\')[-1])
             options[i + 1] = '%s. %s' % (i, name)
+        last_option_index = len(array)
     except Exception:
         print(format_exc())
-        print("Guess something got mistyped. Tell Moses about this.")
-        dyn_name_path = False
+        last_option_index = 0
 
-    try:
-        self.sel_menu.max_index = len(options) - 1
-    except Exception:
-        pass
-    self.option_cache = options
+    if opt_index is None:
+        self.option_cache = options
+        self.options_sane = True
+        if self.sel_menu is not None:
+            self.sel_menu.options_menu_sane = False
+            self.sel_menu.max_index = last_option_index
+        return options
+    return options.get(opt_index, None)
 
-DynamicEnumFrame.cache_options = halo_dynamic_enum_cache_options
+DynamicEnumFrame.generate_options = halo_dynamic_enum_generate_options
