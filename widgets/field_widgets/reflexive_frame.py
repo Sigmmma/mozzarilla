@@ -54,59 +54,24 @@ class ReflexiveFrame(DynamicArrayFrame):
 
         DynamicArrayFrame.set_disabled(self, disable)
 
-    def cache_options(self):
+    def generate_dynamic_options(self, options, options_to_generate):
         node, desc = self.node, self.desc
-        dyn_name_path = desc.get(DYN_NAME_PATH)
-        if node is None:
-            dyn_name_path = ""
+        dyn_name_path = desc.get('DYN_NAME_PATH')
 
-        options = {}
-        if dyn_name_path:
-            try:
-                if dyn_name_path.endswith('.filepath'):
-                    # if it is a dependency filepath
-                    for i in range(len(node)):
-                        name = str(node[i].get_neighbor(dyn_name_path))\
-                               .replace('/', '\\').split('\\')[-1]\
-                               .split('\n')[0]
-                        if name:
-                            options[i] = name
-                else:
-                    for i in range(len(node)):
-                        name = str(node[i].get_neighbor(dyn_name_path))
-                        if name:
-                            options[i] = name.split('\n')[0]
+        if dyn_name_path.endswith('.filepath'):
+            # if it is a dependency filepath
+            for i in options_to_generate:
+                name = str(node[i].get_neighbor(dyn_name_path))\
+                       .replace('/', '\\').split('\\')[-1]\
+                       .split('\n')[0]
+                if name:
+                    options[i] = name
+            return
 
-            except Exception:
-                print(format_exc())
-                print("Guess something got mistyped. Tell Moses about it.")
-                dyn_name_path = False
-
-        if not dyn_name_path:
-            # sort the options by value(values are integers)
-            options.update({i: n for n, i in
-                            self.desc.get('NAME_MAP', {}).items()
-                            if i not in options})
-            sub_desc = desc['SUB_STRUCT']
-            def_struct_name = sub_desc.get('GUI_NAME', sub_desc['NAME'])
-
-            for i in range(len(node)):
-                if i in options:
-                    continue
-                sub_node = node[i]
-                if not hasattr(sub_node, 'desc'):
-                    continue
-                sub_desc = sub_node.desc
-                sub_struct_name = sub_desc.get('GUI_NAME', sub_desc['NAME'])
-                if sub_struct_name == def_struct_name:
-                    continue
-
-                options[i] = sub_struct_name
-
-        for i, v in options.items():
-            options[i] = '%s. %s' % (i, v)
-
-        self.option_cache = options
+        for i in options_to_generate:
+            name = str(node[i].get_neighbor(dyn_name_path))
+            if name:
+                options[i] = name.split('\n')[0]
 
     def set_import_all_disabled(self, disable=True):
         if disable: self.import_all_btn.config(state="disabled")
