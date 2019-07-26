@@ -1117,9 +1117,15 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
                     if i >= bitm_ct:
                         i = 0
 
-                    self.curr_bitmap_spinbox.insert(tk.END, str(i))
-                    self.curr_bitmap_spinbox.config(to=bitm_ct - 1)
-                    self.max_bitmap_entry.insert(tk.END, str(bitm_ct - 1))
+                    if bitm_ct:
+                        self.curr_bitmap_spinbox.config(to=bitm_ct - 1)
+                        self.curr_bitmap_spinbox.insert(tk.END, str(i))
+                        self.max_bitmap_entry.insert(tk.END, str(bitm_ct - 1))
+                    else:
+                        self.curr_bitmap_spinbox.config(to=1)
+                        self.curr_bitmap_spinbox.insert(tk.END, "")
+                        self.max_bitmap_entry.insert(tk.END, "")
+
                     if i < bitm_ct:
                         bitm_info = bitm_tag_info.bitmap_infos[i]
 
