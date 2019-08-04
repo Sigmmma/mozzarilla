@@ -466,7 +466,7 @@ class SbspConverter(ConverterBase, window_base_class):
         for text in ("Portals", "Fog planes", "Weather polyhedra", "Mirrors", "Collision"):
             var = topology_vars[text]
             f = tk.Frame(self.topology_frame)
-            name_lbl = tk.Label(f, text=text, width=15, anchor="w")
+            name_lbl = tk.Label(f, text=text, width=17, anchor="w")
             fan_cbtn = tk.Checkbutton(
                 f, variable=var, text="Triangle fan")
             strip_cbtn = tk.Checkbutton(
