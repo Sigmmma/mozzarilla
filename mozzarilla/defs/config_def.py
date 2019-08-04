@@ -3,7 +3,8 @@ from binilla.defs.config_def import method_enums, modifier_enums, depths,\
      filepath, open_tags, recent_tags, directory_paths, theme_name,\
      tag_window_hotkeys, padding, widths_and_heights, tag_backup
 from binilla.defs.style_def import appearance, color, font
-from binilla.constants import GUI_NAME, NAME, TOOLTIP, VALUE
+from binilla.constants import GUI_NAME, NAME, TOOLTIP, VALUE,\
+     VISIBILITY_METADATA, VISIBILITY_HIDDEN
 from binilla.widgets.field_widgets.array_frame import DynamicArrayFrame
 from binilla.defs import config_tooltips as ttip
 
@@ -140,37 +141,37 @@ mozzarilla = Container("mozzarilla",
         "halo_1_misc",
         "stubbs",
         "halo_3",
-        EDITABLE=False, VISIBLE=False
+        EDITABLE=False, VISIBLE=VISIBILITY_METADATA
         ),
-    UInt16("last_tags_dir",  VISIBLE=False, EDITABLE=False),
-    UInt16("sash_position",  VISIBLE=False, EDITABLE=False),
-    UInt32("last_tool_path", VISIBLE=False, EDITABLE=False),
+    UInt16("last_tags_dir",  VISIBLE=VISIBILITY_METADATA, EDITABLE=False),
+    UInt16("sash_position",  VISIBLE=VISIBILITY_METADATA, EDITABLE=False),
+    UInt32("last_tool_path", VISIBLE=VISIBILITY_METADATA, EDITABLE=False),
     Pad(64 - 2*4 - 4*1),
 
-    UInt16("tags_dirs_count",     VISIBLE=False, EDITABLE=False),
-    UInt16("load_dirs_count",     VISIBLE=False, EDITABLE=False),
-    UInt16("open_mozz_tag_count", VISIBLE=False, EDITABLE=False),
+    UInt16("tags_dirs_count",     VISIBLE=VISIBILITY_METADATA, EDITABLE=False),
+    UInt16("load_dirs_count",     VISIBLE=VISIBILITY_METADATA, EDITABLE=False),
+    UInt16("open_mozz_tag_count", VISIBLE=VISIBILITY_METADATA, EDITABLE=False),
     Pad(64 - 2*3),
 
     Array("tags_dirs", SUB_STRUCT=filepath, SIZE="mozzarilla.tags_dirs_count",
-        MIN=1, VISIBLE=False),
+        MIN=1, VISIBLE=VISIBILITY_METADATA),
     Array("load_dirs", SUB_STRUCT=filepath, SIZE="mozzarilla.load_dirs_count",
         NAME_MAP=("last_data_load_dir", "jms_load_dir", "bitmap_load_dir"),
-        MIN=3, VISIBLE=False
+        MIN=3, VISIBLE=VISIBILITY_METADATA
         ),
     Array("open_mozz_tags",
-        SUB_STRUCT=open_mozz_tag, SIZE="mozzarilla.open_mozz_tag_count", VISIBLE=False
+        SUB_STRUCT=open_mozz_tag, SIZE="mozzarilla.open_mozz_tag_count", VISIBLE=VISIBILITY_HIDDEN
         ),
     COMMENT="\nThese are settings specific to Mozzarilla.",
     GUI_NAME="Mozzarilla"
     )
 
 mozz_version_info = Struct("version_info",
-    UEnum32("id", ('Mozz', 'zzoM'), VISIBLE=False, DEFAULT='zzoM'),
-    UInt32("version", DEFAULT=3, VISIBLE=False, EDITABLE=False),
+    UEnum32("id", ('Mozz', 'zzoM'), VISIBLE=VISIBILITY_METADATA, DEFAULT='zzoM'),
+    UInt32("version", DEFAULT=3, VISIBLE=VISIBILITY_METADATA, EDITABLE=False),
     Timestamp32("date_created", EDITABLE=False),
     Timestamp32("date_modified", EDITABLE=False),
-    SIZE=16, VISIBLE=False
+    SIZE=16, VISIBLE=VISIBILITY_HIDDEN
     )
 
 mozz_appearance = Container("appearance",

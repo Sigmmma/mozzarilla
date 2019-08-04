@@ -9,6 +9,7 @@ from traceback import format_exc
 from supyr_struct.defs.constants import PATHDIV
 from supyr_struct.util import sanitize_path
 
+from binilla import constants
 from binilla.widgets.field_widgets.container_frame import ContainerFrame
 from mozzarilla.widgets.field_widgets.halo_1_bitmap_display import HaloBitmapDisplayButton
 
@@ -246,12 +247,16 @@ class DependencyFrame(ContainerFrame):
 
         for wid in self.f_widget_ids:
             w = self.f_widgets[wid]
-            sub_desc = w.desc
-            if not self.all_visible and (w.attr_index == 0 and
-                                         sub_desc['ENTRIES'] <= 2):
-                w.pack_forget()
-            elif sub_desc.get('NAME') == 'filepath':
-                self.write_trace(w.entry_string, self.validate_filepath)
+            if w.attr_index == 0:
+                # hide the tag class dropdown if not showing hidden and
+                # there is only one valid tag class other than NONE
+                if w.desc.get('ENTRIES', 0) <= 2 and not self.get_visible(
+                        constants.VISIBILITY_HIDDEN):
+                    w.pack_forget()
+            elif w.attr_index == 'STEPTREE':
+                # make sure the filepath has a write trace attached to it
+                w.delete_all_traces("w")
+                w.write_trace(w.entry_string, self.validate_filepath)
                 self.validate_filepath()
 
         if not hasattr(self.tag_window.tag, "tags_dir"):
@@ -273,8 +278,6 @@ class DependencyFrame(ContainerFrame):
                 field_indices = tuple(field_indices) + ('STEPTREE',)
 
             f_widget_ids_map = self.f_widget_ids_map
-            all_visible = self.all_visible
-
             if hasattr(self, "preview_btn") and self.preview_btn:
                 self.preview_btn.display_frame = None
 
@@ -297,7 +300,7 @@ class DependencyFrame(ContainerFrame):
                 w = f_widgets.get(f_widget_ids_map.get(i))
 
                 # if neither would be visible, dont worry about checking it
-                if not(sub_desc.get('VISIBLE',1) or all_visible) and w is None:
+                if not self.get_visible(sub_desc.get('VISIBLE', True)) and w is None:
                     continue
 
                 # if the descriptors are different, gotta repopulate!
