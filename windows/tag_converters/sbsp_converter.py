@@ -32,7 +32,7 @@ def planes_to_verts_and_tris(planes, center, region=0, mat_id=0,
     raw_verts, edge_loops = planes_to_verts_and_edge_loops(
         planes, center, round_adjust=round_adjust)
 
-    verts = [JmsVertex(0, v[0]*100, v[1]*100, v[2]*100) for v in raw_verts]
+    verts = [JmsVertex(0, v[0]*100, v[1]*100, v[2]*100, tex_v=1.0) for v in raw_verts]
     tris = []
     # Calculate verts and triangles from the raw vert positions and edge loops
     for edge_loop in edge_loops:
@@ -78,7 +78,7 @@ def get_bsp_surface_edge_loops(bsp, ignore_flags=False):
 
 
 def make_bsp_jms_verts(bsp, transform=None):
-    verts = [JmsVertex(0, v[0]*100, v[1]*100, v[2]*100)
+    verts = [JmsVertex(0, v[0]*100, v[1]*100, v[2]*100, tex_v=1.0)
              for v in bsp.vertices.STEPTREE]
     return verts
 
@@ -122,7 +122,7 @@ def make_mirror_jms_models(clusters, nodes, make_fans=True):
         tris = edge_loop_to_tris(
             len(mirror.vertices.STEPTREE), make_fan=make_fans)
         verts = [
-            JmsVertex(0, vert[0] * 100, vert[1] * 100, vert[2] * 100)
+            JmsVertex(0, vert[0] * 100, vert[1] * 100, vert[2] * 100, tex_v=1.0)
             for vert in mirror.vertices.STEPTREE
             ]
 
@@ -145,7 +145,7 @@ def make_fog_plane_jms_models(fog_planes, nodes, make_fans=True, optimize=False)
         tris = edge_loop_to_tris(
             len(fog_plane.vertices.STEPTREE), make_fan=make_fans)
         verts = [
-            JmsVertex(0, vert[0] * 100, vert[1] * 100, vert[2] * 100)
+            JmsVertex(0, vert[0] * 100, vert[1] * 100, vert[2] * 100, tex_v=1.0)
             for vert in fog_plane.vertices.STEPTREE
             ]
 
@@ -191,7 +191,7 @@ def make_cluster_portal_jms_models(planes, clusters, cluster_portals, nodes,
                 base=len(verts), make_fan=make_fans)
                                 )
             verts.extend(
-                JmsVertex(0, vert[0] * 100, vert[1] * 100, vert[2] * 100)
+                JmsVertex(0, vert[0] * 100, vert[1] * 100, vert[2] * 100, tex_v=1.0)
                 for vert in portal.vertices.STEPTREE
                 )
 
@@ -291,13 +291,13 @@ def make_bsp_lightmap_jms_models(sbsp_body, base_nodes):
     lightmaps = sbsp_body.lightmaps.STEPTREE
     all_tris = sbsp_body.surfaces.STEPTREE
 
-    lightmap_mat_map = {}
-    lightmap_mats = []
+    shader_index_by_mat_name = {}
+    shader_mats = []
     for i in range(len(lightmaps)):
         lm_index = lightmaps[i].bitmap_index
-        if lm_index not in lightmap_mat_map and lm_index >= 0:
-            lightmap_mat_map[lm_index] = len(lightmap_mat_map)
-            lightmap_mats.append(JmsMaterial("lightmap_%s" % lm_index))
+        if lm_index not in shader_index_by_mat_name and lm_index >= 0:
+            shader_index_by_mat_name[lm_index] = len(shader_index_by_mat_name)
+            shader_mats.append(JmsMaterial("lightmap_%s" % lm_index))
 
     uncomp_vert_xyz_unpacker = PyStruct("<3f").unpack_from
     uncomp_vert_ijkuv_unpacker = PyStruct("<5f").unpack_from
@@ -305,7 +305,7 @@ def make_bsp_lightmap_jms_models(sbsp_body, base_nodes):
     for lightmap in lightmaps:
         verts = []
         tris = []
-        mat_index = lightmap_mat_map.get(lightmap.bitmap_index, -1)
+        mat_index = shader_index_by_mat_name.get(lightmap.bitmap_index, -1)
         if mat_index < 0:
             continue
 
@@ -333,8 +333,72 @@ def make_bsp_lightmap_jms_models(sbsp_body, base_nodes):
                 )
 
         jms_models.append(
-            JmsModel("bsp", 0, base_nodes, lightmap_mats, [],
+            JmsModel("bsp", 0, base_nodes, shader_mats, [],
                      ("lightmap_%s" % lightmap.bitmap_index, ), verts, tris))
+
+    return jms_models
+
+
+def make_bsp_renderable_jms_models(sbsp_body, base_nodes):
+    jms_models = []
+
+    lightmaps = sbsp_body.lightmaps.STEPTREE
+    all_tris = sbsp_body.surfaces.STEPTREE
+
+    shader_index_by_mat_name = {}
+    mat_indices_by_mat_name = {}
+    shader_mats = []
+    for i in range(len(lightmaps)):
+        materials = lightmaps[i].materials.STEPTREE
+        for j in range(len(materials)):
+            material = materials[j]
+            mat_name = os.path.basename(material.shader.filepath.lower())
+            mat_name += "!$" if material.flags.fog_plane else "!"
+
+            if mat_name not in mat_indices_by_mat_name:
+                shader_index_by_mat_name[mat_name] = len(shader_mats)
+                shader_mats.append(JmsMaterial(mat_name))
+                mat_indices_by_mat_name[mat_name] = []
+                shader_mats[-1].shader_path = (shader_mats[-1].shader_path +
+                                               shader_mats[-1].properties)
+                shader_mats[-1].properties = ""
+
+            mat_indices_by_mat_name[mat_name].append((i, j))
+
+    uncomp_vert_unpacker = PyStruct("<14f").unpack_from
+    for mat_name in sorted(mat_indices_by_mat_name):
+        verts = []
+        tris = []
+        for i, j in mat_indices_by_mat_name[mat_name]:
+            material = lightmaps[i].materials.STEPTREE[j]
+
+            mat_index = shader_index_by_mat_name.get(mat_name)
+            if mat_index is None:
+                continue
+
+            vert_data = material.uncompressed_vertices.data
+            v_base = len(verts)
+
+            tris.extend(
+                JmsTriangle(
+                    0, mat_index,
+                    tri[0] + v_base, tri[2] + v_base, tri[1] + v_base)
+                for tri in all_tris[
+                    material.surfaces: material.surfaces + material.surface_count]
+                )
+
+            for i in range(0, material.vertices_count * 56, 56):
+                x, y, z, ni, nj, nk, bi, bj, bk, ti, tj, tk, u, v =\
+                   uncomp_vert_unpacker(vert_data, i)
+                verts.append(
+                    JmsVertex(0, x * 100, y * 100, z * 100,
+                              ni, nj, nk, -1, 0, u, 1 - v, 0,
+                              bi, bj, bk, ti, tj, tk)
+                )
+
+        jms_models.append(
+            JmsModel("bsp", 0, base_nodes, shader_mats, [],
+                     ("renderable", ), verts, tris))
 
     return jms_models
 
@@ -431,7 +495,8 @@ def sbsp_to_mod2(
     if include_renderable:
         print("    Converting renderable...")
         try:
-            pass
+            jms_models.extend(
+                make_bsp_renderable_jms_models(sbsp_body, base_nodes))
         except Exception:
             print(format_exc())
             print("    Could not convert renderable")
@@ -473,7 +538,7 @@ class SbspConverter(ConverterBase, window_base_class):
         self.include_fog_planes = tk.IntVar(self, 1)
         self.include_portals = tk.IntVar(self, 1)
         self.include_collision = tk.IntVar(self, 1)
-        self.include_renderable = tk.IntVar(self, 0)#1)
+        self.include_renderable = tk.IntVar(self, 1)
         self.include_mirrors = tk.IntVar(self, 0)
         self.include_lightmaps = tk.IntVar(self, 0)
 
@@ -506,7 +571,7 @@ class SbspConverter(ConverterBase, window_base_class):
             "Mirrors": self.include_mirrors, "Lightmaps": self.include_lightmaps,
             "Markers": self.include_markers, "Lens flares": self.include_lens_flares}
         self.include_buttons = []
-        for text in ("Collidable", "Portals",# "Renderable",
+        for text in ("Collidable", "Portals", "Renderable",
                      "Weather polyhedra", "Fog planes", "Markers",
                      "Mirrors", "Lens flares", "Lightmaps"):
             self.include_buttons.append(tk.Checkbutton(
