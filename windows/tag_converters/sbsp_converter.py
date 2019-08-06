@@ -9,10 +9,11 @@ import os
 import threadsafe_tkinter as tk
 
 from copy import deepcopy
+from struct import Struct as PyStruct
 from traceback import format_exc
 
-from reclaimer.model.jms import JmsNode, JmsMaterial, JmsMarker, JmsVertex,\
-     JmsModel, MergedJmsModel, edge_loop_to_tris
+from reclaimer.model.jms import JmsNode, JmsMaterial, JmsMarker, \
+     JmsVertex, JmsTriangle, JmsModel, MergedJmsModel, edge_loop_to_tris
 from reclaimer.model.model_compilation import compile_gbxmodel
 from reclaimer.util.matrices import euler_to_quaternion, Ray
 from reclaimer.util.geometry import planes_to_verts_and_edge_loops
@@ -169,6 +170,7 @@ def make_cluster_portal_jms_models(planes, clusters, cluster_portals, nodes,
         JmsMaterial("+portal", "<none>", "+portal"),
         JmsMaterial("+portal&", "<none>", "+portal&")
         ]
+    materials[1].properties = ""
 
     cluster_index = 0
     portals_seen = set()
@@ -283,6 +285,60 @@ def make_bsp_coll_jms_models(bsps, materials, nodes, node_transforms=(),
     return jms_models
 
 
+def make_bsp_lightmap_jms_models(sbsp_body, base_nodes):
+    jms_models = []
+
+    lightmaps = sbsp_body.lightmaps.STEPTREE
+    all_tris = sbsp_body.surfaces.STEPTREE
+
+    lightmap_mat_map = {}
+    lightmap_mats = []
+    for i in range(len(lightmaps)):
+        lm_index = lightmaps[i].bitmap_index
+        if lm_index not in lightmap_mat_map and lm_index >= 0:
+            lightmap_mat_map[lm_index] = len(lightmap_mat_map)
+            lightmap_mats.append(JmsMaterial("lightmap_%s" % lm_index))
+
+    uncomp_vert_xyz_unpacker = PyStruct("<3f").unpack_from
+    uncomp_vert_ijkuv_unpacker = PyStruct("<5f").unpack_from
+
+    for lightmap in lightmaps:
+        verts = []
+        tris = []
+        mat_index = lightmap_mat_map.get(lightmap.bitmap_index, -1)
+        if mat_index < 0:
+            continue
+
+        for material in lightmap.materials.STEPTREE:
+            v_base = len(verts)
+            tris.extend(
+                JmsTriangle(
+                    0, mat_index,
+                    tri[0] + v_base, tri[2] + v_base, tri[1] + v_base)
+                for tri in all_tris[
+                    material.surfaces: material.surfaces + material.surface_count]
+                )
+
+            vert_off = 0
+            lm_vert_off = 56 * material.vertices_count
+            vert_data = material.uncompressed_vertices.data
+            for i in range(material.lightmap_vertices_count):
+                x, y, z = uncomp_vert_xyz_unpacker(vert_data, vert_off)
+                i, j, k, u, v = uncomp_vert_ijkuv_unpacker(vert_data, lm_vert_off)
+                vert_off += 56
+                lm_vert_off += 20
+                verts.append(
+                    JmsVertex(0, x * 100, y * 100, z * 100,
+                              i, j, k, -1, 0, u, 1 - v)
+                )
+
+        jms_models.append(
+            JmsModel("bsp", 0, base_nodes, lightmap_mats, [],
+                     ("lightmap_%s" % lightmap.bitmap_index, ), verts, tris))
+
+    return jms_models
+
+
 def sbsp_to_mod2(
         sbsp_path, include_lens_flares=True, include_markers=True,
         include_weather_polyhedra=True, include_fog_planes=True,
@@ -383,7 +439,8 @@ def sbsp_to_mod2(
     if include_lightmaps:
         print("    Converting lightmaps...")
         try:
-            pass
+            jms_models.extend(
+                make_bsp_lightmap_jms_models(sbsp_body, base_nodes))
         except Exception:
             print(format_exc())
             print("    Could not convert lightmaps")
@@ -451,7 +508,7 @@ class SbspConverter(ConverterBase, window_base_class):
         self.include_buttons = []
         for text in ("Collidable", "Portals",# "Renderable",
                      "Weather polyhedra", "Fog planes", "Markers",
-                     "Mirrors", "Lens flares", ):#"Lightmaps"):
+                     "Mirrors", "Lens flares", "Lightmaps"):
             self.include_buttons.append(tk.Checkbutton(
                 self.include_frame, variable=include_vars[text], text=text))
 
