@@ -18,6 +18,8 @@ class DependencyFrame(ContainerFrame):
     open_btn = None
     browse_btn = None
     preview_btn = None
+    validate_write_trace = None
+    validate_entry_str = None
 
     def browse_tag(self):
         if self.node is None:
@@ -255,8 +257,13 @@ class DependencyFrame(ContainerFrame):
                     w.pack_forget()
             elif w.attr_index == 'STEPTREE':
                 # make sure the filepath has a write trace attached to it
-                w.delete_all_traces("w")
-                w.write_trace(w.entry_string, self.validate_filepath)
+                try:
+                    self.delete_validate_trace()
+                except Exception:
+                    pass
+
+                self.validate_entry_str = w.entry_string
+                self.create_validate_trace()
                 self.validate_filepath()
 
         if not hasattr(self.tag_window.tag, "tags_dir"):
@@ -266,6 +273,15 @@ class DependencyFrame(ContainerFrame):
         for btn in (self.browse_btn, self.open_btn, self.preview_btn):
             if btn is None: continue
             btn.pack(fill='x', side=side, anchor='nw', padx=padx)
+
+    def create_validate_trace(self):
+        self.validate_write_trace = self.write_trace(
+            self.validate_entry_str, self.validate_filepath)
+
+    def delete_validate_trace(self):
+        self.validate_entry_str.trace_vdelete(
+            "w", self.validate_write_trace)
+        self.validate_write_trace = self.validate_entry_str = None
 
     def reload(self):
         '''Resupplies the nodes to the widgets which display them.'''
