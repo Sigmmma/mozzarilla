@@ -301,9 +301,9 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
             if node.parent_index >= 0:
                 parent_name = nodes[node.parent_index].name
             if node.sibling_index >= 0:
-                child_name = nodes[node.sibling_index].name
+                sibling_name = nodes[node.sibling_index].name
             if node.first_child >= 0:
-                sibling_name = nodes[node.first_child].name
+                child_name = nodes[node.first_child].name
 
             jms_tree.insert(iid, 'end', text="Parent",
                             values=(parent_name, ), tags=('item',),)
