@@ -58,7 +58,9 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
             except Exception:
                 pass
 
-        self.listbox_index_to_def_id = list(sorted(self.tag_data_extractors.keys()))
+        self.listbox_index_to_def_id = list(sorted(
+            k for k in self.tag_data_extractors.keys()
+            if k in self.tag_class_fcc_to_ext))
 
         # make the tkinter variables
         self.dir_path = tk.StringVar(self, self.handler.tagsdir)
