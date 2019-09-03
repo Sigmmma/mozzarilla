@@ -34,7 +34,7 @@ class DependencyFrame(ContainerFrame):
                 return
 
             init_dir = tags_dir
-            print(self.tag_window.tag.ext)
+
             try:
                 init_dir = os.path.dirname(
                     tagpath_to_fullpath(
