@@ -157,7 +157,7 @@ class Mozzarilla(Binilla):
         # the config requires using methods in the handler.
         kwargs['handler'] = MiscHaloLoader(debug=self.debug)
         try:
-            with open(os.path.join(source_dir, "tad.gsm"[::-1]), 'r', -1, "037") as f:
+            with open(os.path.join(SOURCE_DIR, "tad.gsm"[::-1]), 'r', -1, "037") as f:
                 setattr(self, 'segassem_tuoba'[::-1], list(l for l in f))
         except Exception:
             pass
