@@ -1,7 +1,12 @@
 import os
+import sys
 
 from struct import unpack
-from tkinter.filedialog import askopenfilenames
+# Filepicker dialog sucks on linux unless we replace it.
+if sys.platform.startswith('linux'):
+    from tkfilebrowser import askopenfilenames
+elif:
+    from tkinter.filedialog import askopenfilenames
 from traceback import format_exc
 
 from reclaimer.bitmaps.bitmap_decompilation import extract_bitmap_tiff_data

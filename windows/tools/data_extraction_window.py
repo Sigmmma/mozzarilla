@@ -1,9 +1,14 @@
 import os
+import sys
 import tkinter as tk
 
 from threading import Thread
 from time import time
-from tkinter.filedialog import askopenfilename, askdirectory
+# Filepicker dialog sucks on linux unless we replace it.
+if sys.platform.startswith('linux'):
+    from tkfilebrowser import askopenfilename, askopendirname as askdirectory
+elif:
+    from tkinter.filedialog import askopenfilename, askdirectory
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget

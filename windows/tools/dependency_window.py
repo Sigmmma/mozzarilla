@@ -1,9 +1,14 @@
 import os
+import sys
 import tkinter as tk
 import zipfile
 
 from threading import Thread
-from tkinter.filedialog import askopenfilename, asksaveasfilename
+# Filepicker dialog sucks on linux unless we replace it.
+if sys.platform.startswith('linux'):
+    from tkfilebrowser import askopenfilename, asksaveasfilename
+elif:
+    from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget

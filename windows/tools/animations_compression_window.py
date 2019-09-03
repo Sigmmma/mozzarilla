@@ -1,9 +1,14 @@
 import os
+import sys
 import tkinter as tk
 import time
 
 from tkinter import messagebox
-from tkinter.filedialog import askdirectory, asksaveasfilename
+# Filepicker dialog sucks on linux unless we replace it.
+if sys.platform.startswith('linux'):
+    from tkfilebrowser import askopendirname as askdirectory, asksaveasfilename
+elif:
+    from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
 from binilla.util import sanitize_path, get_cwd
@@ -135,7 +140,7 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         self.model_animations_path_frame.pack(fill='x')
         self.model_animations_path_buttons_frame.pack(fill="x", pady=3, padx=3)
         self.settings_frame.pack(fill="both")
-        
+
         for w in (self.preserve_compressed_cbtn, self.overwrite_cbtn):
             w.pack(expand=True, fill='both')
 

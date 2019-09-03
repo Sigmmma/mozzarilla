@@ -8,7 +8,11 @@ import arbytmap as ab
 
 from copy import deepcopy
 from threading import Thread
-from tkinter.filedialog import asksaveasfilename, askdirectory
+# Filepicker dialog sucks on linux unless we replace it.
+if sys.platform.startswith('linux'):
+    from tkfilebrowser import askopendirname as askdirectory, asksaveasfilename
+elif:
+    from tkinter.filedialog import askdirectory, asksaveasfilename
 from time import time
 from traceback import format_exc
 
