@@ -1,4 +1,5 @@
 import os
+import pathlib
 import re
 import tkinter as tk
 
@@ -8,7 +9,7 @@ from tkinter.filedialog import askopenfilename, askopenfilenames,\
      askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from reclaimer.constants import PATHDIV, inject_halo_constants
+from reclaimer.constants import inject_halo_constants
 from supyr_struct.util import is_in_dir
 
 # before we do anything, we need to inject these constants so any definitions
@@ -67,8 +68,8 @@ default_hotkeys.update({
     #'<F12>': "create_hek_pool_window",
     })
 
-this_curr_dir = get_cwd(__file__)
-
+WORKING_DIR = os.getcwd()
+SOURCE_DIR  = get_cwd(__file__)
 
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
@@ -76,11 +77,10 @@ class Mozzarilla(Binilla):
     log_filename = 'mozzarilla.log'
     debug = 0
 
-    curr_dir = this_curr_dir
     _mozzarilla_initialized = False
 
-    styles_dir  = this_curr_dir + PATHDIV + "styles"
-    config_path = this_curr_dir + '%smozzarilla.cfg' % PATHDIV
+    styles_dir  = os.path.join(SOURCE_DIR, "styles")
+    config_path = os.path.join(WORKING_DIR, "mozzarilla.cfg")
     guerilla_workspace_def  = None
     config_version = 3
 
@@ -150,12 +150,12 @@ class Mozzarilla(Binilla):
         # the config requires using methods in the handler.
         kwargs['handler'] = MiscHaloLoader(debug=self.debug)
         try:
-            with open(os.path.join(self.curr_dir, "tad.gsm"[::-1]), 'r', -1, "037") as f:
+            with open(os.path.join(source_dir, "tad.gsm"[::-1]), 'r', -1, "037") as f:
                 setattr(self, 'segassem_tuoba'[::-1], list(l for l in f))
         except Exception:
             pass
 
-        self.tags_dirs = ["%s%stags%s" % (this_curr_dir, PATHDIV, PATHDIV)]
+        self.tags_dirs = [os.path.join(WORKING_DIR, "tags")]
         self.handlers = list({} for i in range(len(self.handler_classes)))
         self.handler_names = list(self.handler_names)
 
@@ -177,19 +177,19 @@ class Mozzarilla(Binilla):
 
         Binilla.__init__(self, *args, **kwargs)
 
-        self.app_bitmap_filepath = os.path.join(this_curr_dir, 'mozzarilla.png')
+        self.app_bitmap_filepath = os.path.join(SOURCE_DIR, 'mozzarilla.png')
         if not os.path.isfile(self.app_bitmap_filepath):
-            self.app_bitmap_filepath = os.path.join(this_curr_dir, 'icons', 'mozzarilla.png')
+            self.app_bitmap_filepath = os.path.join(SOURCE_DIR, 'icons', 'mozzarilla.png')
         if not os.path.isfile(self.app_bitmap_filepath):
             self.app_bitmap_filepath = ""
 
         if not e_c.IS_LNX:
             try:
                 try:
-                    self.icon_filepath = os.path.join(this_curr_dir, 'mozzarilla.ico')
+                    self.icon_filepath = os.path.join(SOURCE_DIR, 'mozzarilla.ico')
                     self.iconbitmap(self.icon_filepath)
                 except Exception:
-                    self.icon_filepath = os.path.join(this_curr_dir, 'icons', 'mozzarilla.ico')
+                    self.icon_filepath = os.path.join(SOURCE_DIR, 'icons', 'mozzarilla.ico')
                     self.iconbitmap(self.icon_filepath)
             except Exception:
                 self.icon_filepath = ""
@@ -350,7 +350,14 @@ class Mozzarilla(Binilla):
             if not tags_dir:
                 return ""
 
-            return os.path.join(os.path.dirname(tags_dir.rstrip(PATHDIV)), "data")
+            path_parts = list(pathlib.PurePath(tags_dir).parts)
+            last_part = path_parts.pop()
+            # If the directory tree doesn't end with 'tags' then there
+            # probably is no 'data' directory.
+            if last_part != 'tags':
+                return None
+
+            return os.path.join(path_parts[:], "data")
         except IndexError:
             return None
 
@@ -622,7 +629,7 @@ class Mozzarilla(Binilla):
             except IndexError: pass
 
         if not self.tags_dir:
-            self.tags_dir = self.curr_dir + "%stags%s" % (PATHDIV, PATHDIV)
+            self.tags_dir = os.path.join(WORKING_DIR, "tags")
 
     def record_open_tags(self):
         try:
@@ -778,7 +785,6 @@ class Mozzarilla(Binilla):
         # make sure all the chosen tag paths are relative
         # to the current tags directory if they must be
         last_load_dir = self.last_load_dir
-        tags_dir = os.path.realpath(tags_dir)
         if self.handler_name in self.tags_dir_relative:
             for i in range(len(sanitized_paths)):
                 path = sanitized_paths[i]
@@ -1031,7 +1037,7 @@ class Mozzarilla(Binilla):
 
             tags_dir_str = tags_dir[:-1]
             if not show_full:
-                tags_dir_str = tags_dir_str.split(PATHDIV)
+                tags_dir_str = list(PurePath(tags_dir_str).parts)
                 if tags_dir_str[-1].lower() != "tags":
                     tags_dir_str = tags_dir_str[-1]
                 else:
@@ -1091,9 +1097,9 @@ class Mozzarilla(Binilla):
         self.update_tag_window_title(w)
         try:
             try:
-                w.iconbitmap(os.path.join(this_curr_dir, 'mozzarilla.ico'))
+                w.iconbitmap(os.path.join(SOURCE_DIR, 'mozzarilla.ico'))
             except Exception:
-                w.iconbitmap(os.path.join(this_curr_dir, 'icons', 'mozzarilla.ico'))
+                w.iconbitmap(os.path.join(SOURCE_DIR, 'icons', 'mozzarilla.ico'))
         except Exception:
             pass
 
