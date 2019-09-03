@@ -1,7 +1,6 @@
-**__pycache__/
+__pycache__/
 data/
 tags/
-**.cfg
-**.log
-**.backup
-**.BACKUP
+*.cfg
+*.log
+*.backup
