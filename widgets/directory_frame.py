@@ -4,7 +4,6 @@ import tkinter as tk
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
-from supyr_struct.defs.constants import PATHDIV
 from supyr_struct.util import sanitize_path
 
 # injject this default color
@@ -147,7 +146,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
         for root, subdirs, files in os.walk(directory):
             for subdir in sorted(subdirs):
-                folderpath = directory + subdir + PATHDIV
+                folderpath = os.path.join(directory, subdir)
 
                 dir_info_str = ""
                 for _, subsubdirs, subfiles in os.walk(folderpath):
@@ -164,8 +163,9 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                 self.destroy_subitems(folderpath)
 
             for file in sorted(files):
+                fullpath = os.path.join(directory, file)
                 try:
-                    filesize = os.stat(directory + file).st_size
+                    filesize = os.stat(fullpath).st_size
                     if filesize < 1024:
                         filesize = str(filesize) + " bytes"
                     elif filesize < 1024**2:
@@ -175,7 +175,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                 except Exception:
                     filesize = 'COULDNT CALCULATE'
                 dir_tree.insert(directory, 'end', text=file,
-                                iid=directory + file, tags=('item',),
+                                iid=fullpath, tags=('item',),
                                 values=(filesize, ))
 
             # just do the toplevel of the hierarchy
