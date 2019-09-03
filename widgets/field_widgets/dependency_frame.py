@@ -1,4 +1,5 @@
 import os
+from pathlib import PurePath, PureWindowsPath
 import tkinter as tk
 import tkinter.ttk as ttk
 
@@ -6,8 +7,9 @@ from copy import copy
 from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 
-from supyr_struct.defs.constants import PATHDIV
 from supyr_struct.util import sanitize_path
+
+from reclaimer.util.path import tagpath_to_fullpath
 
 from binilla import constants
 from binilla.widgets.field_widgets.container_frame import ContainerFrame
@@ -31,18 +33,18 @@ class DependencyFrame(ContainerFrame):
             except AttributeError as e:
                 return
 
-            if not tags_dir.endswith(PATHDIV):
-                tags_dir += PATHDIV
-
-            init_dir = sanitize_path(tags_dir)
+            init_dir = tags_dir
+            print(self.tag_window.tag.ext)
             try:
                 init_dir = os.path.dirname(
-                    os.path.join(tags_dir, sanitize_path(self.node.filepath))
+                    tagpath_to_fullpath(
+                        tags_dir,
+                        self.node.filepath,
+                        extension=self.tag_window.tag.ext,
+                        force_windows=True)
                     )
             except Exception:
                 pass
-
-            init_dir = sanitize_path(init_dir)
 
             filetypes = []
             for ext in sorted(self.node.tag_class.NAME_MAP):
@@ -61,30 +63,42 @@ class DependencyFrame(ContainerFrame):
             if not filepath:
                 return
 
-            # ALWAYS store the path with \ as the separator. Halo tools expect
-            # the windows style '\' separator, not the unix/linux '/' separator
-            filepath = filepath.replace('/', '\\')
-            tag_path, ext = os.path.splitext(filepath.lower().split(
-                tags_dir.lower().replace('/', '\\'))[-1])
+            # Halo tagpaths require backslashes( \ ) as dividers.
+            # We take the path we got, interpret it as a native PurePath
+            # And then convert it to a PureWindowsPath to get the backslashes
+            # safely.
+            filepath = PurePath(filepath) # TODO: Check if this goes to
+            # hell if a tagpath outside of the tagdir is selected.
+            tag_path = filepath.relative_to(tags_dir)
+            # get file extension.
+            ext = tag_path.suffix.lower()
+            # Remove file extension.
+            tag_path = tag_path.with_suffix('')
+
             orig_tag_class = copy(self.node.tag_class)
+            # Try to set the tagtype to the type that we selected.
             try:
                 self.node.tag_class.set_to(ext[1:])
+            # If we fail, try to set the tagtype to the first one that
+            # has a file that exists, otherwise, set type to NONE.
             except Exception:
                 self.node.tag_class.set_to('NONE')
                 for filetype in filetypes:
                     ext = filetype[1][1:]
-                    if os.path.exists(tags_dir + tag_path + ext):
+                    if tagpath_to_fullpath(tags_dir, tag_path, extension=ext) is not None:
                         self.node.tag_class.set_to(ext[1:])
                         break
+
+            internal_tag_path = str(PureWindowsPath(tag_path)).lower()
 
             self.edit_create(
                 attr_index=('tag_class', 'filepath'),
                 redo_node=dict(
-                    tag_class=self.node.tag_class, filepath=tag_path),
+                    tag_class=self.node.tag_class, filepath=internal_tag_path),
                 undo_node=dict(
                     tag_class=orig_tag_class, filepath=self.node.filepath))
 
-            self.node.filepath = tag_path
+            self.node.filepath = internal_tag_path
             self.reload()
             self.set_edited()
         except Exception:
@@ -105,24 +119,31 @@ class DependencyFrame(ContainerFrame):
 
         try:
             tags_dir = tag.tags_dir
-            if not tags_dir.endswith(PATHDIV):
-                tags_dir += PATHDIV
 
             self.flush()
             if not self.node.filepath:
                 return
 
             ext = '.' + self.node.tag_class.enum_name
-            filepath = tags_dir + self.node.filepath
-            try:
-                if (new_handler.treat_mode_as_mod2 and
-                    ext == '.model' and not os.path.exists(filepath + ext)):
-                    ext = '.gbxmodel'
-            except AttributeError:
-                pass
+            # Get full path with proper capitalization if it points to a file.
+            filepath = tagpath_to_fullpath(
+                tags_dir,
+                PurePath(PureWindowsPath(self.node.filepath)),
+                extension=ext)
+
+            if (new_handler.treat_mode_as_mod2
+            and filepath is None
+            and ext == '.model'):
+                filepath = tagpath_to_fullpath(
+                    tags_dir,
+                    PurePath(PureWindowsPath(self.node.filepath)),
+                    extension='.gbxmodel')
+
+            if filepath is None:
+                return
 
             app.set_active_handler(new_handler)
-            app.load_tags(filepaths=filepath + ext)
+            app.load_tags(filepaths=filepath)
         except Exception:
             print(format_exc())
         finally:
@@ -139,21 +160,28 @@ class DependencyFrame(ContainerFrame):
             return
 
         try:
-            if not tags_dir.endswith(PATHDIV):
-                tags_dir += PATHDIV
-
             self.flush()
             if not self.node.filepath:
                 return
 
             ext = '.' + self.node.tag_class.enum_name
-            filepath = tags_dir + self.node.filepath
-            try:
-                if (handler.treat_mode_as_mod2 and
-                    ext == '.model' and not os.path.exists(filepath + ext)):
-                    ext = '.gbxmodel'
-            except AttributeError:
-                pass
+            # Get full path with proper capitalization if it points to a file.
+            filepath = tagpath_to_fullpath(
+                tags_dir,
+                PurePath(PureWindowsPath(self.node.filepath)),
+                extension=ext)
+
+            if (new_handler.treat_mode_as_mod2
+            and filepath is None
+            and ext == '.model'):
+                filepath = tagpath_to_fullpath(
+                    tags_dir,
+                    PurePath(PureWindowsPath(self.node.filepath)),
+                    extension='.gbxmodel')
+
+            if filepath is None:
+                return
+
         except Exception:
             print(format_exc())
 
@@ -161,7 +189,7 @@ class DependencyFrame(ContainerFrame):
             tag = handler.get_tag(filepath + ext)
         except Exception:
             try:
-                tag = handler.build_tag(filepath=filepath + ext)
+                tag = handler.build_tag(filepath=filepath)
             except Exception:
                 return None
 
@@ -186,6 +214,9 @@ class DependencyFrame(ContainerFrame):
         if self.node is None:
             return
 
+        if self.node.filepath == '':
+            return
+
         desc = self.desc
         wid = self.f_widget_ids_map.get(desc['NAME_MAP']['filepath'])
         widget = self.f_widgets.get(wid)
@@ -197,21 +228,22 @@ class DependencyFrame(ContainerFrame):
         except AttributeError:
             return
 
-        if not tags_dir.endswith(PATHDIV):
-            tags_dir += PATHDIV
-
         ext = '.' + self.node.tag_class.enum_name
-        filepath = tags_dir + self.node.filepath
-        try:
-            if (self.tag_window.handler.treat_mode_as_mod2 and
-                ext == '.model' and not os.path.exists(filepath + ext)):
-                ext = '.gbxmodel'
-        except AttributeError:
-            pass
+        # Get full path with proper capitalization if it points to a file.
+        filepath = tagpath_to_fullpath(
+            tags_dir,
+            PurePath(PureWindowsPath(self.node.filepath)),
+            extension=ext)
 
-        filepath = filepath + ext
-        filepath = sanitize_path(filepath)
-        if os.path.exists(filepath):
+        if (self.tag_window.handler.treat_mode_as_mod2
+        and filepath is None
+        and ext == '.model'):
+            filepath = tagpath_to_fullpath(
+                tags_dir,
+                PurePath(PureWindowsPath(self.node.filepath)),
+                extension='.gbxmodel')
+
+        if filepath is not None:
             widget.data_entry.config(fg=self.text_normal_color)
         else:
             widget.data_entry.config(fg=self.invalid_path_color)
