@@ -36,7 +36,7 @@ elif platform == "darwin":
     # leaving this here just in case it somehow works though.
     TEXT_EDITOR_NAME = "TextEdit"
 elif platform == "linux":
-    TEXT_EDITOR_NAME = "nano"
+    TEXT_EDITOR_NAME = "vim"
 else:
     # idfk
     TEXT_EDITOR_NAME = "vim"
