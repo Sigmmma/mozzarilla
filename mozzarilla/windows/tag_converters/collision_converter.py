@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 
 try:
     from .converter_base import ConverterBase
@@ -8,7 +9,11 @@ except (ImportError, SystemError):
 import os
 import threadsafe_tkinter as tk
 
-from tkinter.filedialog import askopenfilename
+# Filepicker dialog sucks on linux unless we replace it.
+if sys.platform.startswith('linux'):
+    from tkfilebrowser import askopenfilename
+elif:
+    from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 from struct import pack_into, pack
 

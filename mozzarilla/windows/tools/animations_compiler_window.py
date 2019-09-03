@@ -1,9 +1,14 @@
 import os
+import sys
 import tkinter as tk
 import time
 
 from tkinter import messagebox
-from tkinter.filedialog import askdirectory, asksaveasfilename
+# Filepicker dialog sucks on linux unless we replace it.
+if sys.platform.startswith('linux'):
+    from tkfilebrowser import askopendirname as askdirectory, asksaveasfilename
+elif:
+    from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
 from binilla.util import sanitize_path, get_cwd
@@ -212,7 +217,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         for w in (self.update_mode_frame,
                   self.animation_delta_tolerance_frame):
             w.pack(expand=True, fill='both')
-        
+
         for w in (self.compile_mode_replace_rbtn,
                   self.compile_mode_preserve_rbtn,
                   self.compile_mode_additive_rbtn,):

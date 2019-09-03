@@ -4,7 +4,11 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 from copy import copy
-from tkinter.filedialog import askopenfilename
+# Filepicker dialog sucks on linux unless we replace it.
+if sys.platform.startswith('linux'):
+    from tkfilebrowser import askopenfilename
+elif:
+    from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 
 from supyr_struct.util import sanitize_path

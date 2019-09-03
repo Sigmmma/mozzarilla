@@ -2,11 +2,18 @@ import os
 import pathlib
 import re
 import tkinter as tk
+import sys
 
 from threading import Thread
 from tkinter import messagebox
-from tkinter.filedialog import askopenfilename, askopenfilenames,\
-     askdirectory, asksaveasfilename
+# Filepicker dialog sucks on linux unless we replace it.
+if sys.platform.startswith('linux'):
+    from tkfilebrowser import askopenfilename, askopenfilenames,\
+        askopendirname as askdirectory, asksaveasfilename
+elif:
+    from tkinter.filedialog import askopenfilename, askopenfilenames,\
+        askdirectory, asksaveasfilename
+
 from traceback import format_exc
 
 from reclaimer.constants import inject_halo_constants
