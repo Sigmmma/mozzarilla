@@ -1037,7 +1037,7 @@ class Mozzarilla(Binilla):
 
             tags_dir_str = tags_dir[:-1]
             if not show_full:
-                tags_dir_str = list(PurePath(tags_dir_str).parts)
+                tags_dir_str = list(pathlib.PurePath(tags_dir_str).parts)
                 if tags_dir_str[-1].lower() != "tags":
                     tags_dir_str = tags_dir_str[-1]
                 else:
