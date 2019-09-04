@@ -1,5 +1,4 @@
 import os
-import pathlib
 from pathlib import PurePath, PureWindowsPath
 import re
 import tkinter as tk
@@ -353,21 +352,18 @@ class Mozzarilla(Binilla):
 
     @property
     def data_dir(self):
-        try:
-            tags_dir = self.tags_dir
-            if not tags_dir:
-                return ""
+        tags_dir = self.tags_dir
+        if not tags_dir:
+            return ""
 
-            path_parts = list(pathlib.PurePath(tags_dir).parts)
-            last_part = path_parts.pop()
-            # If the directory tree doesn't end with 'tags' then there
-            # probably is no 'data' directory.
-            if last_part != 'tags':
-                return None
+        path_parts = list(PurePath(tags_dir).parts)
+        last_part = path_parts.pop()
+        # If the directory tree doesn't end with 'tags' then there
+        # probably is no 'data' directory.
+        if last_part != 'tags':
+            return ""
 
-            return os.path.join(path_parts[:], "data")
-        except IndexError:
-            return None
+        return os.path.join(*path_parts, "data")
 
     @property
     def tags_dir(self):
@@ -1053,7 +1049,7 @@ class Mozzarilla(Binilla):
 
             tags_dir_str = tags_dir[:-1]
             if not show_full:
-                tags_dir_str = list(pathlib.PurePath(tags_dir_str).parts)
+                tags_dir_str = list(PurePath(tags_dir_str).parts)
                 if tags_dir_str[-1].lower() != "tags":
                     tags_dir_str = tags_dir_str[-1]
                 else:
