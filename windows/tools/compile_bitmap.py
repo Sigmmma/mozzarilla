@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import PurePath
 
 from struct import unpack
 # Filepicker dialog sucks on linux unless we replace it.
@@ -13,7 +14,6 @@ from reclaimer.bitmaps.bitmap_decompilation import extract_bitmap_tiff_data
 from reclaimer.bitmaps.bitmap_compilation import add_bitmap_to_bitmap_tag,\
      compile_bitmap_from_dds_files
 
-from supyr_struct.defs.constants import PATHDIV
 from supyr_struct.util import sanitize_path
 
 
@@ -46,8 +46,8 @@ def bitmap_from_dds(app, fps=()):
         window.is_new_tag = True
 
         compile_bitmap_from_dds_files(window.tag, (fp, ))
-        window.update_title(fp.split(PATHDIV)[-1])
-    
+        window.update_title(list(PurePath(fp).parts)[-1])
+
         # reload the window to display the newly entered info
         window.reload()
         # prompt the user to save the tag somewhere
@@ -84,8 +84,9 @@ def bitmap_from_multiple_dds(app, fps=()):
     fps = sorted(fps)
 
     for fp in fps:
-        window.update_title(fp.split(PATHDIV)[-1])
-        app.bitmap_load_dir = os.path.dirname(fp)
+        pure_path = PurePath(fp)
+        window.update_title(list(pure_path.parts)[-1])
+        app.bitmap_load_dir = pure_path.parent
         break
 
     compile_bitmap_from_dds_files(window.tag, fps)
