@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import PurePath, PureWindowsPath
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -7,7 +8,7 @@ from copy import copy
 # Filepicker dialog sucks on linux unless we replace it.
 if sys.platform.startswith('linux'):
     from tkfilebrowser import askopenfilename
-elif:
+else:
     from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 

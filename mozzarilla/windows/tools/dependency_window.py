@@ -7,7 +7,7 @@ from threading import Thread
 # Filepicker dialog sucks on linux unless we replace it.
 if sys.platform.startswith('linux'):
     from tkfilebrowser import askopenfilename, asksaveasfilename
-elif:
+else:
     from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
 
@@ -27,7 +27,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
     _zipping = False
     stop_zipping = False
 
-    def __init__(self, app_root, *args, **kwargs): 
+    def __init__(self, app_root, *args, **kwargs):
         self.handler = app_root.handler
         self.app_root = app_root
         kwargs.update(width=400, height=500, bd=0,

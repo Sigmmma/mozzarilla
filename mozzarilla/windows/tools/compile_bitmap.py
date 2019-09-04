@@ -5,7 +5,7 @@ from struct import unpack
 # Filepicker dialog sucks on linux unless we replace it.
 if sys.platform.startswith('linux'):
     from tkfilebrowser import askopenfilenames
-elif:
+else:
     from tkinter.filedialog import askopenfilenames
 from traceback import format_exc
 

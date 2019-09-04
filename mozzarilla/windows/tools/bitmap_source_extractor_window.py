@@ -10,8 +10,8 @@ from threading import Thread
 from struct import unpack, pack_into
 # Filepicker dialog sucks on linux unless we replace it.
 if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopendirname as askdirectory
-elif:
+    from tkfilebrowser import askdirectory
+else:
     from tkinter.filedialog import askdirectory
 from traceback import format_exc
 

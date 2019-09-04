@@ -6,7 +6,7 @@ import tkinter as tk
 # Filepicker dialog sucks on linux unless we replace it.
 if sys.platform.startswith('linux'):
     from tkfilebrowser import askopenfilename, asksaveasfilename
-elif:
+else:
     from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
 
