@@ -5,7 +5,7 @@ import tkinter as tk
 # Filepicker dialog sucks on linux unless we replace it.
 if sys.platform.startswith('linux'):
     from tkfilebrowser import askopenfilename
-elif:
+else:
     from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 from struct import unpack, pack
@@ -23,7 +23,7 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
 
     print_interval = 5
 
-    def __init__(self, app_root, *args, **kwargs): 
+    def __init__(self, app_root, *args, **kwargs):
         self.handler = app_root.get_handler("Halo 1 OS v4")
         self.app_root = app_root
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)

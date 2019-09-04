@@ -8,8 +8,8 @@ from time import time
 from threading import Thread
 # Filepicker dialog sucks on linux unless we replace it.
 if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilename, askopendirname as askdirectory
-elif:
+    from tkfilebrowser import askopenfilename, askdirectory
+else:
     from tkinter.filedialog import askopenfilename, askdirectory
 from traceback import format_exc
 from binilla.widgets.binilla_widget import BinillaWidget

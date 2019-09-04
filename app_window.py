@@ -1,5 +1,6 @@
 import os
 import pathlib
+from pathlib import PurePath, PureWindowsPath
 import re
 import tkinter as tk
 import sys
@@ -9,8 +10,8 @@ from tkinter import messagebox
 # Filepicker dialog sucks on linux unless we replace it.
 if sys.platform.startswith('linux'):
     from tkfilebrowser import askopenfilename, askopenfilenames,\
-        askopendirname as askdirectory, asksaveasfilename
-elif:
+        askdirectory, asksaveasfilename
+else:
     from tkinter.filedialog import askopenfilename, askopenfilenames,\
         askdirectory, asksaveasfilename
 
@@ -786,28 +787,36 @@ class Mozzarilla(Binilla):
             else:
                 filepaths = (filepaths, )
 
-        sani = sanitize_path
-        sanitized_paths = [sani(path) for path in filepaths]
+        #sani = sanitize_path
+        #sanitized_paths = [sani(path) for path in filepaths]
+
+        filepaths = list(filepaths)
 
         # make sure all the chosen tag paths are relative
         # to the current tags directory if they must be
         last_load_dir = self.last_load_dir
         if self.handler_name in self.tags_dir_relative:
-            for i in range(len(sanitized_paths)):
-                path = sanitized_paths[i]
+            for path in filepaths:
                 if not path:
                     # path is empty, so making a new tag
                     continue
-                elif is_in_dir(path, tags_dir, 0):
-                    # make the path relative to the tags_dir
-                    last_load_dir = os.path.dirname(path)
-                    sanitized_paths[i] = os.path.relpath(path, tags_dir)
-                    continue
+                else:
+                    try:
+                        pure_path = PurePath(path)
+                        # make the path relative to the tags_dir
+                        last_load_dir = pure_path.parent
+                        path = str(pure_path.relative_to(tags_dir))
+                        continue
+                    # PurePath.relative_to() exceptions if the path cannot be
+                    # made relative.
+                    except Exception as e:
+                        pass
 
-                print("Specified tag(s) are not located in the tags directory")
+                print("Not loading tag %s because it isn't located in tags folder %s"
+                    % (path, tags_dir))
                 return ()
 
-        windows = Binilla.load_tags(self, sanitized_paths, def_id)
+        windows = Binilla.load_tags(self, filepaths, def_id)
         self.last_load_dir = last_load_dir
 
         if not windows:
@@ -833,7 +842,7 @@ class Mozzarilla(Binilla):
         if not fp:
             return
 
-        self.last_load_dir = os.path.dirname(fp)
+        self.last_load_dir = PurePath(fp).parent
         dsw = DefSelectorWindow(
             self, title="Which tag is this", action=lambda def_id:
             self.load_tags(filepaths=fp, def_id=def_id))

@@ -6,8 +6,8 @@ from threading import Thread
 from time import time
 # Filepicker dialog sucks on linux unless we replace it.
 if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilename, askopendirname as askdirectory
-elif:
+    from tkfilebrowser import askopenfilename, askdirectory
+else:
     from tkinter.filedialog import askopenfilename, askdirectory
 from traceback import format_exc
 
@@ -36,7 +36,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
     tag_class_fcc_to_ext = ()
     tag_class_ext_to_fcc = ()
 
-    def __init__(self, app_root, *args, **kwargs): 
+    def __init__(self, app_root, *args, **kwargs):
         self.handler = app_root.handler
         self.app_root = app_root
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
