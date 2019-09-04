@@ -78,7 +78,7 @@ class DependencyFrame(ContainerFrame):
             # get file extension.
             ext = tag_path.suffix.lower()
             # Remove file extension.
-            tag_path = tag_path.with_suffix('')
+            tag_path = tag_path.stem
 
             orig_tag_class = copy(self.node.tag_class)
             # Try to set the tagtype to the type that we selected.
