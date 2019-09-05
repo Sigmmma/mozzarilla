@@ -324,7 +324,8 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
 
             if success:
                 tex_root = pixel_data[i]
-                tex_root.parse(initdata=arb.texture_block)
+                tex_root.parse(initdata=arb.texture_block,
+                               clear=False, init_attrs=False)
                 tag.swizzled(i, arb.swizzled)
 
                 #change the bitmap format to the new format
