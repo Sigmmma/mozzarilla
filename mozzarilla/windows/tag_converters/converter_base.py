@@ -3,6 +3,7 @@
 import os
 import sys
 import threadsafe_tkinter as tk
+from pathlib import Path
 
 from time import time
 from threading import Thread
@@ -13,8 +14,9 @@ else:
     from tkinter.filedialog import askopenfilename, askdirectory
 from traceback import format_exc
 from binilla.widgets.binilla_widget import BinillaWidget
+from reclaimer.util.path import path_replace
 
-curr_dir = os.path.join(os.path.abspath(os.curdir), "")
+curr_dir = os.curdir
 
 class ConverterBase(BinillaWidget):
     src_ext = "*"
@@ -44,7 +46,7 @@ class ConverterBase(BinillaWidget):
             except Exception:
                 pass
 
-        tags_dir = os.path.join(curr_dir + 'tags', "")
+        tags_dir = path_replace(Path(curr_dir, 'tags'), 'tags', 'tags')
         if self.app_root is not self and hasattr(self.app_root, "tags_dir"):
             tags_dir = getattr(self.app_root, "tags_dir")
 
@@ -201,8 +203,8 @@ class ConverterBase(BinillaWidget):
                 if self.stop_conversion:
                     break
 
-                filepath = os.path.join(root, filename)
-                if os.path.splitext(filename)[-1].lower() == valid_ext:
+                filepath = Path(root, filename)
+                if filepath.suffix.lower() == valid_ext:
                     self.do_convert_tag(filepath)
 
             if self.stop_conversion:

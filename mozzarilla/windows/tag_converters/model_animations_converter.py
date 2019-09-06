@@ -5,7 +5,7 @@ try:
 except (ImportError, SystemError):
     from converter_base import ConverterBase
 
-import os
+from pathlib import Path
 import threadsafe_tkinter as tk
 
 from traceback import format_exc
@@ -21,7 +21,7 @@ if __name__ == "__main__":
 def magy_to_antr(magy_path):
     magy_tag = magy_def.build(filepath=magy_path)
     antr_tag = antr_def.build()
-    antr_tag.filepath = (os.path.splitext(magy_path)[0] + ".model_animations")
+    antr_tag.filepath = Path(magy_path).with_suffix(".model_animations")
 
     magy_attrs = magy_tag.data.tagdata
     antr_attrs = antr_tag.data.tagdata

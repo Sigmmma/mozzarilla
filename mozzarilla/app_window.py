@@ -1,5 +1,6 @@
 import os
-from pathlib import PurePath, PureWindowsPath
+from pathlib import Path, PurePath, PureWindowsPath
+from reclaimer.util.path import tagpath_to_fullpath, path_split, path_replace, path_normalize
 import re
 import tkinter as tk
 import sys
@@ -27,7 +28,7 @@ from binilla.handler import Handler
 from binilla.app_window import Binilla, default_hotkeys,\
      default_tag_window_hotkeys
 from binilla.util import do_subprocess, ProcController, is_main_frozen,\
-     get_cwd, sanitize_path
+     get_cwd
 from binilla.windows.def_selector_window import DefSelectorWindow
 from binilla.windows.tag_window import read_hotkey_string
 
@@ -354,16 +355,9 @@ class Mozzarilla(Binilla):
     def data_dir(self):
         tags_dir = self.tags_dir
         if not tags_dir:
-            return ""
+            return WORKING_DIR
 
-        path_parts = list(PurePath(tags_dir).parts)
-        last_part = path_parts.pop()
-        # If the directory tree doesn't end with 'tags' then there
-        # probably is no 'data' directory.
-        if last_part != 'tags':
-            return ""
-
-        return os.path.join(*path_parts, "data")
+        return path_replace(tags_dir, "tags", "data")
 
     @property
     def tags_dir(self):
@@ -375,13 +369,11 @@ class Mozzarilla(Binilla):
     @tags_dir.setter
     def tags_dir(self, new_val):
         assert isinstance(new_val, str)
-        new_val = os.path.join(sanitize_path(new_val), '')  # ensure it ends with a \
-        self.tags_dirs[self._curr_tags_dir_index] = new_val
+        self.tags_dirs[self._curr_tags_dir_index] = path_normalize(new_val)
 
     def get_tags_dir_index(self, tags_dir):
         try:
-            tags_dir = os.path.join(sanitize_path(tags_dir), '')
-            return self.tags_dirs.index(tags_dir)
+            return self.tags_dirs.index(path_normalize(tags_dir))
         except Exception:
             return None
 
@@ -408,20 +400,19 @@ class Mozzarilla(Binilla):
             if isinstance(index, str):
                 index = self.handler_names.index(index)
 
-            tags_dir = os.path.join(sanitize_path(tags_dir), '')
-            if not self.handlers[index].get(tags_dir.lower(), None):
+            tags_dir = path_normalize(tags_dir)
+            if not self.handlers[index].get(tags_dir, None):
                 if create_if_not_exists:
                     self.create_handlers(tags_dir, index)
                 else:
                     return None
 
-            return self.handlers[index][tags_dir.lower()]
+            return self.handlers[index][tags_dir]
         except Exception:
             return None
 
     def create_handlers(self, tags_dir, handler_indices=()):
-        tags_dir = os.path.join(sanitize_path(tags_dir), '')
-        tags_dir_key = tags_dir.lower()
+        tags_dir = path_normalize(tags_dir)
         if isinstance(handler_indices, int):
             handler_indices = (handler_indices, )
         elif not handler_indices:
@@ -432,12 +423,13 @@ class Mozzarilla(Binilla):
                 i = self.handler_names.index(i)
 
             handlers_by_dir = self.handlers[i]
-            if handlers_by_dir.get(tags_dir_key, None):
+            if handlers_by_dir.get(tags_dir, None):
                 continue
 
+            # TODO: Investigate.
             handler = self.handler_classes[i](debug=self.debug, case_sensitive=e_c.IS_LNX)
             handler.tagsdir = tags_dir
-            handlers_by_dir[tags_dir_key] = handler
+            handlers_by_dir[tags_dir] = handler
 
     def set_active_handler(self, handler=None, index=None, tags_dir=None):
         if handler is not None:
@@ -519,7 +511,7 @@ class Mozzarilla(Binilla):
         if not tags_dir:
             return
 
-        tags_dir = os.path.join(sanitize_path(tags_dir), '')
+        tags_dir = path_normalize(tags_dir)
         if self.get_tags_dir_index(tags_dir) is not None:
             if manual:
                 print("That tags directory already exists.")
@@ -539,6 +531,8 @@ class Mozzarilla(Binilla):
         dirs_count = len(self.tags_dirs)
         # need at least 2 tags dirs to delete one manually
         if dirs_count < 2 and manual:
+            print("You need more than one tags directory before you're "
+                  "allowed to remove one.")
             return
 
         if index is None:
@@ -567,7 +561,7 @@ class Mozzarilla(Binilla):
         if not tags_dir:
             return
 
-        tags_dir = os.path.join(sanitize_path(tags_dir), '')
+        tags_dir = path_normalize(tags_dir)
         if tags_dir in self.tags_dirs:
             print("That tags directory already exists.")
             return
@@ -633,7 +627,7 @@ class Mozzarilla(Binilla):
             except IndexError: pass
 
         if not self.tags_dir:
-            self.tags_dir = os.path.join(WORKING_DIR, "tags")
+            self.tags_dir = tagpath_to_fullpath(WORKING_DIR, "tags", folder=True)
 
     def record_open_tags(self):
         try:
@@ -729,13 +723,13 @@ class Mozzarilla(Binilla):
             return
 
         self.last_load_dir = os.path.dirname(fp)
-        tags_dir = os.path.join(os.path.dirname(fp), "tags", "")
+        tags_dir = tagpath_to_fullpath(os.path.dirname(fp), "tags", folder=True)
         if not os.path.exists(tags_dir):
             print("Specified guerilla.cfg has no corresponding tags directory.")
             return
 
         workspace = self.guerilla_workspace_def.build(filepath=fp)
-        tags_dir = os.path.join(sanitize_path(tags_dir), '')
+        tags_dir = path_normalize(tags_dir)
         if self.get_tags_dir_index(tags_dir) is None:
             print("Adding tags directory:\n    %s" % tags_dir)
             self.add_tags_dir(tags_dir=tags_dir)
@@ -782,9 +776,6 @@ class Mozzarilla(Binilla):
                 filepaths = re.split("\}\W\{", filepaths[1:-1])
             else:
                 filepaths = (filepaths, )
-
-        #sani = sanitize_path
-        #sanitized_paths = [sani(path) for path in filepaths]
 
         filepaths = list(filepaths)
 
@@ -897,7 +888,7 @@ class Mozzarilla(Binilla):
         w = self.get_tag_window_by_tag(tag)
 
         # make sure the filepath is sanitized
-        filepath = sanitize_path(filepath)
+        filepath = path_normalize(filepath)
 
         handler = tag.handler
         tags_dir = self.tags_dir
@@ -1001,11 +992,10 @@ class Mozzarilla(Binilla):
         mozz.selected_handler.data = self._curr_handler_index
         mozz.last_tags_dir = self._curr_tags_dir_index
 
-        sani = sanitize_path
         del tags_dirs[:]
         for tags_dir in self.tags_dirs:
             tags_dirs.append()
-            tags_dirs[-1].path = sani(tags_dir)
+            tags_dirs[-1].path = path_normalize(tags_dir)
 
         if len(load_dirs.NAME_MAP) > len(load_dirs):
             load_dirs.extend(len(load_dirs.NAME_MAP) - len(load_dirs))
@@ -1047,13 +1037,15 @@ class Mozzarilla(Binilla):
             except Exception:
                 show_full = False
 
-            tags_dir_str = tags_dir[:-1]
+            tags_dir_str = tags_dir
+            '''
             if not show_full:
                 tags_dir_str = list(PurePath(tags_dir_str).parts)
                 if tags_dir_str[-1].lower() != "tags":
                     tags_dir_str = tags_dir_str[-1]
                 else:
                     tags_dir_str = tags_dir_str[-2]
+            '''
 
             handler_i = self.get_handler_index(window.handler)
 
