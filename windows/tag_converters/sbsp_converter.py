@@ -6,6 +6,7 @@ except (ImportError, SystemError):
     from converter_base import ConverterBase
 
 import os
+from pathlib import Path, PureWindowsPath
 import threadsafe_tkinter as tk
 
 from copy import deepcopy
@@ -352,7 +353,7 @@ def make_bsp_renderable_jms_models(sbsp_body, base_nodes):
         materials = lightmaps[i].materials.STEPTREE
         for j in range(len(materials)):
             material = materials[j]
-            mat_name = os.path.basename(material.shader.filepath.lower())
+            mat_name = PureWindowsPath(material.shader.filepath).name.lower()
             mat_name += "!$" if material.flags.fog_plane else "!"
 
             if mat_name not in mat_indices_by_mat_name:
@@ -511,7 +512,7 @@ def sbsp_to_mod2(
             print("    Could not convert lightmaps")
 
     print("    Compiling gbxmodel...")
-    mod2_tag.filepath = os.path.splitext(sbsp_path)[0] + "_SBSP.gbxmodel"
+    mod2_tag.filepath = Path(sbsp_path).stem + "_SBSP.gbxmodel"
     compile_gbxmodel(mod2_tag, MergedJmsModel(*jms_models), True)
     return mod2_tag
 

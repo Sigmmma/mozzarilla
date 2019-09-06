@@ -120,7 +120,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
     def insert_root_dir(self, root_dir, index='end'):
         iid = self.tags_tree.insert(
-            '', index, iid=root_dir, text=root_dir[:-1],
+            '', index, iid=root_dir, text=root_dir,
             tags=(root_dir, 'tagdir',))
         self.tags_dir_items.append(iid)
         self.destroy_subitems(iid)
