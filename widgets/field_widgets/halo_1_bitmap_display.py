@@ -20,6 +20,9 @@ try:
 except ImportError:
     HALO_P8_PALETTE = STUBBS_P8_PALETTE = None
 
+SPRITE_RECTANGLE_TAG = "SPRITE_RECTANGLE"
+SPRITE_CENTER_TAG = "SPRITE_CENTER"
+
 
 class HaloBitmapDisplayBase:
     cubemap_padding = CUBEMAP_PADDING
@@ -200,7 +203,8 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
         self.sprite_menu.sel_index = (self.sprite_menu.max_index >= 0) - 1
 
     def sprite_changed(self, *args):
-        self.image_canvas.delete("SPRITE_RECTANGLE")
+        self.image_canvas.delete(SPRITE_RECTANGLE_TAG)
+        self.image_canvas.delete(SPRITE_CENTER_TAG)
         tag = self.bitmap_tag
         if tag is None:
             self.sprite_menu.set_options(())
@@ -222,6 +226,7 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
         sprites = sequence.sprites.STEPTREE
         bitmap_index = sequence.first_bitmap_index + sprite_i
         x0, y0, x1, y1 = 0, 0, 1, 1
+        rx, ry = 0.5, 0.5
         if sprite_i in range(len(sprites)):
             sprite = sprites[sprite_i]
             if sprite.bitmap_index not in range(len(bitmaps)):
@@ -230,6 +235,8 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
             bitmap_index = sprite.bitmap_index
             x0, y0, x1, y1 = sprite.left_side,  sprite.top_side,\
                              sprite.right_side, sprite.bottom_side
+            rx = x0 + sprite.registration_point_x
+            ry = y0 + sprite.registration_point_y
         elif bitmap_index not in range(len(bitmaps)):
             return
 
@@ -241,13 +248,24 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
         w, h = max(bitmap.width>>mip, 1), max(bitmap.height>>mip, 1)
         x0, y0 = int(round(x0 * w)), int(round(y0 * h))
         x1, y1 = int(round(x1 * w)), int(round(y1 * h))
+        rx, ry = int(round(rx * w)), int(round(ry * h))
+        rx0, rx1 = rx - 1, rx + 1
+        ry0, ry1 = ry - 1, ry + 1
         if x1 < x0: x0, x1 = x1, x0
         if y1 < y0: y0, y1 = y1, y0
+        if ry1 < ry0: ry0, ry1 = ry1, ry0
         x0 -= 1; y0 -= 1
+        rx0 -= 1; ry0 -= 1
 
         self.image_canvas.create_rectangle(
-            (x0, y0, x1, y1), fill=None, dash=(2, 1), tags="SPRITE_RECTANGLE",
+            (x0, y0, x1, y1), fill=None, dash=(2, 1),
+            tags=SPRITE_RECTANGLE_TAG,
             outline=self.bitmap_canvas_outline_color)
+
+        self.image_canvas.create_rectangle(
+            (rx0, ry0, rx1, ry1), fill=None,
+            tags=SPRITE_CENTER_TAG, 
+            outline=self.bitmap_canvas_bg_color)
 
     def change_textures(self, textures):
         BitmapDisplayFrame.change_textures(self, textures)
