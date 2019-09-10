@@ -1,6 +1,8 @@
 import os
 import sys
 import tkinter as tk
+from pathlib import Path
+from reclaimer.util.path import path_split
 
 from threading import Thread
 from time import time
@@ -15,9 +17,6 @@ from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.util import get_cwd
 
 from reclaimer.halo_script.hsc import get_h1_scenario_script_object_type_strings
-
-from supyr_struct.defs.constants import PATHDIV
-from supyr_struct.util import sanitize_path, is_in_dir
 
 curr_dir = get_cwd(__file__)
 
@@ -174,19 +173,19 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         if not dirpath:
             return
 
-        dirpath = sanitize_path(dirpath)
-        if not dirpath.endswith(PATHDIV):
-            dirpath += PATHDIV
+        self.app_root.last_load_dir = dirpath
 
-        self.app_root.last_load_dir = os.path.dirname(dirpath)
-        tags_dir = self.handler.tagsdir
-        if not (is_in_dir(dirpath, tags_dir, 0) or
-                os.path.join(dirpath.lower()) == os.path.join(tags_dir.lower())):
-            print("Specified directory is not located within the tags directory.")
+        dirpath = Path(dirpath)
+        tags_dir = Path(self.handler.tagsdir)
+
+        try:
+            dirpath.relative_to(tags_dir)
+        except:
+            print("Directory %s is not located inside tags dir: %s"
+                  % (str(dirpath), str(tags_dir)))
             return
 
-        self.app_root.last_load_dir = os.path.dirname(dirpath)
-        self.dir_path.set(dirpath)
+        self.dir_path.set(str(dirpath))
 
     def tag_browse(self):
         if self._extracting:
@@ -205,11 +204,13 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         if not fp:
             return
 
-        fp = sanitize_path(fp)
-        self.app_root.last_load_dir = os.path.dirname(fp)
+        self.app_root.last_load_dir = str(Path(fp).parent)
         tags_dir = self.handler.tagsdir
-        if not is_in_dir(fp, tags_dir, 0):
-            print("Specified tag is not located within the tags directory.")
+        try:
+            Path(fp).relative_to(tags_dir)
+        except:
+            print("Tag %s is not located in tags directory %s"
+                  % (fp, tags_dir))
             return
 
         self.app_root.last_load_dir = os.path.dirname(fp)
@@ -278,16 +279,16 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
     def do_dir_extract(self):
         tags_dir = self.tags_dir = self.handler.tagsdir
-        if not tags_dir.endswith(PATHDIV):
-            tags_dir += PATHDIV
+        tags_dir = Path(tags_dir)
 
-        tags_path = sanitize_path(self.dir_path.get())
-        data_path = os.path.join(
-            os.path.dirname(os.path.dirname(tags_dir)), "data")
+        tags_path = self.dir_path.get()
+        data_path = tags_dir.parent.join("data")
 
-        if not (is_in_dir(tags_path, tags_dir, 0) or
-                os.path.join(tags_path.lower()) == os.path.join(tags_dir.lower())):
-            print("Specified directory is not located within the tags directory.")
+        try:
+            dirpath.relative_to(tags_dir)
+        except:
+            print("Directory %s is not located inside tags dir: %s"
+                  % (str(dirpath), str(tags_dir)))
             return
 
         settings = dict(out_dir=data_path, overwrite=self.overwrite.get(),
@@ -305,16 +306,18 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         print("Locating tags...")
 
         for root, directories, files in os.walk(tags_path):
-            if not root.endswith(PATHDIV):
-                root += PATHDIV
+            root = Path(root)
+            try:
+                root = root.relative_to(tags_dir)
+            except:
+                continue
 
-            root = os.path.relpath(root, tags_dir)
             for filename in files:
-                filepath = os.path.join(sanitize_path(root), filename)
+                filepath = root.join(filename)
 
                 if time() - c_time > p_int:
                     c_time = time()
-                    print(' '*4 + filepath)
+                    print(' '*4 + str(filepath))
                     self.app_root.update_idletasks()
 
                 if self.stop_extracting:
@@ -322,8 +325,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
                     return
 
                 tag_paths = all_tag_paths.get(
-                    self.tag_class_ext_to_fcc.get(
-                        os.path.splitext(filename)[-1].lower()[1: ]))
+                    self.tag_class_ext_to_fcc.get(filename.suffix[1:].lower()))
 
                 if tag_paths is not None:
                     tag_paths.append(filepath)
@@ -347,23 +349,24 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
     def do_tag_extract(self):
         tags_dir = self.tags_dir = self.handler.tagsdir
-        tag_path = sanitize_path(self.tag_path.get())
-        if not tags_dir.endswith(PATHDIV):
-            tags_dir += PATHDIV
+        tag_path = self.tag_path.get()
 
-        def_id = self.tag_class_ext_to_fcc.get(
-            os.path.splitext(tag_path)[-1].lower()[1:])
+        def_id = self.tag_class_ext_to_fcc.get(Path(tag_path).suffix[1:].lower())
         if def_id is None or def_id not in self.tag_data_extractors:
             print("Cannot extract data from this kind of tag.")
             return
-        elif not is_in_dir(tag_path, tags_dir, 0):
-            print("Specified tag is not located within the tags directory.")
-            return
+        else:
+            try:
+                Path(tag_path).relative_to(tags_dir)
+            except:
+                print("Tag %s is not located within tags directory: %s"
+                      % (tag_path, tags_dir))
+                return
 
         print("Extracting %s" % tag_path)
         self.extract(os.path.relpath(tag_path, tags_dir),
                      self.tag_data_extractors[def_id],
-                     out_dir=os.path.join(os.path.dirname(os.path.dirname(tags_dir)), "data"),
+                     out_dir=str(Path(path_split(tags_dir, "tags")).joinpath("data")),
                      overwrite=self.overwrite.get(), engine="yelo",
                      decode_adpcm=self.decode_adpcm.get()
                      )

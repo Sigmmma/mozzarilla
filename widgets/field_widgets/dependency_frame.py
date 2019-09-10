@@ -1,6 +1,6 @@
 import os
 import sys
-from pathlib import PurePath, PureWindowsPath
+from pathlib import Path, PureWindowsPath
 import tkinter as tk
 import tkinter.ttk as ttk
 
@@ -69,16 +69,19 @@ class DependencyFrame(ContainerFrame):
                 return
 
             # Halo tagpaths require backslashes( \ ) as dividers.
-            # We take the path we got, interpret it as a native PurePath
-            # And then convert it to a PureWindowsPath to get the backslashes
-            # safely.
-            filepath = PurePath(filepath) # TODO: Check if this goes to
-            # hell if a tagpath outside of the tagdir is selected.
-            tag_path = filepath.relative_to(tags_dir)
+            # We take the path we got, interpret it as a native Path, then
+            # convert it to a PureWindowsPath to get the backslashes safely.
+            filepath = Path(filepath)
+            try:
+                tag_path = filepath.relative_to(tags_dir)
+            # If the path is not relative just only take the filename.
+            except Exception:
+                tag_path = Path(filepath.name)
+
             # get file extension.
             ext = tag_path.suffix.lower()
             # Remove file extension.
-            tag_path = tag_path.stem
+            tag_path = tag_path.with_suffix('')
 
             orig_tag_class = copy(self.node.tag_class)
             # Try to set the tagtype to the type that we selected.
@@ -133,7 +136,7 @@ class DependencyFrame(ContainerFrame):
             # Get full path with proper capitalization if it points to a file.
             filepath = tagpath_to_fullpath(
                 tags_dir,
-                PurePath(PureWindowsPath(self.node.filepath)),
+                Path(PureWindowsPath(self.node.filepath)),
                 extension=ext)
 
             if (new_handler.treat_mode_as_mod2
@@ -141,7 +144,7 @@ class DependencyFrame(ContainerFrame):
             and ext == '.model'):
                 filepath = tagpath_to_fullpath(
                     tags_dir,
-                    PurePath(PureWindowsPath(self.node.filepath)),
+                    Path(PureWindowsPath(self.node.filepath)),
                     extension='.gbxmodel')
 
             if filepath is None:
@@ -173,7 +176,7 @@ class DependencyFrame(ContainerFrame):
             # Get full path with proper capitalization if it points to a file.
             filepath = tagpath_to_fullpath(
                 tags_dir,
-                PurePath(PureWindowsPath(self.node.filepath)),
+                Path(PureWindowsPath(self.node.filepath)),
                 extension=ext)
 
             if (new_handler.treat_mode_as_mod2
@@ -181,7 +184,7 @@ class DependencyFrame(ContainerFrame):
             and ext == '.model'):
                 filepath = tagpath_to_fullpath(
                     tags_dir,
-                    PurePath(PureWindowsPath(self.node.filepath)),
+                    Path(PureWindowsPath(self.node.filepath)),
                     extension='.gbxmodel')
 
             if filepath is None:
@@ -237,7 +240,7 @@ class DependencyFrame(ContainerFrame):
         # Get full path with proper capitalization if it points to a file.
         filepath = tagpath_to_fullpath(
             tags_dir,
-            PurePath(PureWindowsPath(self.node.filepath)),
+            Path(PureWindowsPath(self.node.filepath)),
             extension=ext)
 
         if (self.tag_window.handler.treat_mode_as_mod2
@@ -245,7 +248,7 @@ class DependencyFrame(ContainerFrame):
         and ext == '.model'):
             filepath = tagpath_to_fullpath(
                 tags_dir,
-                PurePath(PureWindowsPath(self.node.filepath)),
+                Path(PureWindowsPath(self.node.filepath)),
                 extension='.gbxmodel')
 
         if filepath is not None:

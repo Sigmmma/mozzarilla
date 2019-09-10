@@ -2,6 +2,7 @@ import os
 import sys
 import tkinter as tk
 import time
+from pathlib import Path
 
 from tkinter import messagebox
 # Filepicker dialog sucks on linux unless we replace it.
@@ -427,10 +428,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.app_root.last_load_dir = os.path.dirname(dirpath)
         self.jma_dir.set(dirpath)
         if not self.tags_dir.get():
-            path_pieces = self.app_root.last_load_dir.split(
-                "%sdata%s" % (PATHDIV, PATHDIV))
-            if len(path_pieces) > 1:
-                self.tags_dir.set(os.path.join(path_pieces[0], "tags"))
+            self.tags_dir.set(path_replace(self.app_root.last_load_dir, "data", "tags"))
 
     def tags_dir_browse(self):
         if self._compiling or self._loading or self._saving:
@@ -476,10 +474,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.app_root.last_load_dir = os.path.dirname(fp)
         self.model_animations_path.set(fp)
 
-        path_pieces = os.path.join(self.app_root.last_load_dir, '').split(
-            "%stags%s" % (PATHDIV, PATHDIV))
-        if len(path_pieces) > 1:
-            self.tags_dir.set(os.path.join(path_pieces[0], "tags"))
+        self.tags_dir.set(path_split(self.app_root.last_load_dir, "tags"))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
