@@ -1038,14 +1038,10 @@ class Mozzarilla(Binilla):
                 show_full = False
 
             tags_dir_str = tags_dir
-            '''
             if not show_full:
-                tags_dir_str = list(PurePath(tags_dir_str).parts)
-                if tags_dir_str[-1].lower() != "tags":
-                    tags_dir_str = tags_dir_str[-1]
-                else:
-                    tags_dir_str = tags_dir_str[-2]
-            '''
+                tags_dir_str = Path(tags_dir).name
+                if tags_dir_str.lower() == 'tags':
+                    tags_dir_str = Path(tags_dir).parent.name
 
             handler_i = self.get_handler_index(window.handler)
 
