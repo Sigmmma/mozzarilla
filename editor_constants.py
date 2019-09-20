@@ -1,3 +1,7 @@
+import sys
+import os
+from pathlib import Path
+
 from binilla import editor_constants as b_e_c
 from binilla.editor_constants import *
 from binilla.widgets.binilla_widget import BinillaWidget
@@ -33,5 +37,41 @@ BinillaWidget.font_settings.update(
         slant=FONT_TAG_PREVIEW_FONT_SLANT,
         )
     )
+
+WORKING_DIR = Path.cwd()
+if b_e_c.IS_WIN:
+    SETTINGS_DIR = WORKING_DIR
+else:
+    SETTINGS_DIR = Path(Path.home(), ".local", "share", "mek", "mozzarilla")
+
+MOZZLIB_DIR = Path(__file__).parent
+
+MOZZ_ICON_PATH = Path(MOZZLIB_DIR, "mozzarilla.ico")
+if not MOZZ_ICON_PATH.is_file():
+    MOZZ_ICON_PATH = Path(MOZZLIB_DIR, "icons", "mozzarilla.ico")
+if not MOZZ_ICON_PATH.is_file():
+    MOZZ_ICON_PATH = Path(WORKING_DIR, "mozzarilla.ico")
+if not MOZZ_ICON_PATH.is_file():
+    MOZZ_ICON_PATH = Path(WORKING_DIR, "icons", "mozzarilla.ico")
+if not MOZZ_ICON_PATH.is_file():
+    MOZZ_ICON_PATH = ""
+
+MOZZ_BITMAP_PATH = Path(MOZZLIB_DIR, "mozzarilla.png")
+if not MOZZ_BITMAP_PATH.is_file():
+    MOZZ_BITMAP_PATH = Path(MOZZLIB_DIR, "icons", "mozzarilla.png")
+if not MOZZ_BITMAP_PATH.is_file():
+    MOZZ_BITMAP_PATH = Path(WORKING_DIR, "mozzarilla.png")
+if not MOZZ_BITMAP_PATH.is_file():
+    MOZZ_BITMAP_PATH = Path(WORKING_DIR, "icons", "mozzarilla.png")
+if not MOZZ_BITMAP_PATH.is_file():
+    MOZZ_BITMAP_PATH = ""
+
+IS_64BIT = sys.maxsize > 2**32
+
+print("WORKING_DIR:", WORKING_DIR)
+print("MOZZLIB_DIR:", MOZZLIB_DIR)
+print("SETTINGS_DIR:", SETTINGS_DIR)
+print("MOZZ_ICON_PATH:", MOZZ_ICON_PATH)
+
 del b_e_c
 del FontConfig

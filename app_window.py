@@ -1,6 +1,4 @@
-import os
-from pathlib import Path, PurePath, PureWindowsPath
-from reclaimer.util.path import tagpath_to_fullpath, path_split, path_replace, path_normalize
+from pathlib import Path, PureWindowsPath
 import re
 import tkinter as tk
 import sys
@@ -18,7 +16,6 @@ else:
 from traceback import format_exc
 
 from reclaimer.constants import inject_halo_constants
-from supyr_struct.util import is_in_dir
 
 # before we do anything, we need to inject these constants so any definitions
 # that are built that use them will have them in their descriptor entries.
@@ -38,6 +35,7 @@ from reclaimer.os_v3_hek.handler import OsV3HaloHandler
 from reclaimer.os_v4_hek.handler import OsV4HaloHandler
 from reclaimer.misc.handler import MiscHaloLoader
 from reclaimer.stubbs.handler import StubbsHandler
+from reclaimer.util.path import tagpath_to_fullpath, path_split, path_replace, path_normalize
 
 import mozzarilla
 
@@ -76,9 +74,6 @@ default_hotkeys.update({
     #'<F12>': "create_hek_pool_window",
     })
 
-WORKING_DIR = os.getcwd()
-SOURCE_DIR  = get_cwd(__file__)
-
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
     version = "%s.%s.%s" % mozzarilla.__version__
@@ -87,8 +82,8 @@ class Mozzarilla(Binilla):
 
     _mozzarilla_initialized = False
 
-    styles_dir  = os.path.join(SOURCE_DIR, "styles")
-    config_path = os.path.join(WORKING_DIR, "mozzarilla.cfg")
+    styles_dir  = Path(e_c.SETTINGS_DIR, "styles")
+    config_path = Path(e_c.SETTINGS_DIR, "mozzarilla.cfg")
     guerilla_workspace_def  = None
     config_version = 3
 
@@ -158,12 +153,12 @@ class Mozzarilla(Binilla):
         # the config requires using methods in the handler.
         kwargs['handler'] = MiscHaloLoader(debug=self.debug)
         try:
-            with open(os.path.join(SOURCE_DIR, "tad.gsm"[::-1]), 'r', -1, "037") as f:
+            with open(Path(e_c.MOZZLIB_DIR, "tad.gsm"[::-1]), 'r', -1, "037") as f:
                 setattr(self, 'segassem_tuoba'[::-1], list(l for l in f))
         except Exception:
             pass
 
-        self.tags_dirs = [os.path.join(WORKING_DIR, "tags")]
+        self.tags_dirs = [Path(e_c.WORKING_DIR, "tags")]
         self.handlers = list({} for i in range(len(self.handler_classes)))
         self.handler_names = list(self.handler_names)
 
@@ -185,23 +180,15 @@ class Mozzarilla(Binilla):
 
         Binilla.__init__(self, *args, **kwargs)
 
-        self.app_bitmap_filepath = os.path.join(SOURCE_DIR, 'mozzarilla.png')
-        if not os.path.isfile(self.app_bitmap_filepath):
-            self.app_bitmap_filepath = os.path.join(SOURCE_DIR, 'icons', 'mozzarilla.png')
-        if not os.path.isfile(self.app_bitmap_filepath):
-            self.app_bitmap_filepath = ""
+        self.app_bitmap_filepath = e_c.MOZZ_BITMAP_PATH
 
         if not e_c.IS_LNX:
-            try:
-                try:
-                    self.icon_filepath = os.path.join(SOURCE_DIR, 'mozzarilla.ico')
-                    self.iconbitmap(self.icon_filepath)
-                except Exception:
-                    self.icon_filepath = os.path.join(SOURCE_DIR, 'icons', 'mozzarilla.ico')
-                    self.iconbitmap(self.icon_filepath)
-            except Exception:
-                self.icon_filepath = ""
-                print("Could not load window icon.")
+            self.icon_filepath = MOZZ_ICON_PATH
+            if self.icon_filepath:
+                self.iconbitmap(self.icon_filepath)
+
+        if not self.icon_filepath:
+            print("Could not load window icon.")
 
         self.file_menu.insert_command("Exit", label="Load guerilla config",
                                       command=self.load_guerilla_config)
@@ -355,7 +342,7 @@ class Mozzarilla(Binilla):
     def data_dir(self):
         tags_dir = self.tags_dir
         if not tags_dir:
-            return WORKING_DIR
+            return e_c.WORKING_DIR
 
         return path_replace(tags_dir, "tags", "data")
 
@@ -368,7 +355,7 @@ class Mozzarilla(Binilla):
 
     @tags_dir.setter
     def tags_dir(self, new_val):
-        assert isinstance(new_val, str)
+        assert isinstance(new_val, (str, Path))
         self.tags_dirs[self._curr_tags_dir_index] = path_normalize(new_val)
 
     def get_tags_dir_index(self, tags_dir):
@@ -627,7 +614,7 @@ class Mozzarilla(Binilla):
             except IndexError: pass
 
         if not self.tags_dir:
-            self.tags_dir = tagpath_to_fullpath(WORKING_DIR, "tags", folder=True)
+            self.tags_dir = tagpath_to_fullpath(e_c.WORKING_DIR, "tags", folder=True)
 
     def record_open_tags(self):
         try:
@@ -722,9 +709,11 @@ class Mozzarilla(Binilla):
         if not fp:
             return
 
-        self.last_load_dir = os.path.dirname(fp)
-        tags_dir = tagpath_to_fullpath(os.path.dirname(fp), "tags", folder=True)
-        if not os.path.exists(tags_dir):
+        fp = Path(fp)
+
+        self.last_load_dir = fp.parent
+        tags_dir = tagpath_to_fullpath(fp.parent, "tags", folder=True)
+        if not tags_dir.is_dir():
             print("Specified guerilla.cfg has no corresponding tags directory.")
             return
 
@@ -789,12 +778,12 @@ class Mozzarilla(Binilla):
                     continue
                 else:
                     try:
-                        pure_path = PurePath(path)
+                        pure_path = Path(path)
                         # make the path relative to the tags_dir
                         last_load_dir = pure_path.parent
                         path = str(pure_path.relative_to(tags_dir))
                         continue
-                    # PurePath.relative_to() exceptions if the path cannot be
+                    # Path.relative_to() exceptions if the path cannot be
                     # made relative.
                     except Exception as e:
                         pass
@@ -829,7 +818,7 @@ class Mozzarilla(Binilla):
         if not fp:
             return
 
-        self.last_load_dir = PurePath(fp).parent
+        self.last_load_dir = Path(fp).parent
         dsw = DefSelectorWindow(
             self, title="Which tag is this", action=lambda def_id:
             self.load_tags(filepaths=fp, def_id=def_id))
@@ -858,7 +847,11 @@ class Mozzarilla(Binilla):
 
         # change the tags filepath to be relative to the current tags directory
         if hasattr(tag, "rel_filepath"):
-            tag.filepath = os.path.join(tag.tags_dir, tag.rel_filepath)
+            full_filepath = tagpath_to_fullpath(tag.tags_dir, tag.rel_filepath)
+            if full_filepath:
+                tag.filepath = full_filepath
+            else:
+                tag.filepath = Path(tag.tags_dir, tag.rel_filepath)
 
         return Binilla.save_tag(self, tag)
 
@@ -875,7 +868,7 @@ class Mozzarilla(Binilla):
         if filepath is None:
             ext = tag.ext
             filepath = asksaveasfilename(
-                initialdir=os.path.dirname(tag.filepath), parent=self,
+                initialdir=Path(tag.filepath).parent, parent=self,
                 defaultextension=ext, title="Save tag as...",
                 filetypes=[(ext[1:], "*" + ext), ('All', '*')])
         else:
@@ -888,23 +881,22 @@ class Mozzarilla(Binilla):
         w = self.get_tag_window_by_tag(tag)
 
         # make sure the filepath is sanitized
-        filepath = path_normalize(filepath)
+        filepath = Path(path_normalize(filepath))
 
         handler = tag.handler
         tags_dir = self.tags_dir
         tagsdir_rel = handler.tagsdir_relative
 
         try:
-            self.last_load_dir = os.path.dirname(filepath)
+            self.last_load_dir = filepath.parent
             if tagsdir_rel:
-                filepath = os.path.relpath(filepath, tag.tags_dir)
-
-                if tag.tags_dir != tags_dir:
-                    # trying to save outside tags directory
+                try:
+                    filepath = filepath.relative_to(tag.tags_dir)
+                except:
                     messagebox.showerror(
-                        "Saving outside tags directory", ("Cannot save:\n\n" +
-                         "    %s\n\noutside the tags directory:\n\n    %s\n\n" +
-                         "Change the tags directory back to save this tag.") %
+                        "Saving outside tags directory", ("Cannot save:\n\n"
+                        "    %s\n\noutside the tags directory:\n\n    %s\n\n"
+                        "Change the tags directory back to save this tag.") %
                         (filepath, tag.tags_dir), parent=self.focus_get())
                     return
 
@@ -943,6 +935,11 @@ class Mozzarilla(Binilla):
     def make_config(self, filepath=None):
         if filepath is None:
             filepath = self.config_path
+
+        filepath = Path(filepath)
+
+        # Make directory if it doesn't exist
+        filepath.parent.mkdir(parents=True, exist_ok=True)
 
         # create the config file from scratch
         self.config_file = self.config_def.build()
@@ -1096,10 +1093,7 @@ class Mozzarilla(Binilla):
                                     is_new_tag=is_new_tag)
         self.update_tag_window_title(w)
         try:
-            try:
-                w.iconbitmap(os.path.join(SOURCE_DIR, 'mozzarilla.ico'))
-            except Exception:
-                w.iconbitmap(os.path.join(SOURCE_DIR, 'icons', 'mozzarilla.ico'))
+            w.iconbitmap(MOZZ_ICON_PATH)
         except Exception:
             pass
 
