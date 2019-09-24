@@ -19,6 +19,8 @@ from reclaimer.stubbs.defs.antr import antr_def as stubbs_antr_def
 from reclaimer.animation.animation_compression import \
      compress_animation, decompress_animation
 
+from mozzarilla import editor_constants as e_c
+
 if __name__ == "__main__":
     window_base_class = tk.Tk
 else:
@@ -53,14 +55,10 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         self.update()
         anims_dir = getattr(app_root, "tags_dir", get_cwd(__file__))
 
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except:
+            pass
 
         self.model_animations_path = tk.StringVar(self)
         self.model_animations_dir = tk.StringVar(self, anims_dir if anims_dir else "")

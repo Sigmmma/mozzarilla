@@ -17,6 +17,7 @@ from binilla.util import get_cwd
 from supyr_struct.util import sanitize_path, is_in_dir
 from mozzarilla.widgets.directory_frame import DirectoryFrame,\
      HierarchyFrame, DependencyFrame
+from mozzarilla import editor_constants as e_c
 
 curr_dir = get_cwd(__file__)
 
@@ -38,14 +39,10 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
                    app_root.handler_names[app_root._curr_handler_index])
         self.minsize(width=400, height=100)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except:
+            pass
 
         # make the tkinter variables
         self.tag_filepath = tk.StringVar(self)

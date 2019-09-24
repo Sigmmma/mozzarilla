@@ -15,6 +15,7 @@ else:
 from traceback import format_exc
 from binilla.widgets.binilla_widget import BinillaWidget
 from reclaimer.util.path import path_replace
+from mozzarilla import editor_constants as e_c
 
 curr_dir = os.curdir
 
@@ -37,14 +38,10 @@ class ConverterBase(BinillaWidget):
         self.title(kwargs.pop("title"))
         self.resizable(0, 0)
         self.update()
-        for sub_dirs in ((), ('..', '..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except:
+            pass
 
         tags_dir = path_replace(Path(curr_dir, 'tags'), 'tags', 'tags')
         if self.app_root is not self and hasattr(self.app_root, "tags_dir"):

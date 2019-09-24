@@ -27,6 +27,7 @@ from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.scroll_menu import ScrollMenu
 from mozzarilla.widgets.field_widgets import HaloBitmapDisplayFrame,\
      HaloBitmapDisplayBase
+from mozzarilla import editor_constants as e_c
 
 window_base_class = tk.Toplevel
 if __name__ == "__main__":
@@ -395,14 +396,10 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         self.title("Bitmap converter")
         self.resizable(0, 1)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except:
+            pass
 
         # make the tkinter variables
         self.read_only = tk.BooleanVar(self)

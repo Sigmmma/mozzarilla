@@ -15,6 +15,8 @@ from binilla.widgets.binilla_widget import BinillaWidget
 
 from reclaimer.halo_script.hsc_decompilation import extract_h1_scripts
 
+from mozzarilla import editor_constants as e_c
+
 curr_dir = get_cwd(__file__)
 
 class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
@@ -34,14 +36,10 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
         self.geometry("400x80+0+0")
         self.resizable(0, 0)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except:
+            pass
 
         # make the tkinter variables
         self.scenario_path = tk.StringVar(self)

@@ -4,6 +4,8 @@ import tkinter as tk
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.util import get_cwd
 
+from mozzarilla import editor_constants as e_c
+
 curr_dir = get_cwd(__file__)
 
 class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
@@ -19,14 +21,10 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
         self.minsize(width=450, height=270)
         self.resizable(1, 0)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except:
+            pass
 
         # make the tkinter variables
         self.find_var = tk.StringVar(self)
