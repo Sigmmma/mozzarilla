@@ -23,7 +23,8 @@ from reclaimer.animation.animation_compilation import \
      ANIMATION_COMPILE_MODE_PRESERVE, ANIMATION_COMPILE_MODE_ADDITIVE
 from reclaimer.animation.util import partial_mod2_def
 
-from supyr_struct.defs.constants import PATHDIV
+from mozzarilla import editor_constants as e_c
+
 from supyr_struct.util import is_in_dir
 
 if __name__ == "__main__":
@@ -62,14 +63,10 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.title("Model_animations compiler")
         self.resizable(1, 1)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except:
+            pass
 
         tags_dir = getattr(app_root, "tags_dir", "")
 

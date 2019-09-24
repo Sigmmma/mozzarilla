@@ -18,6 +18,8 @@ from binilla.util import get_cwd
 
 from reclaimer.halo_script.hsc import get_h1_scenario_script_object_type_strings
 
+from mozzarilla import editor_constants as e_c
+
 curr_dir = get_cwd(__file__)
 
 
@@ -53,14 +55,10 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         self.title("Tag Data Extractor")
         self.resizable(0, 0)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except:
+            pass
 
         self.listbox_index_to_def_id = list(sorted(
             k for k in self.tag_data_extractors.keys()

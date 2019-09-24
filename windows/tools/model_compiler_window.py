@@ -25,6 +25,8 @@ from reclaimer.model.util import generate_shader
 from supyr_struct.defs.constants import PATHDIV
 from supyr_struct.util import is_in_dir
 
+from mozzarilla import editor_constants as e_c
+
 if __name__ == "__main__":
     window_base_class = tk.Tk
 else:
@@ -77,14 +79,10 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         self.title("Gbxmodel compiler")
         self.resizable(1, 1)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except:
+            pass
 
 
         self.superhigh_lod_cutoff = tk.StringVar(self)

@@ -16,8 +16,9 @@ else:
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
+from mozzarilla import editor_constants as e_c
 
-curr_dir = os.path.abspath(os.curdir)
+curr_dir = os.curdir
 
 window_base_class = tk.Toplevel
 if __name__ == "__main__":
@@ -40,14 +41,10 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
         self.title("Halo 1 & 2 bitmap source extractor")
         self.resizable(0, 0)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except:
+            pass
 
         self.tags_dir = tk.StringVar(self)
         self.data_dir = tk.StringVar(self)
