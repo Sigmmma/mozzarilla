@@ -169,9 +169,9 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                     if filesize < 1024:
                         filesize = str(filesize) + " bytes"
                     elif filesize < 1024**2:
-                        filesize = str(round(filesize/1024, 3)) + " Kb"
+                        filesize = str(round(filesize/1024, 3)) + " KiB"
                     else:
-                        filesize = str(round(filesize/(1024**2), 3)) + " Mb"
+                        filesize = str(round(filesize/(1024**2), 3)) + " MiB"
                 except Exception:
                     filesize = 'COULDNT CALCULATE'
                 dir_tree.insert(directory, 'end', text=file,
