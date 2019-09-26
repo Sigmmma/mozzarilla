@@ -68,10 +68,5 @@ if not MOZZ_BITMAP_PATH.is_file():
 
 IS_64BIT = sys.maxsize > 2**32
 
-print("WORKING_DIR:", WORKING_DIR)
-print("MOZZLIB_DIR:", MOZZLIB_DIR)
-print("SETTINGS_DIR:", SETTINGS_DIR)
-print("MOZZ_ICON_PATH:", MOZZ_ICON_PATH)
-
 del b_e_c
 del FontConfig
