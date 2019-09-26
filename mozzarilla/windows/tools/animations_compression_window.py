@@ -58,7 +58,7 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
         except:
-            pass
+            print("Could not load window icon.")
 
         self.model_animations_path = tk.StringVar(self)
         self.model_animations_dir = tk.StringVar(self, anims_dir if anims_dir else "")

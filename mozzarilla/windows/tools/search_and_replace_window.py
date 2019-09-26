@@ -9,6 +9,9 @@ from mozzarilla import editor_constants as e_c
 curr_dir = get_cwd(__file__)
 
 class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
+    '''
+    Finds (and replaces) occurances of a string in the last touched tag window.
+    '''
     app_root = None
 
     def __init__(self, app_root, *args, **kwargs):
@@ -24,7 +27,7 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
         except:
-            pass
+            print("Could not load window icon.")
 
         # make the tkinter variables
         self.find_var = tk.StringVar(self)

@@ -66,7 +66,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
         except:
-            pass
+            print("Could not load window icon.")
 
         tags_dir = getattr(app_root, "tags_dir", "")
 

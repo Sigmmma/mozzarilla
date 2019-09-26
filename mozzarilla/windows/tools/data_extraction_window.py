@@ -58,7 +58,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
         except:
-            pass
+            print("Could not load window icon.")
 
         self.listbox_index_to_def_id = list(sorted(
             k for k in self.tag_data_extractors.keys()

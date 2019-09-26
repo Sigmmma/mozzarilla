@@ -83,7 +83,7 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
         except:
-            pass
+            print("Could not load window icon.")
 
 
         self.superhigh_lod_cutoff = tk.StringVar(self)
