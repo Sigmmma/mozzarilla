@@ -1,6 +1,6 @@
 import os
 import tkinter as tk
-from pathlib import Path, PureWindowsPath
+from pathlib import Path
 
 from traceback import format_exc
 
