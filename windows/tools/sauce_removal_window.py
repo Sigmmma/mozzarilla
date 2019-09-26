@@ -39,7 +39,7 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
         except:
-            pass
+            print("Could not load window icon.")
 
         # make the tkinter variables
         self.scenario_path = tk.StringVar(self)

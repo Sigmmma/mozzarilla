@@ -44,7 +44,7 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
         except:
-            pass
+            print("Could not load window icon.")
 
         self.tags_dir = tk.StringVar(self)
         self.data_dir = tk.StringVar(self)

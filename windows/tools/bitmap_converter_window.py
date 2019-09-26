@@ -399,7 +399,7 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
         except:
-            pass
+            print("Could not load window icon.")
 
         # make the tkinter variables
         self.read_only = tk.BooleanVar(self)

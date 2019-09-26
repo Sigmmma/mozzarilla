@@ -42,7 +42,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
         except:
-            pass
+            print("Could not load window icon.")
 
         # make the tkinter variables
         self.tag_filepath = tk.StringVar(self)
