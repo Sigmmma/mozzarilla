@@ -1,10 +1,10 @@
 import os
 import tkinter as tk
+from pathlib import Path, PureWindowsPath
 
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
-from supyr_struct.util import sanitize_path
 
 # injject this default color
 BinillaWidget.active_tags_directory_color = '#%02x%02x%02x' % (40, 170, 80)
@@ -348,7 +348,7 @@ class DependencyFrame(HierarchyFrame):
             self.destroy_subitems(iid)
 
     def generate_subitems(self, parent_iid):
-        tags_dir = sanitize_path(self.tags_dir)
+        tags_dir = Path(self.tags_dir)
         dir_tree = self.tags_tree
         parent_tag_path = dir_tree.item(parent_iid)['values'][-1]
 
@@ -356,15 +356,15 @@ class DependencyFrame(HierarchyFrame):
             return
 
         for tag_ref_block in self.get_dependencies(parent_tag_path):
+            filepath = PureWindowsPath(tag_ref_block.filepath)
             try:
                 ext = '.' + tag_ref_block.tag_class.enum_name
                 if (self.handler.treat_mode_as_mod2 and ext == '.model' and
-                    (not os.path.exists(sanitize_path(
-                        os.path.join(tags_dir, tag_ref_block.filepath + '.model'))))):
+                not Path(tags_dir, filepath).with_suffix(".model").is_file()):
                     ext = '.gbxmodel'
             except Exception:
                 ext = ''
-            tag_path = sanitize_path(tag_ref_block.filepath + ext)
+            tag_path = str(filepath.with_suffix(ext))
 
             dependency_name = tag_ref_block.NAME
             last_block = tag_ref_block

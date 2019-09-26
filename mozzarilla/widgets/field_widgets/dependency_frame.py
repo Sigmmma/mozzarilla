@@ -12,8 +12,6 @@ else:
     from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 
-from supyr_struct.util import sanitize_path
-
 from reclaimer.util.path import tagpath_to_fullpath
 
 from binilla import constants

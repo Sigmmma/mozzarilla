@@ -64,9 +64,7 @@ class Region():
 
 
 def get_tags(coll_path, model_in_path):
-    mod2_path = list(Path(model_in_path).with_suffix('').parts)
-    mod2_path[-1] = mod2_path[-1] + "_COLLISION.gbxmodel"
-    mod2_path = Path(*mod2_path)
+    mod2_path = Path(str(Path(model_in_path).with_suffix('')) + "_COLLISION.gbxmodel")
 
     # get whether or not the collision tag is stubbs
     stubbs = tag_header_def.build(filepath=coll_path).version == 11
