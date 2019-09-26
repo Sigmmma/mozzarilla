@@ -653,7 +653,7 @@ class Mozzarilla(Binilla):
                 header.tags_dir_index = tags_dir_index
                 header.handler_index = handler_index
 
-                open_tag.def_id, open_tag.path = tag.def_id, tag.filepath
+                open_tag.def_id, open_tag.path = tag.def_id, str(tag.filepath)
             except Exception:
                 print(format_exc())
 
@@ -954,7 +954,7 @@ class Mozzarilla(Binilla):
         tags_dirs = data.mozzarilla.tags_dirs
         for tags_dir in self.tags_dirs:
             tags_dirs.append()
-            tags_dirs[-1].path = tags_dir
+            tags_dirs[-1].path = str(tags_dir)
 
         self.update_config()
 
@@ -991,13 +991,13 @@ class Mozzarilla(Binilla):
         del tags_dirs[:]
         for tags_dir in self.tags_dirs:
             tags_dirs.append()
-            tags_dirs[-1].path = path_normalize(tags_dir)
+            tags_dirs[-1].path = str(path_normalize(tags_dir))
 
         if len(load_dirs.NAME_MAP) > len(load_dirs):
             load_dirs.extend(len(load_dirs.NAME_MAP) - len(load_dirs))
 
         for s in ("last_data_load_dir", "jms_load_dir", "bitmap_load_dir"):
-            try: load_dirs[s].path = getattr(self, s)
+            try: load_dirs[s].path = str(getattr(self, s))
             except IndexError: pass
 
         if mozz.flags.show_hierarchy_window and mozz.flags.show_console_window:
