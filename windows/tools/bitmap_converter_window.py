@@ -19,10 +19,10 @@ from traceback import format_exc
 from reclaimer.bitmaps.p8_palette import HALO_P8_PALETTE, STUBBS_P8_PALETTE
 from reclaimer.hek.defs.bitm import bitm_def
 from reclaimer.constants import TYPE_NAME_MAP, FORMAT_NAME_MAP,\
-     I_FORMAT_NAME_MAP, PATHDIV
+     I_FORMAT_NAME_MAP
 
-from binilla.util import get_cwd, sanitize_path, do_subprocess, ProcController
-     
+from binilla.util import get_cwd, do_subprocess, ProcController
+
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.scroll_menu import ScrollMenu
 from mozzarilla.widgets.field_widgets import HaloBitmapDisplayFrame,\
@@ -862,20 +862,21 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
 
             scan_dir = self.loaded_tags_dir
             for root, _, files in os.walk(scan_dir):
-                if not root.endswith(PATHDIV):
-                    root += PATHDIV
-
                 rel_root = os.path.relpath(root, scan_dir)
 
                 for filename in files:
-                    if os.path.splitext(filename)[-1].lower() != ".bitmap":
+                    filename = Path(filename)
+                    if filename.suffix.lower() != ".bitmap":
                         continue
 
-                    fp = os.path.join(sanitize_path(rel_root), filename)
+                    # We use an absolute path here because we later store the
+                    # bitmap tag info as hash keys. This is just so that we
+                    # don't do any double conversions.
+                    fp = str(Path(rel_root, filename).resolve())
 
                     if time() - c_time > p_int:
                         c_time = time()
-                        print(' '*4 + fp)
+                        print('    ' + fp)
                         if self.app_root:
                             self.app_root.update_idletasks()
 
@@ -937,7 +938,7 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         else:
             print("Converting bitmaps...")
             tags_dir = self.loaded_tags_dir
-    
+
             for fp in sorted(self.bitmap_tag_infos):
                 try:
                     if self._cancel_processing:
@@ -1168,13 +1169,11 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         if not dirpath:
             return
 
-        dirpath = sanitize_path(dirpath)
-        if not dirpath.endswith(PATHDIV):
-            dirpath += PATHDIV
+        dirpath = Path(dirpath)
 
         self.scan_dir_path.set(dirpath)
         if self.app_root:
-            self.app_root.last_load_dir = os.path.dirname(dirpath)
+            self.app_root.last_load_dir = dirpath.parent
 
     def data_dir_browse(self):
         if self._processing:
@@ -1188,17 +1187,16 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         if not dirpath:
             return
 
-        dirpath = sanitize_path(dirpath)
-        if not dirpath.endswith(PATHDIV):
-            dirpath += PATHDIV
+        dirpath = Path(dirpath)
 
         curr_data_dir = self.data_dir_path.get()
         for flags in self.conversion_flags.values():
             if not flags:
                 continue
 
-            flags.extract_path = os.path.join(
-                dirpath, os.path.relpath(flags.extract_path, curr_data_dir))
+            flags.extract_path = dirpath.join_path(
+                Path(flags.extract_path).relative_to(curr_data_dir)
+            )
 
         self.data_dir_path.set(dirpath)
 
@@ -1216,12 +1214,11 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         if not fp:
             return
 
-        if not os.path.splitext(fp)[-1]:
-            fp += ".log"
+        fp = Path(fp).with_suffix('.log')
 
-        self.log_file_path.set(sanitize_path(fp))
+        self.log_file_path.set(fp)
         if self.app_root:
-            self.app_root.last_load_dir = os.path.dirname(self.log_file_path.get())
+            self.app_root.last_load_dir = Path(self.log_file_path.get()).parent
 
     def get_will_be_processed(self, tag_path):
         info = self.bitmap_tag_infos.get(tag_path)

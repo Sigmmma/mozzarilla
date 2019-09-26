@@ -1,4 +1,3 @@
-import os
 import reclaimer
 import tkinter as tk
 

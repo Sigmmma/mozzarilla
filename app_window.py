@@ -24,8 +24,7 @@ inject_halo_constants()
 from binilla.handler import Handler
 from binilla.app_window import Binilla, default_hotkeys,\
      default_tag_window_hotkeys
-from binilla.util import do_subprocess, ProcController, is_main_frozen,\
-     get_cwd
+from binilla.util import do_subprocess, ProcController, is_main_frozen
 from binilla.windows.def_selector_window import DefSelectorWindow
 from binilla.windows.tag_window import read_hotkey_string
 

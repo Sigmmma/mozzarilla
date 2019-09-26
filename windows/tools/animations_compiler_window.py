@@ -410,17 +410,23 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             initialdir=jma_dir, parent=self,
             title="Select the folder of animations to compile...")
 
-        dirpath = os.path.join(sanitize_path(dirpath), "")
         if not dirpath:
             return
+
+        dirpath = path_normalize(dirpath)
 
         if tags_dir and data_dir and os.path.basename(dirpath).lower() == "animations":
             object_dir = os.path.dirname(dirpath)
 
             if object_dir and is_in_dir(object_dir, data_dir):
-                tag_path = os.path.join(object_dir, os.path.basename(object_dir))
-                tag_path = os.path.join(tags_dir, os.path.relpath(tag_path, data_dir))
-                self.model_animations_path.set(tag_path + ".model_animations")
+                try:
+                    Path(object_dir).relative_to(data_dir)
+                    tag_path = os.path.join(object_dir, os.path.basename(object_dir))
+                    tag_path = os.path.join(tags_dir, os.path.relpath(tag_path, data_dir))
+                    self.model_animations_path.set(tag_path + ".model_animations")
+                except Exception:
+                    pass
+
 
         self.app_root.last_load_dir = os.path.dirname(dirpath)
         self.jma_dir.set(dirpath)
@@ -436,9 +442,10 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             initialdir=old_tags_dir, parent=self,
             title="Select the root of the tags directory")
 
-        tags_dir = sanitize_path(os.path.join(tags_dir, ""))
         if not tags_dir:
             return
+
+        tags_dir = path_normalize(tags_dir)
 
         antr_path = self.model_animations_path.get()
         if old_tags_dir and antr_path and not is_in_dir(antr_path, tags_dir):
@@ -464,7 +471,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if not fp:
             return
 
-        fp = sanitize_path(fp)
+        fp = Path(fp)
         if not os.path.splitext(fp)[-1]:
             fp += ".model_animations"
 
