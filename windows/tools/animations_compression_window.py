@@ -11,7 +11,7 @@ else:
     from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import sanitize_path, get_cwd
+from binilla.util import get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
 
 from reclaimer.hek.defs.antr import antr_def as halo_antr_def
@@ -187,7 +187,6 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         if not dirpath:
             return
 
-        dirpath = sanitize_path(dirpath)
         self.app_root.last_load_dir = dirpath
         self.model_animations_dir.set(dirpath)
 
@@ -206,11 +205,11 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         if not fp:
             return
 
-        fp = sanitize_path(fp)
-        if not os.path.splitext(fp)[-1]:
-            fp += ".model_animations"
+        fp = Path(fp)
+        if not fp.suffix:
+            fp = fp.with_suffix(".model_animations")
 
-        self.app_root.last_load_dir = os.path.dirname(fp)
+        self.app_root.last_load_dir = fp.parent
         self.model_animations_path.set(fp)
 
     def apply_style(self, seen=None):
@@ -274,10 +273,11 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
 
         for root, _, files in os.walk(antr_dir):
             for fname in files:
+                fname = Path(fname)
                 try:
-                    if os.path.splitext(fname)[-1].lower() != ".model_animations":
+                    if fname.suffix.lower() != ".model_animations":
                         continue
-                    self._do_compression(compress, os.path.join(root, fname))
+                    self._do_compression(compress, Path(root, fname))
                 except Exception:
                     pass#print(format_exc())
 
