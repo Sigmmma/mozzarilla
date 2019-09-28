@@ -398,7 +398,9 @@ class Mozzarilla(Binilla):
             return None
 
     def create_handlers(self, tags_dir, handler_indices=()):
-        tags_dir = path_normalize(tags_dir)
+        # Convert to str for compatibility with the legacy handler.
+        tags_dir = str(path_normalize(tags_dir))
+
         if isinstance(handler_indices, int):
             handler_indices = (handler_indices, )
         elif not handler_indices:
