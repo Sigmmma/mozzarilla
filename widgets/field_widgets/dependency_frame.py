@@ -236,10 +236,15 @@ class DependencyFrame(ContainerFrame):
 
         ext = '.' + self.node.tag_class.enum_name
         # Get full path with proper capitalization if it points to a file.
-        filepath = tagpath_to_fullpath(
-            tags_dir,
-            Path(PureWindowsPath(self.node.filepath)),
-            extension=ext)
+        try:
+            filepath = tagpath_to_fullpath(
+                tags_dir,
+                Path(PureWindowsPath(self.node.filepath)),
+                extension=ext)
+        except:
+            filepath = None
+            print("Validation of a filepath failed unexpectedly.")
+            print(format_exc())
 
         if (self.tag_window.handler.treat_mode_as_mod2
         and filepath is None
