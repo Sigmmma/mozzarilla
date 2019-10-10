@@ -12,7 +12,6 @@ else:
     from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import sanitize_path, get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
 
 from reclaimer.hek.defs.antr import antr_def
@@ -25,14 +24,10 @@ from reclaimer.animation.util import partial_mod2_def
 
 from mozzarilla import editor_constants as e_c
 
-from supyr_struct.util import is_in_dir
-
 if __name__ == "__main__":
     window_base_class = tk.Tk
 else:
     window_base_class = tk.Toplevel
-
-curr_dir = get_cwd(__file__)
 
 
 class AnimationsCompilerWindow(window_base_class, BinillaWidget):
@@ -418,7 +413,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if tags_dir and data_dir and os.path.basename(dirpath).lower() == "animations":
             object_dir = os.path.dirname(dirpath)
 
-            if object_dir and is_in_dir(object_dir, data_dir):
+            if object_dir:
                 try:
                     Path(object_dir).relative_to(data_dir)
                     tag_path = os.path.join(object_dir, os.path.basename(object_dir))
@@ -448,10 +443,14 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         tags_dir = path_normalize(tags_dir)
 
         antr_path = self.model_animations_path.get()
-        if old_tags_dir and antr_path and not is_in_dir(antr_path, tags_dir):
-            # adjust antr filepath to be relative to the new tags directory
-            antr_path = os.path.join(tags_dir, os.path.relpath(antr_path, old_tags_dir))
-            self.model_animations_path.set(antr_path)
+        if old_tags_dir and antr_path:
+            # Only execute following code if antr_path is not relative to tags_dir
+            try:
+                Path(antr_path).relative_to(tags_dir)
+            except:
+                # adjust antr filepath to be relative to the new tags directory
+                antr_path = os.path.join(tags_dir, os.path.relpath(antr_path, old_tags_dir))
+                self.model_animations_path.set(antr_path)
 
         self.app_root.last_load_dir = os.path.dirname(tags_dir)
         self.tags_dir.set(tags_dir)

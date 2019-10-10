@@ -8,8 +8,6 @@ else:
     from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 
-from supyr_struct.util import sanitize_path
-
 from reclaimer.strings.strings_compilation import compile_unicode_string_list,\
      compile_string_list
 
@@ -36,7 +34,6 @@ def strings_from_txt(app, fp=None):
         return
 
     try:
-        fp = sanitize_path(fp)
         app.last_data_load_dir = os.path.dirname(fp)
         tag_ext = "unicode_string_list"
         tag_cls = "ustr"

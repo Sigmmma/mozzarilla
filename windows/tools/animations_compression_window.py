@@ -11,7 +11,6 @@ else:
     from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
 
 from reclaimer.hek.defs.antr import antr_def as halo_antr_def
@@ -25,9 +24,6 @@ if __name__ == "__main__":
     window_base_class = tk.Tk
 else:
     window_base_class = tk.Toplevel
-
-
-curr_dir = get_cwd(__file__)
 
 
 class AnimationsCompressionWindow(window_base_class, BinillaWidget):

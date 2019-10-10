@@ -8,7 +8,6 @@ else:
     from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 
-from supyr_struct.util import sanitize_path
 from reclaimer.strings.strings_compilation import compile_hud_message_text
 
 
@@ -34,7 +33,6 @@ def hud_message_text_from_hmt(app, fp=None):
         return
 
     try:
-        fp = sanitize_path(fp)
         app.last_data_load_dir = os.path.dirname(fp)
 
         print("Creating hud_message_text from this hmt file:")

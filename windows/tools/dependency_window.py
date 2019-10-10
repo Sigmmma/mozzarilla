@@ -12,14 +12,12 @@ else:
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
-from binilla.util import get_cwd
 
 from supyr_struct.util import sanitize_path, is_in_dir
 from mozzarilla.widgets.directory_frame import DirectoryFrame,\
      HierarchyFrame, DependencyFrame
 from mozzarilla import editor_constants as e_c
 
-curr_dir = get_cwd(__file__)
 
 class DependencyWindow(tk.Toplevel, BinillaWidget):
     app_root = None

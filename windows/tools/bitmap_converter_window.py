@@ -21,7 +21,7 @@ from reclaimer.hek.defs.bitm import bitm_def
 from reclaimer.constants import TYPE_NAME_MAP, FORMAT_NAME_MAP,\
      I_FORMAT_NAME_MAP
 
-from binilla.util import get_cwd, do_subprocess, ProcController
+from binilla.util import do_subprocess, ProcController
 
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.scroll_menu import ScrollMenu
@@ -33,8 +33,6 @@ window_base_class = tk.Toplevel
 if __name__ == "__main__":
     window_base_class = tk.Tk
 
-
-curr_dir = get_cwd(__file__)
 
 #                      (A, R, G, B)
 PC_ARGB_TO_XBOX_ARGB = (1, 3, 2, 0)

@@ -12,15 +12,13 @@ else:
     from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import sanitize_path, get_cwd, ProcController, do_subprocess
+from binilla.util import ProcController, do_subprocess
 from binilla.widgets.binilla_widget import BinillaWidget
 
 from supyr_struct.defs.constants import PATHDIV
 from supyr_struct.util import is_in_dir
 
 from mozzarilla import editor_constants as e_c
-
-curr_dir = get_cwd(__file__)
 
 
 platform = sys.platform.lower()
@@ -156,7 +154,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         self.transient(app_root)
 
         self.directory_path.set(handler.tagsdir)
-        self.logfile_path.set(os.path.join(handler.tagsdir, "tag_scanner.log"))
+        self.logfile_path.set(Path(handler.tagsdir, "tag_scanner.log"))
         self.apply_style()
         self.update()
         w, h = self.winfo_reqwidth(), self.winfo_reqheight()
