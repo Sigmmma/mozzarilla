@@ -10,14 +10,12 @@ else:
 from traceback import format_exc
 from struct import unpack, pack
 
-from binilla.util import get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
 
 from reclaimer.halo_script.hsc_decompilation import extract_h1_scripts
 
 from mozzarilla import editor_constants as e_c
 
-curr_dir = get_cwd(__file__)
 
 class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
     app_root = None

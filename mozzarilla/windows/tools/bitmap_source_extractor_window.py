@@ -18,8 +18,6 @@ from traceback import format_exc
 from binilla.widgets.binilla_widget import BinillaWidget
 from mozzarilla import editor_constants as e_c
 
-curr_dir = os.curdir
-
 window_base_class = tk.Toplevel
 if __name__ == "__main__":
     window_base_class = tk.Tk
@@ -48,8 +46,8 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
 
         self.tags_dir = tk.StringVar(self)
         self.data_dir = tk.StringVar(self)
-        self.tags_dir.set(os.path.join(curr_dir, 'tags'))
-        self.data_dir.set(os.path.join(curr_dir, 'data'))
+        self.tags_dir.set(os.path.join(e_c.WORKING_DIR, 'tags'))
+        self.data_dir.set(os.path.join(e_c.WORKING_DIR, 'data'))
 
         # make the frames
         self.tags_dir_frame = tk.LabelFrame(self, text="Tags directory")

@@ -11,8 +11,6 @@ from traceback import format_exc
 from reclaimer.model.jms import read_jms
 from reclaimer.physics.physics_compilation import compile_physics
 
-from supyr_struct.util import sanitize_path
-
 
 def physics_from_jms(app, fp=None):
     load_dir = app.jms_load_dir
@@ -36,7 +34,6 @@ def physics_from_jms(app, fp=None):
         return
 
     try:
-        fp = sanitize_path(fp)
         app.jms_load_dir = os.path.dirname(fp)
 
         print("Creating physics from this jms file:")

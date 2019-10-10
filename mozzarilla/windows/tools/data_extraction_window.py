@@ -14,13 +14,10 @@ else:
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
-from binilla.util import get_cwd
 
 from reclaimer.halo_script.hsc import get_h1_scenario_script_object_type_strings
 
 from mozzarilla import editor_constants as e_c
-
-curr_dir = get_cwd(__file__)
 
 
 class DataExtractionWindow(tk.Toplevel, BinillaWidget):

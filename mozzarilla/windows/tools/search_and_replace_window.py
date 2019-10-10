@@ -2,11 +2,9 @@ import os
 import tkinter as tk
 
 from binilla.widgets.binilla_widget import BinillaWidget
-from binilla.util import get_cwd
 
 from mozzarilla import editor_constants as e_c
 
-curr_dir = get_cwd(__file__)
 
 class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
     '''
