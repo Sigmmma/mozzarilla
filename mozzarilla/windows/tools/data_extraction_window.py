@@ -384,7 +384,9 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
             print(format_exc())
 
         try:
-            result = extractor(tag.data.tagdata, tag_path, **settings)
+            result = extractor(
+                tag.data.tagdata, tag_path, byteswap_pcm_samples=True,
+                **settings)
         except Exception:
             result = format_exc()
 
