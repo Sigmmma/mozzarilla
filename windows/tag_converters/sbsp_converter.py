@@ -174,9 +174,9 @@ def make_cluster_portal_jms_models(planes, clusters, cluster_portals, nodes,
 
     cluster_index = 0
     portals_seen = set()
+    verts = []
+    tris = []
     for cluster in clusters:
-        verts = []
-        tris = []
         for portal_index in cluster.portals.STEPTREE:
             if portal_index[0] in portals_seen:
                 continue
@@ -189,22 +189,20 @@ def make_cluster_portal_jms_models(planes, clusters, cluster_portals, nodes,
             tris.extend(edge_loop_to_tris(
                 len(portal.vertices.STEPTREE), mat_id=shader,
                 base=len(verts), make_fan=make_fans)
-                                )
+                )
             verts.extend(
                 JmsVertex(0, vert[0] * 100, vert[1] * 100, vert[2] * 100, tex_v=1.0)
                 for vert in portal.vertices.STEPTREE
                 )
 
-        jms_model = JmsModel(
-            "bsp", 0, nodes, materials, (),
-            ("cluster_%s_portals" % cluster_index, ), verts, tris)
+    jms_model = JmsModel(
+        "bsp", 0, nodes, materials, (),
+        ("cluster_portals", ), verts, tris)
 
-        if optimize:
-            jms_model.optimize_geometry(True)
+    if optimize:
+        jms_model.optimize_geometry(True)
 
-        jms_models.append(jms_model)
-        cluster_index += 1
-
+    jms_models.append(jms_model)
     return jms_models
 
 
