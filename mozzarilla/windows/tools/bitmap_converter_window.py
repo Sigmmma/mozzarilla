@@ -243,7 +243,7 @@ def get_channel_mappings(conv_flags, bitmap_info):
     return chan_map, chan_merge_map
 
 
-def convert_bitmap_tag(tag, conv_flags, bitmap_info):
+def convert_bitmap_tag(tag, conv_flags, bitmap_info, use_stubbs_p8=False):
     for i in range(tag.bitmap_count()):
         if not tag.is_power_of_2_bitmap(i):
             return False
@@ -260,7 +260,7 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
 
     arb = ab.Arbytmap()
     if tag.sanitize_mipmap_counts():
-        print("ERROR: Bad mipmap counts in this tag:\n%s\t\n" % tag.filepath)
+        print("ERROR: Bad mipmap counts in:\n%s\t\n" % tag.filepath)
         return False
 
     tag.parse_bitmap_blocks()
@@ -288,7 +288,13 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
 
         chan_map, chan_merge_map = get_channel_mappings(conv_flags, bitmap_info)
         palette_picker = None
-        palettize = fmt_t == ab.FORMAT_P8_BUMP
+        palettize = (fmt_t == ab.FORMAT_P8_BUMP)
+
+        p8_palette = STUBBS_P8_PALETTE if use_stubbs_p8 else HALO_P8_PALETTE
+
+        if "palette" in tex_info:
+            tex_info["palette"] = [
+                p8_palette.p8_palette_32bit_packed] * len(tex_block)
 
         # we want to preserve the color key transparency of
         # the original image if converting to the same format
@@ -299,9 +305,9 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info):
 
         if ab.CHANNEL_COUNTS[fmt_s] == 4:
             if not ck_trans or fmt_s in (ab.FORMAT_X8R8G8B8, ab.FORMAT_R5G6B5):
-                palette_picker = tag.p8_palette.argb_array_to_p8_array_best_fit
+                palette_picker = p8_palette.argb_array_to_p8_array_best_fit
             else:
-                palette_picker = tag.p8_palette.argb_array_to_p8_array_best_fit_alpha
+                palette_picker = p8_palette.argb_array_to_p8_array_best_fit_alpha
 
         arb.load_new_texture(texture_block=tex_block, texture_info=tex_info)
 
@@ -954,7 +960,8 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
                             tag.data.tagdata.compressed_color_plate_data.data = bytearray()
 
                         if converting or extracting:
-                            convert_bitmap_tag(tag, conv_flags, bitmap_info)
+                            convert_bitmap_tag(tag, conv_flags, bitmap_info,
+                                               use_stubbs_p8=self.use_stubbs_p8.get())
 
                         if converting or pruning:
                             tag.serialize(temp=False, calc_pointers=False,
@@ -1336,6 +1343,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
     sort_method = 'path'
 
     displayed_paths = ()
+    type_format_map = ()
     selected_paths = ()
 
     _populating = False
@@ -1350,6 +1358,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
         self.formats_shown = [True] * self.format_count
         self.types_shown   = [True] * self.type_count
         self.displayed_paths = []
+        self.type_format_map = []
         self.selected_paths = set()
         self.build_tag_sort_mappings()
 
@@ -1729,7 +1738,11 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
                 listbox.delete(0, tk.END)
 
             for fp in self.displayed_paths:
-                info = self.master.bitmap_tag_infos[fp]
+                try:
+                    info = self.master.bitmap_tag_infos[fp]
+                except KeyError:
+                    continue
+
                 size = info.pixel_data_size
                 if size < 1024:
                     size_str = str(size) + "  B"
