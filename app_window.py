@@ -76,6 +76,8 @@ class Mozzarilla(Binilla):
     log_filename = 'mozzarilla.log'
     debug = 0
 
+    issue_tracker_url = "https://github.com/MosesofEgypt/mozzarilla/issues"
+
     curr_dir = this_curr_dir
     _mozzarilla_initialized = False
 
@@ -233,6 +235,7 @@ class Mozzarilla(Binilla):
         self.main_menu.add_cascade(label="Tools", menu=self.tools_menu)
         self.main_menu.add_cascade(label="Compile Tag", menu=self.compile_menu)
         self.main_menu.add_command(label="About", command=self.show_about_window)
+        self.main_menu.add_command(label="Report Bug", command=self.open_issue_tracker)
         try:
             if e_c.IS_WIN and not is_main_frozen():
                 import hek_pool
