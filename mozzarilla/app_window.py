@@ -79,6 +79,8 @@ class Mozzarilla(Binilla):
     log_filename = 'mozzarilla.log'
     debug = 0
 
+    issue_tracker_url = "https://github.com/MosesofEgypt/mozzarilla/issues"
+
     _mozzarilla_initialized = False
 
     styles_dir  = Path(e_c.SETTINGS_DIR, "styles")
@@ -216,7 +218,7 @@ class Mozzarilla(Binilla):
         self.defs_menu = tk.Menu(self.main_menu, tearoff=0,
                                  postcommand=self.generate_defs_menu)
         self.converters_menu = tk.Menu(self.tools_menu, tearoff=0)
-        
+
         self.main_menu.delete(0, "end")  # clear the menu
         self.main_menu.add_cascade(label="File",    menu=self.file_menu)
         self.main_menu.add_cascade(label="Settings", menu=self.settings_menu)
@@ -227,6 +229,7 @@ class Mozzarilla(Binilla):
         self.main_menu.add_cascade(label="Tools", menu=self.tools_menu)
         self.main_menu.add_cascade(label="Compile Tag", menu=self.compile_menu)
         self.main_menu.add_command(label="About", command=self.show_about_window)
+        self.main_menu.add_command(label="Report Bug", command=self.open_issue_tracker)
         try:
             if e_c.IS_WIN and not is_main_frozen():
                 import hek_pool
