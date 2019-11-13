@@ -96,7 +96,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         if not dir_tree['columns']:
             dir_tree['columns'] = ('size', )
             dir_tree.heading("#0", text='path')
-            dir_tree.heading("size", text='file count/size')
+            dir_tree.heading("size", text='info')
             dir_tree.column("#0", minwidth=100, width=100)
             dir_tree.column("size", minwidth=100, width=100, stretch=False)
 
@@ -151,7 +151,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
                 dir_info_str = ""
                 for _, subsubdirs, subfiles in os.walk(folderpath):
-                    dir_info_str = "%s files" % len(subfiles)
+                    dir_info_str = "%s items" % (len(subfiles) + len(subsubdirs))
                     break
                     
                 dir_tree.insert(
@@ -167,13 +167,13 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                 try:
                     filesize = os.stat(directory + file).st_size
                     if filesize < 1024:
-                        filesize = str(filesize) + " bytes"
+                        filesize = "%d Bytes" % (filesize)
                     elif filesize < 1024**2:
-                        filesize = str(round(filesize/1024, 3)) + " KiB"
+                        filesize = "%.2f KiB" % (filesize/1024)
                     else:
-                        filesize = str(round(filesize/(1024**2), 3)) + " MiB"
+                        filesize = "%.2f MiB" % (filesize/1024**2)
                 except Exception:
-                    filesize = 'COULDNT CALCULATE'
+                    filesize = 'ERROR'
                 dir_tree.insert(directory, 'end', text=file,
                                 iid=directory + file, tags=('item',),
                                 values=(filesize, ))
