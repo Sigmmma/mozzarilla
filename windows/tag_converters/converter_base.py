@@ -14,7 +14,7 @@ else:
     from tkinter.filedialog import askopenfilename, askdirectory
 from traceback import format_exc
 from binilla.widgets.binilla_widget import BinillaWidget
-from reclaimer.util.path import path_replace
+from supyr_struct.util.path import path_replace
 from mozzarilla import editor_constants as e_c
 
 curr_dir = os.curdir
