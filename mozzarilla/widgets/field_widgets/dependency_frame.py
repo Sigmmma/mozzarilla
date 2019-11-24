@@ -12,7 +12,7 @@ else:
     from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 
-from reclaimer.util.path import tagpath_to_fullpath
+from supyr_struct.util.path import tagpath_to_fullpath
 
 from binilla import constants
 from binilla.widgets.field_widgets.container_frame import ContainerFrame

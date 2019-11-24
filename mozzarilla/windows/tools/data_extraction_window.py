@@ -2,7 +2,7 @@ import os
 import sys
 import tkinter as tk
 from pathlib import Path
-from reclaimer.util.path import path_split
+from supyr_struct.util.path import path_split
 
 from threading import Thread
 from time import time
