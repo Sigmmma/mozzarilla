@@ -34,7 +34,7 @@ from reclaimer.os_v3_hek.handler import OsV3HaloHandler
 from reclaimer.os_v4_hek.handler import OsV4HaloHandler
 from reclaimer.misc.handler import MiscHaloLoader
 from reclaimer.stubbs.handler import StubbsHandler
-from reclaimer.util.path import tagpath_to_fullpath, path_split, path_replace, path_normalize
+from supyr_struct.util import tagpath_to_fullpath, path_split, path_replace, path_normalize
 
 import mozzarilla
 

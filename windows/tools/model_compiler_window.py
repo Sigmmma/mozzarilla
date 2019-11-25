@@ -21,7 +21,7 @@ from reclaimer.model.dae import jms_model_from_dae
 from reclaimer.model.obj import jms_model_from_obj
 from reclaimer.model.model_compilation import compile_gbxmodel
 from reclaimer.model.util import generate_shader
-from supyr_struct.util.path import path_replace, path_split
+from supyr_struct.util import path_replace, path_split
 
 from supyr_struct.util import is_in_dir
 
