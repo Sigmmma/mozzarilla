@@ -483,7 +483,8 @@ class Mozzarilla(Binilla):
         if not handler or handler is not self.handler:
             if manual:
                 print("Changing tag set to %s" % self.handler_names[menu_index])
-                self.io_text.update_idletasks()
+                if hasattr(self, "io_text"):
+                    self.io_text.update_idletasks()
 
             self.set_active_handler(index=menu_index)
             try:
@@ -602,7 +603,7 @@ class Mozzarilla(Binilla):
         try:
             self.select_defs()
         except Exception:
-            pass
+            print(format_exc())
 
         for i in range(len(self.tags_dirs)):
             self.remove_tags_dir(i, manual=False)
