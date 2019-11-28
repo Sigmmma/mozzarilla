@@ -1,6 +1,7 @@
 import os
 import tkinter as tk
 from pathlib import Path
+from sys import platform
 
 from traceback import format_exc
 
@@ -116,11 +117,24 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         self.insert_root_dir(root_dir)
 
     def add_root_dir(self, root_dir):
+        '''
+        Alias for insert_root_dir.
+        '''
         self.insert_root_dir(root_dir)
 
     def insert_root_dir(self, root_dir, index='end'):
+        '''
+        Add new top tag directory to the HierarchyFrame.
+        '''
+        # Turn "/home/currentuser/" into "~/"
+        text = str(root_dir)
+        if "linux" in platform:
+            home = str(Path.home())
+            if text.startswith(home):
+                text = "~/" + text[1+len(home):]
+
         iid = self.tags_tree.insert(
-            '', index, iid=root_dir, text=root_dir,
+            '', index, iid=root_dir, text=text,
             tags=(root_dir, 'tagdir',))
         self.tags_dir_items.append(iid)
         self.destroy_subitems(iid)
@@ -152,7 +166,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                 for _, subsubdirs, subfiles in os.walk(folderpath):
                     dir_info_str = "%s items" % (len(subfiles) + len(subsubdirs))
                     break
-                    
+
                 dir_tree.insert(
                     directory, 'end', text=subdir,
                     iid=folderpath, tags=('item',),
@@ -186,7 +200,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         dir_tree = self.tags_tree
         prev_parent = iid
         parent = dir_tree.parent(prev_parent)
-        
+
         while parent:
             prev_parent = parent
             parent = dir_tree.parent(prev_parent)
