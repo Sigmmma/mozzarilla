@@ -156,16 +156,14 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         dir_tree.insert(directory, 'end')
 
     def generate_subitems(self, directory):
+        directory = str(directory)
         dir_tree = self.tags_tree
 
         for root, subdirs, files in os.walk(directory):
             for subdir in sorted(subdirs):
                 folderpath = os.path.join(directory, subdir)
 
-                dir_info_str = ""
-                for _, subsubdirs, subfiles in os.walk(folderpath):
-                    dir_info_str = "%s items" % (len(subfiles) + len(subsubdirs))
-                    break
+                dir_info_str = "%s items" % len(list(os.scandir(folderpath)))
 
                 dir_tree.insert(
                     directory, 'end', text=subdir,
