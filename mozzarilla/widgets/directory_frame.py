@@ -160,7 +160,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         dir_tree = self.tags_tree
 
         for root, subdirs, files in os.walk(directory):
-            for subdir in sorted(subdirs):
+            for subdir in sorted(subdirs, key=str.casefold):
                 folderpath = os.path.join(directory, subdir)
 
                 dir_info_str = "%s items" % len(list(os.scandir(folderpath)))
@@ -174,7 +174,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                 # at least one item so they can be expanded.
                 self.destroy_subitems(folderpath)
 
-            for file in sorted(files):
+            for file in sorted(files, key=str.casefold):
                 fullpath = os.path.join(directory, file)
                 try:
                     filesize = os.stat(fullpath).st_size
