@@ -5,15 +5,11 @@ import tkinter as tk
 
 from time import time
 from threading import Thread
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askdirectory, asksaveasfilename
-else:
-    from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
 from binilla.util import ProcController, do_subprocess
 from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.windows.filedialog import askdirectory, asksaveasfilename
 
 from supyr_struct.defs.constants import PATHDIV
 from supyr_struct.util import is_in_dir
@@ -53,7 +49,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
     listbox_index_to_def_id = ()
 
-    def __init__(self, app_root, *args, **kwargs): 
+    def __init__(self, app_root, *args, **kwargs):
         self.handler = handler = app_root.handler
         self.app_root = app_root
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)

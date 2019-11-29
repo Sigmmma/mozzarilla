@@ -1,15 +1,12 @@
 import os
 import sys
 
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilename
-else:
-    from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 
 from reclaimer.strings.strings_compilation import compile_unicode_string_list,\
      compile_string_list
+
+from binilla.windows.filedialog import askopenfilename
 
 
 def strings_from_txt(app, fp=None):

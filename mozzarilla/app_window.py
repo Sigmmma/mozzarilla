@@ -5,13 +5,6 @@ import sys
 
 from threading import Thread
 from tkinter import messagebox
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilename, askopenfilenames,\
-        askdirectory, asksaveasfilename
-else:
-    from tkinter.filedialog import askopenfilename, askopenfilenames,\
-        askdirectory, asksaveasfilename
 
 from traceback import format_exc
 
@@ -26,6 +19,8 @@ from binilla.app_window import Binilla, default_hotkeys,\
      default_tag_window_hotkeys
 from binilla.util import do_subprocess, ProcController, is_main_frozen
 from binilla.windows.def_selector_window import DefSelectorWindow
+from binilla.windows.filedialog import askopenfilename, askopenfilenames,\
+    askdirectory, asksaveasfilename
 from binilla.windows.tag_window import read_hotkey_string
 
 from reclaimer.hek.handler import HaloHandler

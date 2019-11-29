@@ -1,16 +1,12 @@
 import os
 import sys
 
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilename
-else:
-    from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 
 from reclaimer.model.jms import read_jms
 from reclaimer.physics.physics_compilation import compile_physics
 
+from binilla.windows.filedialog import askopenfilename
 
 def physics_from_jms(app, fp=None):
     load_dir = app.jms_load_dir

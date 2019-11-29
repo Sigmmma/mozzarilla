@@ -5,16 +5,12 @@ import tkinter as tk
 import tkinter.ttk as ttk
 
 from copy import copy
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilename
-else:
-    from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 
 from supyr_struct.util import tagpath_to_fullpath
 
 from binilla import constants
+from binilla.windows.filedialog import askopenfilename
 from binilla.widgets.field_widgets.container_frame import ContainerFrame
 from mozzarilla.widgets.field_widgets.halo_1_bitmap_display import HaloBitmapDisplayButton
 
