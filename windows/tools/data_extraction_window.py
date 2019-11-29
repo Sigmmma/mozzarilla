@@ -2,7 +2,7 @@ import os
 import sys
 import tkinter as tk
 from pathlib import Path
-from supyr_struct.util import path_split
+from supyr_struct.util import path_split, is_in_dir
 
 from threading import Thread
 from time import time
@@ -169,9 +169,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         dirpath = Path(dirpath)
         tags_dir = Path(self.handler.tagsdir)
 
-        try:
-            dirpath.relative_to(tags_dir)
-        except Exception:
+        if not is_in_dir(dirpath, tags_dir):
             print("Directory %s is not located inside tags dir: %s"
                   % (str(dirpath), str(tags_dir)))
             return
@@ -197,9 +195,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
         self.app_root.last_load_dir = str(Path(fp).parent)
         tags_dir = self.handler.tagsdir
-        try:
-            Path(fp).relative_to(tags_dir)
-        except Exception:
+        if not is_in_dir(fp, tags_dir):
             print("Tag %s is not located in tags directory %s"
                   % (fp, tags_dir))
             return
@@ -275,9 +271,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         tags_path = self.dir_path.get()
         data_path = tags_dir.parent.join("data")
 
-        try:
-            dirpath.relative_to(tags_dir)
-        except Exception:
+        if not is_in_dir(dirpath, tags_dir):
             print("Directory %s is not located inside tags dir: %s"
                   % (str(dirpath), str(tags_dir)))
             return
@@ -300,7 +294,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
             root = Path(root)
             try:
                 root = root.relative_to(tags_dir)
-            except Exception:
+            except ValueError:
                 continue
 
             for filename in files:
@@ -347,9 +341,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
             print("Cannot extract data from this kind of tag.")
             return
         else:
-            try:
-                Path(tag_path).relative_to(tags_dir)
-            except Exception:
+            if not is_in_dir(tag_path, tags_dir):
                 print("Tag %s is not located within tags directory: %s"
                       % (tag_path, tags_dir))
                 return

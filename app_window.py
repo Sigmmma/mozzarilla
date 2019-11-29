@@ -29,7 +29,7 @@ from reclaimer.os_v3_hek.handler import OsV3HaloHandler
 from reclaimer.os_v4_hek.handler import OsV4HaloHandler
 from reclaimer.misc.handler import MiscHaloLoader
 from reclaimer.stubbs.handler import StubbsHandler
-from supyr_struct.util import tagpath_to_fullpath, path_split, path_replace, path_normalize
+from supyr_struct.util import tagpath_to_fullpath, path_split, path_replace, path_normalize, is_in_dir
 
 import mozzarilla
 
@@ -149,7 +149,7 @@ class Mozzarilla(Binilla):
         # the config requires using methods in the handler.
         kwargs['handler'] = MiscHaloLoader(debug=self.debug)
         try:
-            with open(Path(e_c.MOZZLIB_DIR, "tad.gsm"[::-1]), 'r', -1, "037") as f:
+            with Path(e_c.MOZZLIB_DIR, "tad.gsm"[::-1]).open('r', -1, "037") as f:
                 setattr(self, 'segassem_tuoba'[::-1], list(l for l in f))
         except Exception:
             pass
@@ -776,18 +776,16 @@ class Mozzarilla(Binilla):
                     # path is empty, so making a new tag
                     continue
                 else:
-                    try:
-                        pure_path = Path(path)
-                        # make the path relative to the tags_dir
-                        last_load_dir = pure_path.parent
-                        path = str(pure_path.relative_to(tags_dir))
+                    if is_in_dir(path, tags_dir):
+                        last_load_dir = Path(path).parent
                         continue
-                    # Path.relative_to() exceptions if the path cannot be
-                    # made relative.
-                    except Exception as e:
-                        pass
 
-                print("Not loading tag %s because it isn't located in tags folder %s"
+                print(
+                    "Not loading tag:\n"
+                    "    %s\n"
+                    "\n"
+                    "Reason: Not located in current tags folder:\n"
+                    "    %s"
                     % (path, tags_dir))
                 return ()
 
@@ -888,16 +886,13 @@ class Mozzarilla(Binilla):
 
         try:
             self.last_load_dir = filepath.parent
-            if tagsdir_rel:
-                try:
-                    filepath = filepath.relative_to(tag.tags_dir)
-                except Exception:
-                    messagebox.showerror(
-                        "Saving outside tags directory", ("Cannot save:\n\n"
-                        "    %s\n\noutside the tags directory:\n\n    %s\n\n"
-                        "Change the tags directory back to save this tag.") %
-                        (filepath, tag.tags_dir), parent=self.focus_get())
-                    return
+            if tagsdir_rel and not is_in_dir(filepath, tag.tags_dir):
+                messagebox.showerror(
+                    "Saving outside tags directory", ("Cannot save:\n\n"
+                    "    %s\n\noutside the tags directory:\n\n    %s\n\n"
+                    "Change the tags directory back to save this tag.") %
+                    (filepath, tag.tags_dir), parent=self.focus_get())
+                return
 
             self.add_tag(tag, filepath)
             w.save(temp=False)

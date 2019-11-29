@@ -69,7 +69,7 @@ class DependencyFrame(ContainerFrame):
             try:
                 tag_path = filepath.relative_to(tags_dir)
             # If the path is not relative just only take the filename.
-            except Exception:
+            except ValueError:
                 tag_path = Path(filepath.name)
 
             # get file extension.
