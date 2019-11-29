@@ -498,7 +498,7 @@ class Mozzarilla(Binilla):
                 print("    Finished")
 
             # Update window title to reflect tag set that we're using.
-            self.title('%s v%s [%s]' % (self.app_name, self.version, self.handler_names[menu_index]))
+        self.title('%s v%s [%s]' % (self.app_name, self.version, self.handler_names[menu_index]))
 
 
     def generate_defs_menu(self):
