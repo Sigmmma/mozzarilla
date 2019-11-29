@@ -241,7 +241,7 @@ class DependencyFrame(ContainerFrame):
                 tags_dir,
                 Path(PureWindowsPath(self.node.filepath)),
                 extension=ext)
-        except:
+        except Exception:
             filepath = None
             print("Validation of a filepath failed unexpectedly.")
             print(format_exc())

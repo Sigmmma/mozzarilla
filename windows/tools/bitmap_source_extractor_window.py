@@ -41,7 +41,7 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
         self.update()
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
-        except:
+        except Exception:
             print("Could not load window icon.")
 
         self.tags_dir = tk.StringVar(self)
@@ -52,7 +52,7 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
         # make the frames
         self.tags_dir_frame = tk.LabelFrame(self, text="Tags directory")
         self.data_dir_frame = tk.LabelFrame(self, text="Data directory")
-        
+
         # add the filepath boxes
         self.tags_dir_entry = tk.Entry(
             self.tags_dir_frame, textvariable=self.tags_dir)
@@ -168,7 +168,7 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
 
                     tag_id = data[36:40]
                     engine_id = data[60:64]
-                    
+
                     # make sure this is a bitmap tag
                     if tag_id == b'bitm' and engine_id == b'blam':
                         dims_off = 64+24
@@ -226,7 +226,7 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
                 except Exception:
                     #print(format_exc())
                     print("    Couldnt make Tga file.")
-                
+
         print('\nFinished. Took %s seconds' % (time() - start))
 
 

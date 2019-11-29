@@ -60,7 +60,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.update()
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
-        except:
+        except Exception:
             print("Could not load window icon.")
 
         tags_dir = getattr(app_root, "tags_dir", "")
@@ -447,7 +447,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             # Only execute following code if antr_path is not relative to tags_dir
             try:
                 Path(antr_path).relative_to(tags_dir)
-            except:
+            except Exception:
                 # adjust antr filepath to be relative to the new tags directory
                 antr_path = os.path.join(tags_dir, os.path.relpath(antr_path, old_tags_dir))
                 self.model_animations_path.set(antr_path)
