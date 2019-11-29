@@ -896,7 +896,7 @@ class Mozzarilla(Binilla):
             if tagsdir_rel:
                 try:
                     filepath = filepath.relative_to(tag.tags_dir)
-                except:
+                except Exception:
                     messagebox.showerror(
                         "Saving outside tags directory", ("Cannot save:\n\n"
                         "    %s\n\noutside the tags directory:\n\n    %s\n\n"

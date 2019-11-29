@@ -47,14 +47,14 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
                                      for k in self.handler.id_ext_map}
         self.tag_class_ext_to_fcc = {self.tag_class_fcc_to_ext[k]: k
                                      for k in self.tag_class_fcc_to_ext}
-        
+
 
         self.title("Tag Data Extractor")
         self.resizable(0, 0)
         self.update()
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
-        except:
+        except Exception:
             print("Could not load window icon.")
 
         self.listbox_index_to_def_id = list(sorted(
@@ -119,7 +119,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
             self.tag_path_frame, text="Browse", command=self.tag_browse)
         self.tag_extract_button = tk.Button(
             self.tag_path_frame, text="Extract", command=self.tag_extract)
-        
+
         self.cancel_extraction_button = tk.Button(
             self, text="Cancel extraction", command=self.cancel_extraction)
 
@@ -175,7 +175,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
         try:
             dirpath.relative_to(tags_dir)
-        except:
+        except Exception:
             print("Directory %s is not located inside tags dir: %s"
                   % (str(dirpath), str(tags_dir)))
             return
@@ -203,7 +203,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         tags_dir = self.handler.tagsdir
         try:
             Path(fp).relative_to(tags_dir)
-        except:
+        except Exception:
             print("Tag %s is not located in tags directory %s"
                   % (fp, tags_dir))
             return
@@ -281,7 +281,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
 
         try:
             dirpath.relative_to(tags_dir)
-        except:
+        except Exception:
             print("Directory %s is not located inside tags dir: %s"
                   % (str(dirpath), str(tags_dir)))
             return
@@ -304,7 +304,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
             root = Path(root)
             try:
                 root = root.relative_to(tags_dir)
-            except:
+            except Exception:
                 continue
 
             for filename in files:
@@ -353,7 +353,7 @@ class DataExtractionWindow(tk.Toplevel, BinillaWidget):
         else:
             try:
                 Path(tag_path).relative_to(tags_dir)
-            except:
+            except Exception:
                 print("Tag %s is not located within tags directory: %s"
                       % (tag_path, tags_dir))
                 return
