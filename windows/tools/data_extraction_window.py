@@ -6,14 +6,10 @@ from supyr_struct.util import path_split
 
 from threading import Thread
 from time import time
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilename, askdirectory
-else:
-    from tkinter.filedialog import askopenfilename, askdirectory
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.windows.filedialog import askopenfilename, askdirectory
 
 from reclaimer.halo_script.hsc import get_h1_scenario_script_object_type_strings
 

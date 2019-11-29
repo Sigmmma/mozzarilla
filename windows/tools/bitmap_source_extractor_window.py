@@ -8,14 +8,10 @@ import zlib
 from time import time
 from threading import Thread
 from struct import unpack, pack_into
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askdirectory
-else:
-    from tkinter.filedialog import askdirectory
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.windows.filedialog import askdirectory
 from mozzarilla import editor_constants as e_c
 
 window_base_class = tk.Toplevel

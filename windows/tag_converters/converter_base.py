@@ -4,16 +4,12 @@ import os
 import sys
 import threadsafe_tkinter as tk
 from pathlib import Path
-
 from time import time
 from threading import Thread
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilename, askdirectory
-else:
-    from tkinter.filedialog import askopenfilename, askdirectory
 from traceback import format_exc
+
 from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.windows.filedialog import askopenfilename, askdirectory
 from supyr_struct.util import path_replace
 from mozzarilla import editor_constants as e_c
 
@@ -40,7 +36,7 @@ class ConverterBase(BinillaWidget):
         self.update()
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
-        except:
+        except Exception:
             pass
 
         tags_dir = path_replace(Path(curr_dir, 'tags'), 'tags', 'tags')

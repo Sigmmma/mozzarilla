@@ -3,17 +3,13 @@ import os
 import sys
 import tkinter as tk
 
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilename, asksaveasfilename
-else:
-    from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
 
 from supyr_struct.buffer import get_rawdata
 from supyr_struct.defs.audio.wav import wav_def
 
 from binilla.widgets.field_widgets import FieldWidget, RawdataFrame
+from binilla.windows.filedialog import askopenfilename, asksaveasfilename
 
 from reclaimer.meta.wrappers.byteswapping import byteswap_pcm16_samples
 

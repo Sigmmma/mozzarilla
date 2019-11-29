@@ -3,11 +3,6 @@ import sys
 from pathlib import PurePath
 
 from struct import unpack
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilenames
-else:
-    from tkinter.filedialog import askopenfilenames
 from traceback import format_exc
 
 from reclaimer.bitmaps.bitmap_decompilation import extract_bitmap_tiff_data
@@ -16,6 +11,7 @@ from reclaimer.bitmaps.bitmap_compilation import add_bitmap_to_bitmap_tag,\
 
 from supyr_struct.util import sanitize_path
 
+from binilla.windows.filedialog import askopenfilenames
 
 def bitmap_from_dds(app, fps=()):
     load_dir = app.bitmap_load_dir
@@ -24,7 +20,7 @@ def bitmap_from_dds(app, fps=()):
         data_dir = ""
     if not load_dir:
         load_dir = data_dir
-    
+
     if not fps:
         fps = askopenfilenames(
             initialdir=load_dir, parent=app,
@@ -61,7 +57,7 @@ def bitmap_from_multiple_dds(app, fps=()):
         data_dir = ""
     if not load_dir:
         load_dir = data_dir
-    
+
     if not fps:
         fps = askopenfilenames(
             initialdir=load_dir, parent=app,
@@ -101,7 +97,7 @@ def bitmap_from_bitmap_source(app, e=None):
     load_dir = app.bitmap_load_dir
     if not load_dir:
         load_dir = app.last_data_load_dir
-    
+
     fps = askopenfilenames(initialdir=load_dir, parent=app,
                            filetypes=(("bitmap", "*.bitmap"), ("All", "*")),
                            title="Select a bitmap tag to get the source tiff")

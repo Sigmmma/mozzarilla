@@ -8,11 +8,6 @@ import arbytmap as ab
 
 from copy import deepcopy
 from threading import Thread
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askdirectory, asksaveasfilename
-else:
-    from tkinter.filedialog import askdirectory, asksaveasfilename
 from time import time
 from traceback import format_exc
 
@@ -22,9 +17,9 @@ from reclaimer.constants import TYPE_NAME_MAP, FORMAT_NAME_MAP,\
      I_FORMAT_NAME_MAP
 
 from binilla.util import do_subprocess, ProcController
-
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.scroll_menu import ScrollMenu
+from binilla.windows.filedialog import askdirectory, asksaveasfilename
 from mozzarilla.widgets.field_widgets import HaloBitmapDisplayFrame,\
      HaloBitmapDisplayBase
 from mozzarilla import editor_constants as e_c

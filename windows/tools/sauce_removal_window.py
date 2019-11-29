@@ -2,15 +2,11 @@ import os
 import sys
 import tkinter as tk
 
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilename
-else:
-    from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 from struct import unpack, pack
 
 from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.windows.filedialog import askopenfilename
 
 from reclaimer.halo_script.hsc_decompilation import extract_h1_scripts
 

@@ -9,13 +9,10 @@ except (ImportError, SystemError):
 from pathlib import Path
 import threadsafe_tkinter as tk
 
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilename
-else:
-    from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 from struct import pack_into, pack
+
+from binilla.windows.filedialog import askopenfilename
 
 from reclaimer.hek.defs.coll import coll_def
 from reclaimer.hek.defs.mod2 import mod2_def

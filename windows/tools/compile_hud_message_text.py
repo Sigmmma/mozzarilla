@@ -1,15 +1,11 @@
 import os
 import sys
 
-# Filepicker dialog sucks on linux unless we replace it.
-if sys.platform.startswith('linux'):
-    from tkfilebrowser import askopenfilename
-else:
-    from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 
 from reclaimer.strings.strings_compilation import compile_hud_message_text
 
+from binilla.windows.filedialog import askopenfilename
 
 def hud_message_text_from_hmt(app, fp=None):
     load_dir = app.last_data_load_dir
