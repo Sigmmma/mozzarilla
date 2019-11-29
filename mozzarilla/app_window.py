@@ -483,6 +483,8 @@ class Mozzarilla(Binilla):
         if not handler or handler is not self.handler:
             if manual:
                 print("Changing tag set to %s" % self.handler_names[menu_index])
+                # The first time this function is called is before initialization is
+                # finished. This attribute will not exist yet by then.
                 if hasattr(self, "io_text"):
                     self.io_text.update_idletasks()
 
