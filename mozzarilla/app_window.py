@@ -469,7 +469,10 @@ class Mozzarilla(Binilla):
         if not handler or handler is not self.handler:
             if manual:
                 print("Changing tag set to %s" % self.handler_names[menu_index])
-                self.io_text.update_idletasks()
+                # The first time this function is called is before initialization is
+                # finished. This attribute will not exist yet by then.
+                if hasattr(self, "io_text"):
+                    self.io_text.update_idletasks()
 
             self.set_active_handler(index=menu_index)
             try:
@@ -479,6 +482,10 @@ class Mozzarilla(Binilla):
 
             if manual:
                 print("    Finished")
+
+            # Update window title to reflect tag set that we're using.
+        self.title('%s v%s [%s]' % (self.app_name, self.version, self.handler_names[menu_index]))
+
 
     def generate_defs_menu(self):
         self.defs_menu.delete(0, "end")  # clear the menu
@@ -590,7 +597,7 @@ class Mozzarilla(Binilla):
         try:
             self.select_defs()
         except Exception:
-            pass
+            print(format_exc())
 
         for i in range(len(self.tags_dirs)):
             self.remove_tags_dir(i, manual=False)
