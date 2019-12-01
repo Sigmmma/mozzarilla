@@ -239,8 +239,8 @@ class DependencyFrame(ContainerFrame):
             filepath = tagpath_to_fullpath(
                 tags_dir, PureWindowsPath(filepath), extension=ext)
 
-            if filepath is None and
-            (self.tag_window.handler.treat_mode_as_mod2 and ext == '.model'):
+            if filepath is None and (
+            self.tag_window.handler.treat_mode_as_mod2 and ext == '.model'):
                 filepath = tagpath_to_fullpath(
                     tags_dir, PureWindowsPath(filepath), extension='.gbxmodel')
 
