@@ -170,7 +170,7 @@ class DependencyFrame(ContainerFrame):
             # Get full path with proper capitalization if it points to a file.
             filepath = tagpath_to_fullpath(
                 tags_dir,
-                Path(PureWindowsPath(self.node.filepath)),
+                PureWindowsPath(self.node.filepath),
                 extension=ext)
 
             if (new_handler.treat_mode_as_mod2
@@ -216,9 +216,6 @@ class DependencyFrame(ContainerFrame):
         if self.node is None:
             return
 
-        if self.node.filepath == '':
-            return
-
         desc = self.desc
         wid = self.f_widget_ids_map.get(desc['NAME_MAP']['filepath'])
         widget = self.f_widgets.get(wid)
@@ -230,25 +227,27 @@ class DependencyFrame(ContainerFrame):
         except AttributeError:
             return
 
-        ext = '.' + self.node.tag_class.enum_name
-        # Get full path with proper capitalization if it points to a file.
         try:
+            # Get filepath directly from the typing box
+            filepath = widget.data_entry.get()
+            if filepath == '':
+                return
+
+            ext = '.' + self.node.tag_class.enum_name
+
+            # Get full path with proper capitalization if it points to a file.
             filepath = tagpath_to_fullpath(
-                tags_dir,
-                Path(PureWindowsPath(self.node.filepath)),
-                extension=ext)
+                tags_dir, PureWindowsPath(filepath), extension=ext)
+
+            if filepath is None and
+            (self.tag_window.handler.treat_mode_as_mod2 and ext == '.model'):
+                filepath = tagpath_to_fullpath(
+                    tags_dir, PureWindowsPath(filepath), extension='.gbxmodel')
+
         except Exception:
             filepath = None
             print("Validation of a filepath failed unexpectedly.")
             print(format_exc())
-
-        if (self.tag_window.handler.treat_mode_as_mod2
-        and filepath is None
-        and ext == '.model'):
-            filepath = tagpath_to_fullpath(
-                tags_dir,
-                PureWindowsPath(self.node.filepath),
-                extension='.gbxmodel')
 
         if filepath is not None:
             widget.data_entry.config(fg=self.text_normal_color)
