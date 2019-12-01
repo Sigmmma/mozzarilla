@@ -130,7 +130,7 @@ class DependencyFrame(ContainerFrame):
             # Get full path with proper capitalization if it points to a file.
             filepath = tagpath_to_fullpath(
                 tags_dir,
-                Path(PureWindowsPath(self.node.filepath)),
+                PureWindowsPath(self.node.filepath),
                 extension=ext)
 
             if (new_handler.treat_mode_as_mod2
@@ -138,7 +138,7 @@ class DependencyFrame(ContainerFrame):
             and ext == '.model'):
                 filepath = tagpath_to_fullpath(
                     tags_dir,
-                    Path(PureWindowsPath(self.node.filepath)),
+                    PureWindowsPath(self.node.filepath),
                     extension='.gbxmodel')
 
             if filepath is None:
@@ -178,7 +178,7 @@ class DependencyFrame(ContainerFrame):
             and ext == '.model'):
                 filepath = tagpath_to_fullpath(
                     tags_dir,
-                    Path(PureWindowsPath(self.node.filepath)),
+                    PureWindowsPath(self.node.filepath),
                     extension='.gbxmodel')
 
             if filepath is None:
@@ -247,7 +247,7 @@ class DependencyFrame(ContainerFrame):
         and ext == '.model'):
             filepath = tagpath_to_fullpath(
                 tags_dir,
-                Path(PureWindowsPath(self.node.filepath)),
+                PureWindowsPath(self.node.filepath),
                 extension='.gbxmodel')
 
         if filepath is not None:
