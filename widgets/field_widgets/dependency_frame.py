@@ -1,5 +1,3 @@
-import os
-import sys
 from pathlib import Path, PureWindowsPath
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -23,26 +21,26 @@ class DependencyFrame(ContainerFrame):
     validate_entry_str = None
 
     def browse_tag(self):
+        '''Opens a filepicker window to aid the user in referencing their
+        wished tag file.'''
         if self.node is None:
             return
 
         try:
             try:
                 tags_dir = self.tag_window.tag.tags_dir
-            except AttributeError as e:
+            except AttributeError:
                 return
 
             init_dir = tags_dir
 
             try:
-                init_dir = os.path.dirname(
-                    tagpath_to_fullpath(
-                        tags_dir,
-                        self.node.filepath,
-                        extension=self.tag_window.tag.ext,
-                        force_windows=True)
-                    )
+                init_dir = Path(tagpath_to_fullpath(
+                        tags_dir, self.node.filepath,
+                        extension=self.tag_window.tag.ext, force_windows=True)
+                    ).parent
             except Exception:
+                # This path is not valid, so use our earlier assignment instead.
                 pass
 
             filetypes = []
@@ -50,6 +48,8 @@ class DependencyFrame(ContainerFrame):
                 if ext == 'NONE':
                     continue
                 filetypes.append((ext, '*.%s' % ext))
+            # TODO: Create a function that can generate globs
+            # that support all types valid for this field.
             if len(filetypes) > 1:
                 filetypes = (('All', '*'),) + tuple(filetypes)
             else:
@@ -60,6 +60,7 @@ class DependencyFrame(ContainerFrame):
                 title="Select a tag", parent=self)
 
             if not filepath:
+                # askopenfilename returned nothing. Quit.
                 return
 
             # Halo tagpaths require backslashes( \ ) as dividers.
@@ -87,7 +88,8 @@ class DependencyFrame(ContainerFrame):
                 self.node.tag_class.set_to('NONE')
                 for filetype in filetypes:
                     ext = filetype[1][1:]
-                    if tagpath_to_fullpath(tags_dir, tag_path, extension=ext) is not None:
+                    if tagpath_to_fullpath(
+                            tags_dir, tag_path, extension=ext) is not None:
                         self.node.tag_class.set_to(ext[1:])
                         break
 
@@ -107,6 +109,7 @@ class DependencyFrame(ContainerFrame):
             print(format_exc())
 
     def open_tag(self):
+        '''Open the referenced tag.'''
         if self.node is None:
             return
 
@@ -129,9 +132,7 @@ class DependencyFrame(ContainerFrame):
             ext = '.' + self.node.tag_class.enum_name
             # Get full path with proper capitalization if it points to a file.
             filepath = tagpath_to_fullpath(
-                tags_dir,
-                PureWindowsPath(self.node.filepath),
-                extension=ext)
+                tags_dir, PureWindowsPath(self.node.filepath), extension=ext)
 
             if (new_handler.treat_mode_as_mod2
             and filepath is None
@@ -169,9 +170,7 @@ class DependencyFrame(ContainerFrame):
             ext = '.' + self.node.tag_class.enum_name
             # Get full path with proper capitalization if it points to a file.
             filepath = tagpath_to_fullpath(
-                tags_dir,
-                PureWindowsPath(self.node.filepath),
-                extension=ext)
+                tags_dir, PureWindowsPath(self.node.filepath), extension=ext)
 
             if (new_handler.treat_mode_as_mod2
             and filepath is None
@@ -199,6 +198,7 @@ class DependencyFrame(ContainerFrame):
         return tag
 
     def bitmap_preview(self, e=None):
+        '''Loads the referenced bitmap tag and displays its preview window.'''
         f = self.preview_btn.display_frame
         if f is not None and f() is not None:
             return
@@ -213,6 +213,8 @@ class DependencyFrame(ContainerFrame):
         self.preview_btn.show_window(None, self.tag_window.app_root)
 
     def validate_filepath(self, *args):
+        '''Checks if the referenced tag exists, sets text color to red if
+        it's invalid. Sets color to default if valid.'''
         if self.node is None:
             return
 
