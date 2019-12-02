@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import os, sys
+import sys
 
 info = sys.version_info
 
@@ -16,7 +16,7 @@ try:
     from mozzarilla.app_window import Mozzarilla
     main_window = Mozzarilla(debug=1)
     main_window.mainloop()
-    
+
 except Exception:
     exception = format_exc()
     try:

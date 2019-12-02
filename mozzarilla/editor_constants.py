@@ -1,5 +1,4 @@
 import sys
-import os
 from pathlib import Path
 
 from binilla import editor_constants as b_e_c
