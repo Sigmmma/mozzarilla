@@ -1,13 +1,13 @@
-import os
-import tkinter as tk
 from pathlib import Path
 from sys import platform
+import os
+import tkinter as tk
 
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
 
-# injject this default color
+# inject this default color
 BinillaWidget.active_tags_directory_color = '#%02x%02x%02x' % (40, 170, 80)
 
 
@@ -156,10 +156,9 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         dir_tree.insert(directory, 'end')
 
     def generate_subitems(self, directory):
-        directory = str(directory)
         dir_tree = self.tags_tree
 
-        for root, subdirs, files in os.walk(directory):
+        for root, subdirs, files in os.walk(str(directory)):
             for subdir in sorted(subdirs, key=str.casefold):
                 folderpath = os.path.join(directory, subdir)
 
@@ -220,7 +219,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         if tag_path is None:
             return
 
-        if os.path.isdir(tag_path):
+        if Path(tag_path).is_dir():
             self.destroy_subitems(tag_path)
 
     def highlight_tags_dir(self, tags_dir=None):
@@ -399,7 +398,7 @@ class DependencyFrame(HierarchyFrame):
 
             iid = dir_tree.insert(
                 parent_iid, 'end', text=tag_path, tags=('item',),
-                values=(dependency_name, tags_dir + tag_path))
+                values=(dependency_name, Path(tags_dir, tag_path)))
 
             self.destroy_subitems(iid)
 
@@ -408,7 +407,7 @@ class DependencyFrame(HierarchyFrame):
         active = dir_tree.focus()
         if active is None:
             return
-        tag_path = dir_tree.item(active)['values'][-1]
+        tag_path = Path(dir_tree.item(active)['values'][-1])
 
         try:
             app = self.app_root
@@ -417,7 +416,7 @@ class DependencyFrame(HierarchyFrame):
         except Exception:
             print(format_exc())
 
-        if os.path.isdir(tag_path):
+        if tag_path.is_dir():
             return
 
         try:
