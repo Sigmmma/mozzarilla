@@ -1,6 +1,4 @@
 import os
-import sys
-
 from traceback import format_exc
 
 from reclaimer.strings.strings_compilation import compile_hud_message_text

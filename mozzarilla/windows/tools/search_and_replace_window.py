@@ -1,4 +1,3 @@
-import os
 import tkinter as tk
 
 from binilla.widgets.binilla_widget import BinillaWidget

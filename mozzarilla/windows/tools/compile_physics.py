@@ -1,5 +1,4 @@
 import os
-import sys
 
 from traceback import format_exc
 

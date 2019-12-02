@@ -1,8 +1,7 @@
-import os
-import sys
-import tkinter as tk
-import time
 from pathlib import Path
+import os
+import time
+import tkinter as tk
 
 from tkinter import messagebox
 from traceback import format_exc
