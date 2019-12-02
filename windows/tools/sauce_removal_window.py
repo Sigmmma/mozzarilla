@@ -1,5 +1,4 @@
 import os
-import sys
 import tkinter as tk
 
 from traceback import format_exc

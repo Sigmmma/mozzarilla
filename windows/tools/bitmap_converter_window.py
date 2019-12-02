@@ -1,15 +1,16 @@
 import ctypes
-import os
 import gc
+import os
 import sys
 import tkinter as tk
 import weakref
-import arbytmap as ab
 
 from copy import deepcopy
 from threading import Thread
 from time import time
 from traceback import format_exc
+
+import arbytmap as ab
 
 from reclaimer.bitmaps.p8_palette import HALO_P8_PALETTE, STUBBS_P8_PALETTE
 from reclaimer.hek.defs.bitm import bitm_def
