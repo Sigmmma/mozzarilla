@@ -782,19 +782,18 @@ class Mozzarilla(Binilla):
                 if not path:
                     # path is empty, so making a new tag
                     continue
+                elif is_in_dir(path, tags_dir):
+                    last_load_dir = Path(path).parent
+                    continue
                 else:
-                    if is_in_dir(path, tags_dir):
-                        last_load_dir = Path(path).parent
-                        continue
-
-                print(
-                    "Not loading tag:\n"
-                    "    %s\n"
-                    "\n"
-                    "Reason: Not located in current tags folder:\n"
-                    "    %s"
-                    % (path, tags_dir))
-                return ()
+                    print(
+                        "Not loading tag:\n"
+                        "    %s\n"
+                        "\n"
+                        "Reason: Not located in current tags folder:\n"
+                        "    %s"
+                        % (path, tags_dir))
+                    return ()
 
         windows = Binilla.load_tags(self, filepaths, def_id)
         self.last_load_dir = last_load_dir
