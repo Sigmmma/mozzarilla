@@ -5,7 +5,6 @@ try:
 except (ImportError, SystemError):
     from converter_base import ConverterBase
 
-import os
 from pathlib import Path, PureWindowsPath
 import threadsafe_tkinter as tk
 
@@ -251,7 +250,7 @@ def make_bsp_coll_jms_models(bsps, materials, nodes, node_transforms=(),
                 material.collision_only = not material.large_collideable
                 material.double_sided &= not material.large_collideable
                 material.name = material.name + material.properties
-                material.shader_path = material.shader_path + material.properties 
+                material.shader_path = material.shader_path + material.properties
                 material.properties = ""
 
             mat_info_to_mat_id[mat_info] = len(coll_materials)
@@ -612,7 +611,7 @@ class SbspConverter(ConverterBase, window_base_class):
             self.weather_tolerance_frame, from_=self.min_weather_tolerance,
             to=100, width=25, increment=self.weather_tolerance,
             textvariable=self.weather_tolerance_string, justify="right")
-        
+
         self.pack_widgets()
         self.apply_style()
 
