@@ -1,6 +1,5 @@
+from pathlib import Path
 import copy
-import os
-import sys
 import tkinter as tk
 
 from traceback import format_exc
@@ -93,7 +92,8 @@ class SoundSampleFrame(HaloRawdataFrame):
         if not filepath:
             return
 
-        ext = os.path.splitext(filepath)[1].lower()
+        filepath = Path(filepath)
+        ext = filepath.suffix.lower()
 
         curr_size = None
         index = self.attr_index
@@ -171,15 +171,14 @@ class SoundSampleFrame(HaloRawdataFrame):
 
         filepath = asksaveasfilename(
             initialdir=initialdir, title="Export sound data to...",
-            parent=self, filetypes=[(self.name, '*' + def_ext),
-                                    ('All', '*')])
+            parent=self, filetypes=[(self.name, '*' + def_ext), ('All', '*')])
 
         if not filepath:
             return
 
-        filepath, ext = os.path.splitext(filepath)
-        if not ext: ext = def_ext
-        filepath += ext
+        filepath = Path(filepath)
+        if not filepath.suffix:
+            filepath = filepath.with_suffix(def_ext)
 
         if ext == '.wav':
             # if the file is wav, we need to give it a header
