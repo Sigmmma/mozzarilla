@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import sys
 
 try:
     from .converter_base import ConverterBase

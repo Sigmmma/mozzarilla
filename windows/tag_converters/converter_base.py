@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 
-import os
-import sys
-import threadsafe_tkinter as tk
 from pathlib import Path
-from time import time
 from threading import Thread
+from time import time
 from traceback import format_exc
+import os
+import threadsafe_tkinter as tk
 
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.windows.filedialog import askopenfilename, askdirectory
 from supyr_struct.util import path_replace
 from mozzarilla import editor_constants as e_c
 
-curr_dir = os.curdir
+curr_dir = Path.cwd()
 
 class ConverterBase(BinillaWidget):
     src_ext = "*"
