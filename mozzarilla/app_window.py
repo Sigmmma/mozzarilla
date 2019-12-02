@@ -1,7 +1,6 @@
 from pathlib import Path, PureWindowsPath
 import re
 import tkinter as tk
-import sys
 
 from threading import Thread
 from tkinter import messagebox
