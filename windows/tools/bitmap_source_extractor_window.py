@@ -220,7 +220,7 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
                         f.write(data)
                 except Exception:
                     #print(format_exc())
-                    print("    Couldnt make Tga file.")
+                    print("    Couldn't make Tga file.")
 
         print('\nFinished. Took %s seconds' % (time() - start))
 
