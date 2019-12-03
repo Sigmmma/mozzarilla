@@ -1,4 +1,4 @@
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from sys import platform
 import os
 import tkinter as tk
@@ -367,7 +367,7 @@ class DependencyFrame(HierarchyFrame):
             return
 
         for tag_ref_block in self.get_dependencies(parent_tag_path):
-            filepath = PureWindowsPath(tag_ref_block.filepath)
+            filepath = Path(PureWindowsPath(tag_ref_block.filepath))
             try:
                 ext = '.' + tag_ref_block.tag_class.enum_name
                 if (self.handler.treat_mode_as_mod2 and ext == '.model' and
