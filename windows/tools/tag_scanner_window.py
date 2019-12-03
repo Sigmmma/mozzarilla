@@ -12,7 +12,6 @@ from binilla.util import ProcController, do_subprocess
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.windows.filedialog import askdirectory, asksaveasfilename
 
-from supyr_struct.defs.constants import PATHDIV
 from supyr_struct.util import path_normalize, is_in_dir
 
 from mozzarilla import editor_constants as e_c
@@ -322,7 +321,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
                 if time() - c_time > p_int:
                     c_time = time()
-                    print(' '*4 + filepath.lstrip("." + PATHDIV))
+                    print(' '*4 + filepath)
                     self.app_root.update_idletasks()
 
                 tag = self.get_tag(os.path.join(tags_dir, filepath))
