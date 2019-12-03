@@ -17,7 +17,7 @@ from reclaimer.animation.animation_compilation import \
      ANIMATION_COMPILE_MODE_PRESERVE, ANIMATION_COMPILE_MODE_ADDITIVE
 from reclaimer.animation.util import partial_mod2_def
 
-from supyr_struct.util import is_in_dir
+from supyr_struct.util import is_in_dir, path_normalize
 
 from mozzarilla import editor_constants as e_c
 
@@ -398,14 +398,12 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if tags_dir and not jma_dir:
             jma_dir = data_dir
 
-        dirpath = askdirectory(
+        dirpath = path_normalize(askdirectory(
             initialdir=jma_dir, parent=self,
-            title="Select the folder of animations to compile...")
+            title="Select the folder of animations to compile..."))
 
         if not dirpath:
             return
-
-        dirpath = path_normalize(dirpath)
 
         if tags_dir and data_dir and os.path.basename(dirpath).lower() == "animations":
             object_dir = os.path.dirname(dirpath)
