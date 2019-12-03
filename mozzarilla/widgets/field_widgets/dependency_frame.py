@@ -134,9 +134,8 @@ class DependencyFrame(ContainerFrame):
             filepath = tagpath_to_fullpath(
                 tags_dir, PureWindowsPath(self.node.filepath), extension=ext)
 
-            if (new_handler.treat_mode_as_mod2
-            and filepath is None
-            and ext == '.model'):
+            if filepath is None and (
+            new_handler.treat_mode_as_mod2 and ext == '.model'):
                 filepath = tagpath_to_fullpath(
                     tags_dir,
                     PureWindowsPath(self.node.filepath),
@@ -172,9 +171,8 @@ class DependencyFrame(ContainerFrame):
             filepath = tagpath_to_fullpath(
                 tags_dir, PureWindowsPath(self.node.filepath), extension=ext)
 
-            if (new_handler.treat_mode_as_mod2
-            and filepath is None
-            and ext == '.model'):
+            if filepath is None and (
+            handler.treat_mode_as_mod2 and ext == '.model'):
                 filepath = tagpath_to_fullpath(
                     tags_dir,
                     PureWindowsPath(self.node.filepath),
