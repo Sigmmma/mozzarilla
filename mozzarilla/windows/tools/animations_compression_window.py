@@ -1,3 +1,4 @@
+from pathlib import Path
 import os
 import tkinter as tk
 import time
@@ -6,7 +7,7 @@ from tkinter import messagebox
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
-from binilla.windows.filedialog import askdirectory, asksaveasfilename
+from binilla.windows.filedialog import askdirectory, askopenfilename
 
 from reclaimer.hek.defs.antr import antr_def as halo_antr_def
 from reclaimer.stubbs.defs.antr import antr_def as stubbs_antr_def
@@ -44,7 +45,7 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         #self.resizable(1, 1)
         self.resizable(0, 0)
         self.update()
-        anims_dir = getattr(app_root, "tags_dir", get_cwd(__file__))
+        anims_dir = getattr(app_root, "tags_dir", str(Path.cwd()))
 
         try:
             self.iconbitmap(e_c.MOZZ_ICON_PATH)
@@ -170,9 +171,8 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         if not force and (self._working or self._loading):
             return
 
-        antr_dir = os.path.dirname(self.model_animations_dir.get())
         dirpath = askdirectory(
-            initialdir=antr_dir, parent=self,
+            initialdir=self.model_animations_dir.get(), parent=self,
             title="Directory of model_animations to compress/decompress")
 
         if not dirpath:
@@ -189,7 +189,7 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         if self.model_animations_dir.get() and not antr_dir:
             antr_dir = self.model_animations_dir.get()
 
-        fp = asksaveasfilename(
+        fp = askopenfilename(
             initialdir=antr_dir, title="Model_animations to compress/decompress", parent=self,
             filetypes=(("Model animations graph", "*.model_animations"), ('All', '*')))
 
@@ -339,8 +339,8 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
 
         try:
             if not self.overwrite.get():
-                base, ext = os.path.splitext(antr_tag.filepath)
-                antr_tag.filepath = base + "_DECOMP" + ext
+                fp = Path(antr_tag.filepath)
+                antr_tag.filepath = Path(fp.parent, fp.stem+"_DECOMP"+fp.suffix)
 
             antr_tag.calc_internal_data()
             antr_tag.serialize(temp=False, backup=False, calc_pointers=False,
