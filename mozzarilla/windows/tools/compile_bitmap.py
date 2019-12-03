@@ -1,5 +1,5 @@
 import os
-from pathlib import PurePath
+from pathlib import Path
 
 from struct import unpack
 from traceback import format_exc
@@ -7,8 +7,6 @@ from traceback import format_exc
 from reclaimer.bitmaps.bitmap_decompilation import extract_bitmap_tiff_data
 from reclaimer.bitmaps.bitmap_compilation import add_bitmap_to_bitmap_tag,\
      compile_bitmap_from_dds_files
-
-from supyr_struct.util import sanitize_path
 
 from binilla.windows.filedialog import askopenfilenames
 
@@ -41,7 +39,7 @@ def bitmap_from_dds(app, fps=()):
         window.is_new_tag = True
 
         compile_bitmap_from_dds_files(window.tag, (fp, ))
-        window.update_title(list(PurePath(fp).parts)[-1])
+        window.update_title(list(Path(fp).parts)[-1])
 
         # reload the window to display the newly entered info
         window.reload()
@@ -79,7 +77,7 @@ def bitmap_from_multiple_dds(app, fps=()):
     fps = sorted(fps)
 
     for fp in fps:
-        pure_path = PurePath(fp)
+        pure_path = Path(fp)
         window.update_title(list(pure_path.parts)[-1])
         app.bitmap_load_dir = pure_path.parent
         break
@@ -108,7 +106,6 @@ def bitmap_from_bitmap_source(app, e=None):
 
     print('Creating bitmap from uncompressed source image of these bitmaps:')
     for fp in fps:
-        fp = sanitize_path(fp)
         print("  %s" % fp)
 
         width, height, pixels = extract_bitmap_tiff_data(fp)
