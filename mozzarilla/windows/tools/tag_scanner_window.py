@@ -1,4 +1,5 @@
 import ctypes
+from pathlib import Path
 import os
 import sys
 import tkinter as tk
@@ -12,7 +13,7 @@ from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.windows.filedialog import askdirectory, asksaveasfilename
 
 from supyr_struct.defs.constants import PATHDIV
-from supyr_struct.util import is_in_dir
+from supyr_struct.util import path_normalize, is_in_dir
 
 from mozzarilla import editor_constants as e_c
 
@@ -173,14 +174,13 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         def_id = handler.get_def_id(filepath)
 
         try:
-            tag = handler.get_tag(sanitize_path(filepath), def_id)
+            tag = handler.get_tag(filepath, def_id)
         except (KeyError, LookupError):
             tag = None
         try:
             if tag is None:
                 return handler.build_tag(
-                    filepath=sanitize_path(
-                        os.path.join(self.tags_dir, filepath))
+                    filepath=os.path.join(self.tags_dir, filepath)
                     )
         except Exception:
             pass
@@ -195,14 +195,9 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         if not dirpath:
             return
 
-        dirpath = sanitize_path(dirpath)
-        if not dirpath.endswith(PATHDIV):
-            dirpath += PATHDIV
-
-        self.app_root.last_load_dir = os.path.dirname(dirpath)
+        self.app_root.last_load_dir = dirpath
         tags_dir = self.handler.tagsdir
-        if not (is_in_dir(dirpath, tags_dir, 0) or
-                os.path.join(dirpath.lower()) == os.path.join(tags_dir.lower())):
+        if not is_in_dir(dirpath, tags_dir):
             print("Specified directory is not located within the tags directory")
             return
 
@@ -219,8 +214,8 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         if not filepath:
             return
 
-        filepath = sanitize_path(filepath)
-        self.app_root.last_load_dir = os.path.dirname(filepath)
+        filepath = Path(filepath)
+        self.app_root.last_load_dir = Path(filepath).parent
 
         self.logfile_path.set(filepath)
 
@@ -255,12 +250,11 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         handler = self.handler
         self.stop_scanning = False
 
-        tags_dir = self.tags_dir = sanitize_path(self.handler.tagsdir)
-        dirpath = sanitize_path(self.directory_path.get())
-        logpath = sanitize_path(self.logfile_path.get())
+        tags_dir = self.tags_dir = path_normalize(self.handler.tagsdir)
+        dirpath = path_normalize(self.directory_path.get())
+        logpath = path_normalize(self.logfile_path.get())
 
-        if not (is_in_dir(dirpath, tags_dir, 0) or
-                os.path.join(dirpath.lower()) == os.path.join(tags_dir.lower())):
+        if not is_in_dir(dirpath, tags_dir):
             print("Specified directory is not located within the tags directory")
             return
 
@@ -288,12 +282,12 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         print("Locating tags...")
 
         for root, directories, files in os.walk(dirpath):
-            root = sanitize_path(os.path.join(root, ""))
+            root = path_normalize(os.path.join(root, ""))
 
             rel_root = os.path.relpath(root, tags_dir)
 
             for filename in files:
-                filepath = os.path.join(rel_root, sanitize_path(filename))
+                filepath = os.path.join(rel_root, path_normalize(filename))
 
                 if time() - c_time > p_int:
                     c_time = time()
@@ -365,6 +359,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
                 except Exception:
                     print("    Could not scan '%s'" % tag.filepath)
+                    print(format_exc())
                     continue
 
             if self.stop_scanning:
