@@ -6,6 +6,7 @@ import tkinter as tk
 import weakref
 
 from copy import deepcopy
+from pathlib import Path
 from threading import Thread
 from time import time
 from traceback import format_exc
@@ -862,17 +863,16 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
 
             scan_dir = self.loaded_tags_dir
             for root, _, files in os.walk(scan_dir):
-                rel_root = os.path.relpath(root, scan_dir)
+                rel_root = Path(os.path.relpath(root, scan_dir))
 
                 for filename in files:
-                    filename = Path(filename)
-                    if filename.suffix.lower() != ".bitmap":
+                    if Path(filename).suffix.lower() != ".bitmap":
                         continue
 
                     # We use an absolute path here because we later store the
                     # bitmap tag info as hash keys. This is just so that we
                     # don't do any double conversions.
-                    fp = str(Path(rel_root, filename).resolve())
+                    fp = str(rel_root.joinpath(filename))
 
                     if time() - c_time > p_int:
                         c_time = time()
@@ -1277,7 +1277,7 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
             formatted_strs[typ] = [''] * 18
             tag_info_strs[typ]  = [''] * 18
 
-            for fmt in range(len(BITMAP_FORMATS)):
+            for fmt in range(min(len(BITMAP_FORMATS), 18)):
                 if "?" not in BITMAP_FORMATS[fmt]:
                     formatted_strs[typ][fmt] = "\n\n\t%s" % BITMAP_FORMATS[fmt]
                     tag_info_strs[typ][fmt] = {}

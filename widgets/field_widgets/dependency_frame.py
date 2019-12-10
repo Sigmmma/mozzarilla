@@ -1,16 +1,16 @@
-from pathlib import Path, PureWindowsPath
 import tkinter as tk
 import tkinter.ttk as ttk
 
 from copy import copy
+from pathlib import Path, PureWindowsPath
 from traceback import format_exc
 
-from supyr_struct.util import tagpath_to_fullpath
 
 from binilla import constants
 from binilla.windows.filedialog import askopenfilename
 from binilla.widgets.field_widgets.container_frame import ContainerFrame
 from mozzarilla.widgets.field_widgets.halo_1_bitmap_display import HaloBitmapDisplayButton
+from supyr_struct.util import tagpath_to_fullpath
 
 
 class DependencyFrame(ContainerFrame):
