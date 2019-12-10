@@ -21,12 +21,6 @@ else:
 
 curr_dir = get_cwd(__file__)
 
-
-encoding_names = {
-    constants.ENCODING_MONO: "mono",
-    constants.ENCODING_STEREO: "stereo",
-    }
-
 compression_names = {
     constants.COMPRESSION_PCM_8_SIGNED: "8bit PCM signed",
     constants.COMPRESSION_PCM_8_UNSIGNED: "8bit PCM unsigned",
@@ -39,26 +33,27 @@ compression_names = {
     constants.COMPRESSION_ADPCM: "ADPCM",
     constants.COMPRESSION_OGG: "Ogg Vorbis",
     }
-
 sample_rate_names = {
     constants.SAMPLE_RATE_22K: "22kHz",
     constants.SAMPLE_RATE_44K: "44kHz",
     }
-
-encoding_menu_values = (
-    constants.ENCODING_MONO,
-    constants.ENCODING_STEREO,
-    )
+encoding_names = {
+    constants.ENCODING_MONO: "mono",
+    constants.ENCODING_STEREO: "stereo",
+    }
 
 compression_menu_values = (
     constants.COMPRESSION_PCM_16_LE,
     constants.COMPRESSION_ADPCM,
     constants.COMPRESSION_OGG
     )
-
 sample_rate_menu_values = (
     constants.SAMPLE_RATE_22K,
     constants.SAMPLE_RATE_44K,
+    )
+encoding_menu_values = (
+    constants.ENCODING_MONO,
+    constants.ENCODING_STEREO,
     )
 
 
@@ -75,16 +70,17 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
     split_to_adpcm_blocksize = None
     split_into_smaller_chunks = None
 
-    encoding = None
+    update_mode = None
+
     compression = None
     sample_rate = None
-    update_mode = None
+    encoding = None
 
     _compiling = False
     _loading = False
     _saving = False
 
-    _wav_tree_iids = ()
+    _pr_tree_iids = ()
 
     def __init__(self, app_root, *args, **kwargs):
         if window_base_class == tk.Toplevel:
@@ -115,9 +111,9 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         self.split_to_adpcm_blocksize = tk.IntVar(self, 0)
         self.split_into_smaller_chunks = tk.IntVar(self, 1)
 
-        self.encoding = tk.IntVar(self, constants.ENCODING_MONO)
         self.compression = tk.IntVar(self, constants.COMPRESSION_PCM_16_LE)
         self.sample_rate = tk.IntVar(self, constants.SAMPLE_RATE_22K)
+        self.encoding = tk.IntVar(self, constants.ENCODING_MONO)
         self.update_mode = tk.IntVar(self, constants.SOUND_COMPILE_MODE_PRESERVE)
 
         # make the frames
@@ -162,21 +158,21 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
                 compression_names[const] for const in compression_menu_values
                 )
             )
-        self.encoding_menu = ScrollMenu(
-            self.processing_frame, variable=self.encoding, menu_width=5,
-            options=tuple(
-                encoding_names[const] for const in encoding_menu_values
-                )
-            )
         self.sample_rate_menu = ScrollMenu(
             self.processing_frame, variable=self.sample_rate, menu_width=5,
             options=tuple(
                 sample_rate_names[const] for const in sample_rate_menu_values
                 )
             )
-        self.encoding_menu.sel_index = 0
+        self.encoding_menu = ScrollMenu(
+            self.processing_frame, variable=self.encoding, menu_width=5,
+            options=tuple(
+                encoding_names[const] for const in encoding_menu_values
+                )
+            )
         self.compression_menu.sel_index = 0
         self.sample_rate_menu.sel_index = 0
+        self.encoding_menu.sel_index = 0
 
         self.generate_mouth_data_cbtn = tk.Checkbutton(
             self.flags_frame, variable=self.generate_mouth_data,
@@ -189,15 +185,15 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
             anchor="w", text="Split long sounds into pieces")
 
 
-        self.wav_info_tree = tk.ttk.Treeview(
+        self._pr_info_tree = tk.ttk.Treeview(
             self.wav_info_frame, selectmode='browse', padding=(0, 0), height=4)
         self.wav_info_vsb = tk.Scrollbar(
             self.wav_info_frame, orient='vertical',
-            command=self.wav_info_tree.yview)
+            command=self._pr_info_tree.yview)
         self.wav_info_hsb = tk.Scrollbar(
             self.wav_info_frame, orient='horizontal',
-            command=self.wav_info_tree.xview)
-        self.wav_info_tree.config(yscrollcommand=self.wav_info_vsb.set,
+            command=self._pr_info_tree.xview)
+        self._pr_info_tree.config(yscrollcommand=self.wav_info_vsb.set,
                                   xscrollcommand=self.wav_info_hsb.set)
 
         self.wav_dir_entry = tk.Entry(
@@ -245,7 +241,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
 
         self.wav_info_hsb.pack(side="bottom", fill='x')
         self.wav_info_vsb.pack(side="right",  fill='y')
-        self.wav_info_tree.pack(side='left', fill='both', expand=True)
+        self._pr_info_tree.pack(side='left', fill='both', expand=True)
 
         self.load_button.pack(side='left', fill='both', padx=3, expand=True)
         self.compile_button.pack(side='right', fill='both', padx=3, expand=True)
@@ -258,7 +254,8 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
                   self.compile_mode_additive_rbtn,):
             w.pack(expand=True, fill='both')
 
-        for w in (self.compression_menu, self.sample_rate_menu,
+        for w in (self.compression_menu,
+                  self.sample_rate_menu,
                   self.encoding_menu):
             w.pack(expand=True, side='left', fill='both')
 
@@ -272,36 +269,94 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
             self.transient(self.app_root)
 
     def populate_wav_info_tree(self):
-        wav_tree = self.wav_info_tree
-        if not wav_tree['columns']:
-            wav_tree['columns'] = ('data', )
-            wav_tree.heading("#0")
-            wav_tree.heading("data")
-            wav_tree.column("#0", minwidth=100, width=100)
-            wav_tree.column("data", minwidth=80, width=80, stretch=False)
+        pr_tree = self._pr_info_tree
+        if not pr_tree['columns']:
+            pr_tree['columns'] = ('data', )
+            pr_tree.heading("#0", text="pitch ranges")
+            pr_tree.heading("data")
+            pr_tree.column("#0", minwidth=150, width=150)
+            pr_tree.column("data", minwidth=80, width=80, stretch=False)
 
-        for iid in self._wav_tree_iids:
-            wav_tree.delete(iid)
+        for iid in self._pr_tree_iids:
+            pr_tree.delete(iid)
 
-        self._wav_tree_iids = []
+        self._pr_tree_iids = []
+
+        wav_files_iid = pr_tree.insert(
+            '', 'end', text='WAV pitch ranges',
+            tags=('item',), )
+        snd__tag_iid = pr_tree.insert(
+            '', 'end', text='Sound pitch ranges',
+            tags=('item',), )
+        self._pr_tree_iids.append(wav_files_iid)
+        self._pr_tree_iids.append(snd__tag_iid)
 
         if not self.blam_sound_bank:
             return
-        '''
-        nodes_iid = wav_tree.insert('', 'end', text="Nodes", tags=('item',),
-                                    values=(len(self.blam_sound_bank.nodes),))
-        self._wav_tree_iids.append(nodes_iid)
-        nodes = self.blam_sound_bank.nodes
-        for node in nodes:
-            iid = wav_tree.insert(nodes_iid, 'end', text=node.name, tags=('item',))
-            parent_name = child_name = sibling_name = "NONE"
-            if node.sibling_index >= 0:
-                sibling_name = nodes[node.sibling_index].name
 
-            wav_tree.insert(iid, 'end', text="Next sibling",
-                            values=(sibling_name, ), tags=('item',),)
-        '''
+        for pr_name in sorted(self.blam_sound_bank.pitch_ranges):
+            pitch_range = self.blam_sound_bank.pitch_ranges[pr_name]
 
+            pitch_range_iid = pr_tree.insert(
+                wav_files_iid, 'end', text='%s' % pr_name,
+                tags=('item',), values=(len(pitch_range.permutations),))
+            for perm_name in sorted(pitch_range.permutations):
+                perm = pitch_range.permutations[perm_name]
+                iid = pr_tree.insert(pitch_range_iid, 'end', tags=('item',),
+                                      text=perm_name)
+                pr_tree.insert(
+                    iid, 'end', text="Compression", tags=('item',),
+                    values=(compression_names.get(
+                        perm.source_compression, "<INVALID>"), ))
+                pr_tree.insert(
+                    iid, 'end', text="Sample rate", tags=('item',),
+                    values=(sample_rate_names.get(
+                        perm.source_sample_rate, "<INVALID>"), ))
+                pr_tree.insert(
+                    iid, 'end', text="Encoding", tags=('item',),
+                    values=(encoding_names.get(
+                        perm.source_encoding, "<INVALID>"), ))
+                pr_tree.insert(
+                    iid, 'end', text="Size", tags=('item',),
+                    values=("%s bytes" % len(perm.source_sample_data), ))
+
+
+        if not self.snd__tag:
+            return
+
+        sample_rate_const = constants.halo_1_sample_rates.get(
+            self.snd__tag.data.tagdata.sample_rate.data)
+        encoding_const = self.snd__tag.data.tagdata.encoding.data
+
+        sample_rate_str = sample_rate_names.get(
+            sample_rate_const, "<INVALID>")
+        encoding_str = encoding_names.get(
+            encoding_const, "<INVALID>")
+
+        pr_tree.insert(
+            snd__tag_iid, 'end', text="Sample rate", tags=('item',),
+            values=(sample_rate_str, ))
+        pr_tree.insert(
+            snd__tag_iid, 'end', text="Encoding", tags=('item',),
+            values=(encoding_str, ))
+        for pitch_range in self.snd__tag.data.tagdata.pitch_ranges.STEPTREE:
+            pitch_range_iid = pr_tree.insert(
+                snd__tag_iid, 'end', text=pitch_range.name, tags=('item',),
+                values=(len(pitch_range.permutations.STEPTREE),))
+            for perm in pitch_range.permutations.STEPTREE:
+                iid = pr_tree.insert(pitch_range_iid, 'end', tags=('item',),
+                                     text=perm.name)
+                pr_tree.insert(
+                    iid, 'end', text="Compression", tags=('item',),
+                    values=(
+                        compression_names.get(
+                            constants.halo_1_compressions.get(
+                                perm.compression.data),
+                            "<INVALID>"),
+                        ))
+                pr_tree.insert(
+                    iid, 'end', text="Size", tags=('item',),
+                    values=("%s bytes" % len(perm.samples.data), ))
 
     def wav_dir_browse(self):
         if self._compiling or self._loading or self._saving:
@@ -400,15 +455,11 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
                   "        A new sound tag will be created.")
         else:
             tagdata = self.snd__tag.data.tagdata
-            encoding_const = tagdata.encoding.data
             compression_const = constants.halo_1_compressions.get(
                 tagdata.compression.data)
             sample_rate_const = constants.halo_1_sample_rates.get(
                 tagdata.sample_rate.data)
-
-            if encoding_const in encoding_menu_values:
-                self.encoding.set(
-                    encoding_menu_values.index(encoding_const))
+            encoding_const = tagdata.encoding.data
 
             if compression_const in compression_menu_values:
                 self.compression.set(
@@ -418,13 +469,16 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
                 self.sample_rate.set(
                     sample_rate_menu_values.index(sample_rate_const))
 
+            if encoding_const in encoding_menu_values:
+                self.encoding.set(
+                    encoding_menu_values.index(encoding_const))
+
             self.split_into_smaller_chunks.set(
                 bool(tagdata.flags.split_long_sound_into_permutations))
             self.split_to_adpcm_blocksize.set(
                 bool(tagdata.flags.fit_to_adpcm_blocksize))
             self.generate_mouth_data.set(
                 "dialog" in tagdata.sound_class.enum_name)
-
 
         self.blam_sound_bank = blam_sound_bank
         print("Finished loading wav files. Took %s seconds.\n" %
@@ -450,9 +504,12 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
 
         self.update()
 
-        self.blam_sound_bank.encoding = self.encoding.get()
-        self.blam_sound_bank.compression = self.compression.get()
-        self.blam_sound_bank.sample_rate = self.sample_rate.get()
+        self.blam_sound_bank.compression = compression_menu_values[
+            self.compression.get()]
+        self.blam_sound_bank.sample_rate = sample_rate_menu_values[
+            self.sample_rate.get()]
+        self.blam_sound_bank.encoding = encoding_menu_values[
+            self.encoding.get()]
         self.blam_sound_bank.split_into_smaller_chunks = bool(self.split_into_smaller_chunks.get())
         self.blam_sound_bank.split_to_adpcm_blocksize = bool(self.split_to_adpcm_blocksize.get())
         self.blam_sound_bank.generate_mouth_data = bool(self.generate_mouth_data.get())
