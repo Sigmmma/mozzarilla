@@ -1,8 +1,8 @@
-from pathlib import Path, PureWindowsPath
-from sys import platform
 import os
 import tkinter as tk
 
+from pathlib import Path, PureWindowsPath
+from sys import platform
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
@@ -228,15 +228,18 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         if tags_dir is None:
               tags_dir = self.app_root.tags_dir
 
+        tags_dir = Path(tags_dir)
         for td in app.tags_dirs:
             if td == tags_dir:
                 dir_tree.tag_configure(
-                    td, background=self.active_tags_directory_color,
+                    str(td),
+                    background=self.active_tags_directory_color,
                     foreground=self.text_highlighted_color)
                 self.active_tags_dir = td
             else:
                 dir_tree.tag_configure(
-                    td, background=self.entry_normal_color,
+                    str(td),
+                    background=self.entry_normal_color,
                     foreground=self.text_normal_color)
 
     def activate_item(self, e=None):
@@ -247,18 +250,20 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
         try:
             app = self.app_root
-            tags_dir = self.get_item_tags_dir(tag_path)
-            if tags_dir not in app.tags_dirs:
+            tags_dir = Path(self.get_item_tags_dir(tag_path))
+            tags_dir_index = self.app_root.get_tags_dir_index(
+                self.get_item_tags_dir(tag_path))
+            if tags_dir_index is None:
                 print("'%s' is not a registered tags directory." % tags_dir)
                 return
 
             self.highlight_tags_dir(tags_dir)
-            app.switch_tags_dir(index=app.tags_dirs.index(tags_dir))
+            app.switch_tags_dir(index=tags_dir_index)
         except Exception:
             print(format_exc())
 
         if os.path.isdir(tag_path):
-            app.last_load_dir = tag_path
+            app.last_load_dir = Path(tag_path)
             return
 
         try:

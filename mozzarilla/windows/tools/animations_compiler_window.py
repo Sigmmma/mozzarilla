@@ -1,8 +1,8 @@
-from pathlib import Path
 import os
 import time
 import tkinter as tk
 
+from pathlib import Path
 from tkinter import messagebox
 from traceback import format_exc
 
@@ -17,7 +17,8 @@ from reclaimer.animation.animation_compilation import \
      ANIMATION_COMPILE_MODE_PRESERVE, ANIMATION_COMPILE_MODE_ADDITIVE
 from reclaimer.animation.util import partial_mod2_def
 
-from supyr_struct.util import is_in_dir, path_normalize
+from supyr_struct.util import is_in_dir, path_normalize,\
+     path_split, path_replace
 
 from mozzarilla import editor_constants as e_c
 
@@ -405,6 +406,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if not dirpath:
             return
 
+        dirpath = str(Path(dirpath))
         if tags_dir and data_dir and os.path.basename(dirpath).lower() == "animations":
             object_dir = os.path.dirname(dirpath)
 
@@ -416,7 +418,10 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.app_root.last_load_dir = os.path.dirname(dirpath)
         self.jma_dir.set(dirpath)
         if not self.tags_dir.get():
-            self.tags_dir.set(path_replace(self.app_root.last_load_dir, "data", "tags"))
+            self.tags_dir.set(
+                os.path.join(
+                    path_split(self.app_root.last_load_dir, "data"),
+                    "tags"))
 
     def tags_dir_browse(self):
         if self._compiling or self._loading or self._saving:
@@ -430,7 +435,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if not tags_dir:
             return
 
-        tags_dir = path_normalize(tags_dir)
+        tags_dir = str(Path(path_normalize(tags_dir)))
 
         antr_path = self.model_animations_path.get()
         if old_tags_dir and antr_path and not is_in_dir(antr_path, tags_dir):
@@ -456,14 +461,15 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if not fp:
             return
 
-        fp = Path(fp)
-        if not os.path.splitext(fp)[-1]:
-            fp += ".model_animations"
+        fp = Path(fp).with_suffix(".model_animations")
 
-        self.app_root.last_load_dir = os.path.dirname(fp)
-        self.model_animations_path.set(fp)
+        self.app_root.last_load_dir = str(fp.parent)
+        self.model_animations_path.set(str(fp))
 
-        self.tags_dir.set(path_split(self.app_root.last_load_dir, "tags"))
+        self.tags_dir.set(
+            os.path.join(
+                path_split(self.app_root.last_load_dir, "tags"),
+                "tags"))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
