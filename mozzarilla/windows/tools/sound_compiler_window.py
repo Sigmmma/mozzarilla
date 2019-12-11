@@ -11,8 +11,9 @@ from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.scroll_menu import ScrollMenu
 
 from reclaimer.hek.defs.snd_ import snd__def
-from reclaimer.sounds.blam_sound_bank import BlamSoundBank
 from reclaimer.sounds import constants
+from reclaimer.sounds.blam_sound_bank import BlamSoundBank
+from reclaimer.sounds.sound_compilation import compile_sound
 
 if __name__ == "__main__":
     window_base_class = tk.Tk
@@ -119,7 +120,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         # make the frames
         self.main_frame = tk.Frame(self)
         self.wav_info_frame = tk.LabelFrame(
-            self, text="Wav files info")
+            self, text="Import info")
 
         self.dirs_frame = tk.LabelFrame(
             self.main_frame, text="Directories")
@@ -272,7 +273,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         pr_tree = self._pr_info_tree
         if not pr_tree['columns']:
             pr_tree['columns'] = ('data', )
-            pr_tree.heading("#0", text="pitch ranges")
+            pr_tree.heading("#0")
             pr_tree.heading("data")
             pr_tree.column("#0", minwidth=150, width=150)
             pr_tree.column("data", minwidth=80, width=80, stretch=False)
@@ -515,7 +516,8 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         self.blam_sound_bank.generate_mouth_data = bool(self.generate_mouth_data.get())
 
         errors = compile_sound(
-            self.snd__tag, self.blam_sound_bank, self.update_mode.get())
+            self.snd__tag, self.blam_sound_bank,
+            update_mode=self.update_mode.get())
 
         if errors:
             for error in errors:
