@@ -484,16 +484,17 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         print("Compiling...")
         while not self.sound_path.get():
             self.sound_path_browse(True)
-            if (not self.sound_path.get()) and self.warn_cancel():
+            if not self.sound_path.get() and self.warn_cancel():
                 print("    Sound compilation cancelled.")
                 return
 
         if self.snd__tag is None:
             print("Creating new sound tag.")
             self.snd__tag = snd__def.build()
-            self.snd__tag.filepath = self.sound_path.get()
         else:
             print("Updating existing sound tag.")
+
+        self.snd__tag.filepath = self.sound_path.get()
 
         self.update()
 
