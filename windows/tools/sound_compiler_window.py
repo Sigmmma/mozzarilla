@@ -44,7 +44,7 @@ encoding_names = {
     }
 
 compression_menu_values = (
-    constants.COMPRESSION_PCM_16_LE,
+    constants.COMPRESSION_PCM_16_BE,
     constants.COMPRESSION_ADPCM,
     constants.COMPRESSION_OGG
     )
@@ -256,7 +256,6 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
             w.pack(expand=True, side='left', fill='both')
 
         for w in (self.generate_mouth_data_cbtn,
-                  self.split_to_adpcm_blocksize_cbtn,
                   self.split_into_smaller_chunks_cbtn,):
             w.pack(expand=True, fill='both')
 
@@ -505,13 +504,17 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         self.blam_sound_bank.encoding = encoding_menu_values[
             self.encoding.get()]
         self.blam_sound_bank.split_into_smaller_chunks = bool(self.split_into_smaller_chunks.get())
-        self.blam_sound_bank.generate_mouth_data = bool(self.generate_mouth_data.get())
 
         try:
             print("Paritioning and compressing permutations...", end="")
             self.update()
             self.blam_sound_bank.compress_samples()
             print(" Done.")
+
+            if self.generate_mouth_data.get():
+                print("Generating mouth data...", end="")
+                self.blam_sound_bank.generate_mouth_data()
+                print(" Done.")
         except Exception:
             print("\n", format_exc(), sep="")
             print("    Error occurred while partitoning and compressing.")
