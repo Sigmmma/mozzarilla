@@ -305,8 +305,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
                         perm.source_compression, "<INVALID>"), ))
                 pr_tree.insert(
                     iid, 'end', text="Sample rate", tags=('item',),
-                    values=(sample_rate_names.get(
-                        perm.source_sample_rate, "<INVALID>"), ))
+                    values=("%sHz" % perm.source_sample_rate), )
                 pr_tree.insert(
                     iid, 'end', text="Encoding", tags=('item',),
                     values=(encoding_names.get(
