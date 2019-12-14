@@ -295,7 +295,11 @@ class DependencyFrame(HierarchyFrame):
 
     def reload(self):
         dir_tree = self.tags_tree
-        self.tags_dir = self.app_root.tags_dir
+        if self.handler is not None:
+            self.tags_dir = self.handler.tagsdir
+        else:
+            self.tags_dir = Path("")
+
         if not dir_tree['columns']:
             dir_tree["columns"]=("dependency", )
             dir_tree.heading("#0", text='Filepath')
@@ -364,7 +368,7 @@ class DependencyFrame(HierarchyFrame):
             self.destroy_subitems(iid)
 
     def generate_subitems(self, parent_iid):
-        tags_dir = Path(self.tags_dir)
+        tags_dir = self.handler.tagsdir
         dir_tree = self.tags_tree
         parent_tag_path = dir_tree.item(parent_iid)['values'][-1]
 

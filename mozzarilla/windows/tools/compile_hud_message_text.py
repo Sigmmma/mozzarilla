@@ -1,66 +1,69 @@
 import os
+
+from pathlib import Path
 from traceback import format_exc
 
 from reclaimer.strings.strings_compilation import compile_hud_message_text
-
+from supyr_struct.util import is_path_empty
 from binilla.windows.filedialog import askopenfilename
+
 
 def hud_message_text_from_hmt(app, fp=None):
     load_dir = app.last_data_load_dir
     tags_dir = app.tags_dir
     data_dir = app.data_dir
-    if not tags_dir:
-        tags_dir = ""
-    if not data_dir:
-        data_dir = ""
+    if is_path_empty(tags_dir):
+        tags_dir = Path("")
+    if is_path_empty(data_dir):
+        data_dir = Path("")
 
-    if not load_dir:
+    if is_path_empty(load_dir):
         load_dir = data_dir
 
-    if not fp:
+    if is_path_empty(fp):
         fp = askopenfilename(
             initialdir=load_dir, parent=app,
             filetypes=(("HUD messages", "*.hmt"), ("All", "*")),
             title="Select hmt file to turn into a hud_message_text tag")
 
-    if not fp:
+    fp = Path(fp)
+    if is_path_empty(fp):
         return
 
     try:
-        app.last_data_load_dir = os.path.dirname(fp)
+        app.last_data_load_dir = fp.parent
 
         print("Creating hud_message_text from this hmt file:")
         print("    %s" % fp)
-        with open(fp, "r", encoding="utf-16-le") as f:
+        with fp.open("r", encoding="utf-16-le") as f:
             hmt_string_data = f.read()
     except Exception:
         print(format_exc())
         print("    Could not load hmt file.")
         return
+    
+    try:
+        rel_filepath = fp.relative_to(data_dir)
+    except ValueError:
+        rel_filepath = Path("")
 
-    tag_path = os.path.dirname(os.path.relpath(fp, data_dir))
-    rel_tagpath = os.path.join(tag_path, "hud messages.hud_message_text")
-    if not tag_path.startswith(".."):
-        tag_path = os.path.join(tags_dir, rel_tagpath)
-    else:
-        tag_path = ""
+    rel_filepath = rel_filepath.joinpath("hud messages.hud_message_text")
 
-    if os.path.isfile(tag_path):
-        print("    Updating existing hud_message_text tag.")
-        tag_load_path = (tag_path, )
-    else:
-        print("    Creating new hud_message_text tag.")
-        tag_load_path = ""
+    tag_path = Path("")
+    if not is_path_empty(rel_filepath):
+        tag_path = tags_dir.joinpath(rel_filepath)
 
     # make the tag window
-    window = app.load_tags(filepaths=tag_load_path, def_id='hmt ')
+    window = app.load_tags(
+        filepaths=(tag_path, ) if tag_path.is_file() else "",
+        def_id='hmt ')
     if not window:
         return
 
     window = window[0]
     window.is_new_tag = False
     window.tag.filepath = tag_path
-    window.tag.rel_filepath = rel_tagpath
+    window.tag.rel_filepath = rel_filepath
 
     error = compile_hud_message_text(window.tag, hmt_string_data)
 
@@ -71,6 +74,6 @@ def hud_message_text_from_hmt(app, fp=None):
         print("    Errors occurred while compiling. " +
               "Tag will not be automatically saved.")
         window.is_new_tag = True
-    elif not os.path.isfile(tag_path):
+    elif not tag_path.is_file():
         # save the tag if it doesnt already exist
         app.save_tag()

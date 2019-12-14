@@ -60,7 +60,7 @@ class Region():
 
 
 def get_tags(coll_path, model_in_path):
-    mod2_path = Path(str(Path(model_in_path).with_suffix('')) + "_COLLISION.gbxmodel")
+    mod2_path = str(Path(model_in_path).with_suffix('')) + "_COLL.gbxmodel"
 
     # get whether or not the collision tag is stubbs
     stubbs = tag_header_def.build(filepath=coll_path).version == 11
@@ -342,7 +342,7 @@ def coll_to_mod2(coll_path, model_in_path=None, guess_mod2=True, use_mats=True):
     mod2_data = mod2_tag.data.tagdata
 
 
-    # MAKE SURE REGIONS AND PERMUTATIONS MATCH BETWEEN model_in_tag AND coll_tag
+    # TODO: MAKE SURE REGIONS AND PERMUTATIONS MATCH BETWEEN model_in_tag AND coll_tag
     mod2_data.flags.parts_have_local_nodes = True
     mod2_data.base_map_u_scale = 1.0
     mod2_data.base_map_v_scale = 1.0

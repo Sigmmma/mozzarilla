@@ -509,7 +509,7 @@ def sbsp_to_mod2(
             print("    Could not convert lightmaps")
 
     print("    Compiling gbxmodel...")
-    mod2_tag.filepath = Path(sbsp_path).with_suffix('') + "_SBSP.gbxmodel"
+    mod2_tag.filepath = str(Path(sbsp_path).with_suffix('')) + "_SBSP.gbxmodel"
     compile_gbxmodel(mod2_tag, MergedJmsModel(*jms_models), True)
     return mod2_tag
 

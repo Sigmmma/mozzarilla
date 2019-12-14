@@ -34,8 +34,7 @@ import mozzarilla
 
 from mozzarilla import editor_constants as e_c
 from mozzarilla.widgets.field_widget_picker import def_halo_widget_picker
-from mozzarilla.widgets.directory_frame import DirectoryFrame,\
-     HierarchyFrame, DependencyFrame
+from mozzarilla.widgets.directory_frame import DirectoryFrame
 from mozzarilla.windows.tag_window import HaloTagWindow
 from mozzarilla.windows.tools import \
      SearchAndReplaceWindow, SauceRemovalWindow, \
@@ -73,12 +72,19 @@ class Mozzarilla(Binilla):
     log_filename = 'mozzarilla.log'
     debug = 0
 
+    '''Directories/filepaths'''
+    tags_dirs = ()
+
+    _styles_dir  = Path(e_c.SETTINGS_DIR, "styles")
+    _config_path = Path(e_c.SETTINGS_DIR, "mek_config", "mozzarilla.cfg")
+    _last_data_load_dir = Path("")
+    _jms_load_dir = Path("")
+    _bitmap_load_dir = Path("")
+
+
     issue_tracker_url = "https://github.com/MosesofEgypt/mozzarilla/issues"
 
     _mozzarilla_initialized = False
-
-    styles_dir  = Path(e_c.SETTINGS_DIR, "styles")
-    config_path = Path(e_c.SETTINGS_DIR, "mek_config", "mozzarilla.cfg")
     guerilla_workspace_def  = None
     config_version = 3
 
@@ -111,8 +117,6 @@ class Mozzarilla(Binilla):
         "Halo 3"
         ))
 
-    tags_dirs = ()
-
     about_module_names = (
         "arbytmap",
         "binilla",
@@ -136,9 +140,6 @@ class Mozzarilla(Binilla):
     window_panes = None
     directory_frame = None
     directory_frame_width = 200
-    last_data_load_dir = ""
-    jms_load_dir = ""
-    bitmap_load_dir = ""
 
     def __init__(self, *args, **kwargs):
         self.debug = kwargs.pop('debug', self.debug)
@@ -153,7 +154,7 @@ class Mozzarilla(Binilla):
         except Exception:
             pass
 
-        self.tags_dirs = [Path(e_c.WORKING_DIR, "tags")]
+        self.tags_dirs = [e_c.WORKING_DIR.joinpath("tags")]
         self.handlers = list({} for i in range(len(self.handler_classes)))
         self.handler_names = list(self.handler_names)
 
@@ -335,9 +336,36 @@ class Mozzarilla(Binilla):
                 parent=self)
 
     @property
+    def last_data_load_dir(self):
+        return self._last_data_load_dir
+    @last_data_load_dir.setter
+    def last_data_load_dir(self, new_val):
+        if not isinstance(new_val, Path):
+            new_val = Path(new_val)
+        self._last_data_load_dir = new_val
+
+    @property
+    def jms_load_dir(self):
+        return self._jms_load_dir
+    @jms_load_dir.setter
+    def jms_load_dir(self, new_val):
+        if not isinstance(new_val, Path):
+            new_val = Path(new_val)
+        self._jms_load_dir = new_val
+
+    @property
+    def bitmap_load_dir(self):
+        return self._bitmap_load_dir
+    @bitmap_load_dir.setter
+    def bitmap_load_dir(self, new_val):
+        if not isinstance(new_val, Path):
+            new_val = Path(new_val)
+        self._bitmap_load_dir = new_val
+
+    @property
     def data_dir(self):
         tags_dir = self.tags_dir
-        if not tags_dir:
+        if tags_dir is None:
             return e_c.WORKING_DIR
 
         return path_replace(tags_dir, "tags", "data")
@@ -345,7 +373,7 @@ class Mozzarilla(Binilla):
     @property
     def tags_dir(self):
         try:
-            return self.tags_dirs[self._curr_tags_dir_index]
+            return Path(self.tags_dirs[self._curr_tags_dir_index])
         except IndexError:
             return None
 
@@ -432,9 +460,10 @@ class Mozzarilla(Binilla):
         else:
             if not tags_dir:
                 tags_dir = self.tags_dir
-            elif not isinstance(tags_dir, str):
+            elif not isinstance(tags_dir, (str, PurePath)):
                 raise TypeError("Invalid type for tags_dir argument. Must be "
-                                "of type %s, not %s" % (str, type(tags_dir)))
+                                "of type %s, or %s, not %s" % (
+                                    str, PurePath, type(tags_dir)))
 
             if index is None:
                 index = self._curr_handler_index
@@ -706,7 +735,7 @@ class Mozzarilla(Binilla):
             print("Change the current tag set.")
             return
 
-        fp = askopenfilename(initialdir=self.last_load_dir, parent=self,
+        fp = askopenfilename(initialdir=str(self.last_load_dir), parent=self,
                              title="Select the tag to load",
                              filetypes=(('Guerilla config', '*.cfg'),
                                         ('All', '*')))
@@ -718,12 +747,12 @@ class Mozzarilla(Binilla):
 
         self.last_load_dir = fp.parent
         tags_dir = tagpath_to_fullpath(fp.parent, "tags", folder=True)
-        if not tags_dir.is_dir():
+        if tags_dir is None:
             print("Specified guerilla.cfg has no corresponding tags directory.")
             return
 
+        tags_dir = Path(tags_dir)
         workspace = self.guerilla_workspace_def.build(filepath=fp)
-        tags_dir = path_normalize(tags_dir)
         if self.get_tags_dir_index(tags_dir) is None:
             print("Adding tags directory:\n    %s" % tags_dir)
             self.add_tags_dir(tags_dir=tags_dir)
@@ -758,7 +787,7 @@ class Mozzarilla(Binilla):
             defs = self.handler.defs
             for id in sorted(defs.keys()):
                 filetypes.append((id, defs[id].ext))
-            filepaths = askopenfilenames(initialdir=self.last_load_dir,
+            filepaths = askopenfilenames(initialdir=str(self.last_load_dir),
                                          filetypes=filetypes, parent=self,
                                          title="Select the tag to load")
             
@@ -816,7 +845,7 @@ class Mozzarilla(Binilla):
         for def_id in sorted(defs.keys()):
             filetypes.append((def_id, defs[def_id].ext))
 
-        fp = askopenfilename(initialdir=self.last_load_dir,
+        fp = askopenfilename(initialdir=str(self.last_load_dir),
                              filetypes=filetypes, parent=self,
                              title="Select the tag to load")
 
