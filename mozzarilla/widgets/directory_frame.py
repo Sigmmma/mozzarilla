@@ -158,9 +158,10 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
     def generate_subitems(self, directory):
         dir_tree = self.tags_tree
 
-        for root, subdirs, files in os.walk(str(directory)):
+        directory = str(directory)
+        for root, subdirs, files in os.walk(directory):
             for subdir in sorted(subdirs, key=str.casefold):
-                folderpath = os.path.join(directory, subdir)
+                folderpath = os.path.join(root, subdir)
 
                 dir_info_str = "%s items" % len(list(os.scandir(folderpath)))
 
@@ -174,7 +175,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                 self.destroy_subitems(folderpath)
 
             for file in sorted(files, key=str.casefold):
-                fullpath = os.path.join(directory, file)
+                fullpath = os.path.join(root, file)
                 try:
                     filesize = os.stat(fullpath).st_size
                     if filesize < 1024:
@@ -262,8 +263,9 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         except Exception:
             print(format_exc())
 
-        if os.path.isdir(tag_path):
-            app.last_load_dir = Path(tag_path)
+        tag_path = Path(tag_path)
+        if tag_path.is_dir():
+            app.last_load_dir = tag_path
             return
 
         try:
@@ -328,6 +330,7 @@ class DependencyFrame(HierarchyFrame):
             print(("Unable to load '%s'.\n" % tag_path) +
                   "    You may need to change the tag set to load this tag.")
             return ()
+
         handler = self.handler
         d_id = tag.def_id
         dependency_cache = handler.tag_ref_cache.get(d_id)
@@ -355,8 +358,8 @@ class DependencyFrame(HierarchyFrame):
             dir_tree.delete(child)
 
         # add an empty node to make an "expand" button appear
-        tag_path = dir_tree.item(iid)['values'][-1]
-        if not os.path.exists(tag_path):
+        tag_path = Path(dir_tree.item(iid)['values'][-1])
+        if not tag_path.is_file():
             dir_tree.item(iid, tags=('badref', 'item'))
         elif self.get_dependencies(tag_path):
             dir_tree.insert(iid, 'end')
@@ -370,9 +373,9 @@ class DependencyFrame(HierarchyFrame):
     def generate_subitems(self, parent_iid):
         tags_dir = self.handler.tagsdir
         dir_tree = self.tags_tree
-        parent_tag_path = dir_tree.item(parent_iid)['values'][-1]
+        parent_tag_path = Path(dir_tree.item(parent_iid)['values'][-1])
 
-        if not os.path.exists(parent_tag_path):
+        if not parent_tag_path.is_file():
             return
 
         for tag_ref_block in self.get_dependencies(parent_tag_path):
@@ -416,8 +419,8 @@ class DependencyFrame(HierarchyFrame):
         active = dir_tree.focus()
         if active is None:
             return
-        tag_path = Path(dir_tree.item(active)['values'][-1])
 
+        tag_path = Path(dir_tree.item(active)['values'][-1])
         try:
             app = self.app_root
             tags_dir = self.get_item_tags_dir(tag_path)
