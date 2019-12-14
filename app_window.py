@@ -154,7 +154,12 @@ class Mozzarilla(Binilla):
         except Exception:
             pass
 
-        self.tags_dirs = [e_c.WORKING_DIR.joinpath("tags")]
+        tags_dir_fullpath = tagpath_to_fullpath(
+            e_c.WORKING_DIR, "tags", folder=True)
+        if tags_dir_fullpath is None:
+            tags_dir_fullpath = e_c.WORKING_DIR.joinpath("tags")
+
+        self.tags_dirs = [Path(tags_dir_fullpath)]
         self.handlers = list({} for i in range(len(self.handler_classes)))
         self.handler_names = list(self.handler_names)
 
@@ -380,11 +385,23 @@ class Mozzarilla(Binilla):
     @tags_dir.setter
     def tags_dir(self, new_val):
         assert isinstance(new_val, (str, Path))
-        self.tags_dirs[self._curr_tags_dir_index] = Path(path_normalize(new_val))
+        new_val = Path(new_val)
+        try:
+            new_val = new_val.resolve()
+        except FileNotFoundError:
+            pass
+        self.tags_dirs[self._curr_tags_dir_index] = new_val
 
     def get_tags_dir_index(self, tags_dir):
         try:
-            return self.tags_dirs.index(Path(path_normalize(tags_dir)))
+            # make sure to resolve tags dir otherwise the test for
+            # this tags dir existing will fail for non-absolute paths
+            tags_dir = Path(tags_dir)
+            try:
+                tags_dir = tags_dir.resolve()
+            except FileNotFoundError:
+                pass
+            return self.tags_dirs.index(tags_dir)
         except Exception:
             return None
 
@@ -411,20 +428,30 @@ class Mozzarilla(Binilla):
             if isinstance(index, str):
                 index = self.handler_names.index(index)
 
-            tags_dir = Path(path_normalize(tags_dir))
-            if not self.handlers[index].get(tags_dir, None):
-                if create_if_not_exists:
-                    self.create_handlers(tags_dir, index)
-                else:
-                    return None
+            # make sure to resolve tags dir otherwise the test for
+            # this tags dir existing will fail for non-absolute paths
+            tags_dir = Path(tags_dir)
+            try:
+                full_tags_dir = tags_dir.resolve()
+            except FileNotFoundError:
+                full_tags_dir = tags_dir
 
-            return self.handlers[index][tags_dir]
+            if (self.handlers[index].get(full_tags_dir) is None and
+                    create_if_not_exists):
+                self.create_handlers(tags_dir, index)
+
+            return self.handlers[index].get(full_tags_dir)
         except Exception:
             return None
 
     def create_handlers(self, tags_dir, handler_indices=()):
-        # Convert to str for compatibility with the legacy handler.
-        tags_dir = Path(path_normalize(tags_dir))
+        # make sure to resolve tags dir otherwise the test for
+        # this tags dir existing will fail for non-absolute paths
+        tags_dir = Path(tags_dir)
+        try:
+            full_tags_dir = tags_dir.resolve()
+        except FileNotFoundError:
+            full_tags_dir = tags_dir
 
         if isinstance(handler_indices, int):
             handler_indices = (handler_indices, )
@@ -435,14 +462,13 @@ class Mozzarilla(Binilla):
             if isinstance(i, str):
                 i = self.handler_names.index(i)
 
-            handlers_by_dir = self.handlers[i]
-            if handlers_by_dir.get(tags_dir):
+            if self.handlers[i].get(full_tags_dir) is not None:
                 continue
 
             # TODO: Investigate.
             handler = self.handler_classes[i](debug=self.debug, case_sensitive=e_c.IS_LNX)
             handler.tagsdir = tags_dir
-            handlers_by_dir[tags_dir] = handler
+            self.handlers[i][full_tags_dir] = handler
 
     def set_active_handler(self, handler=None, index=None, tags_dir=None):
         if handler is not None:
@@ -514,7 +540,6 @@ class Mozzarilla(Binilla):
             # Update window title to reflect tag set that we're using.
         self.title('%s v%s [%s]' % (self.app_name, self.version, self.handler_names[menu_index]))
 
-
     def generate_defs_menu(self):
         self.defs_menu.delete(0, "end")  # clear the menu
         for i in range(len(self.handler_names)):
@@ -532,13 +557,17 @@ class Mozzarilla(Binilla):
         if not tags_dir:
             return
 
-        tags_dir = Path(path_normalize(tags_dir))
+        tags_dir = Path(tags_dir)
         if self.get_tags_dir_index(tags_dir) is not None:
             if manual:
                 print("That tags directory already exists.")
             return
 
-        self.tags_dirs.append(tags_dir)
+        try:
+            full_tags_dir = tags_dir.resolve()
+        except FileNotFoundError:
+            full_tags_dir = tags_dir
+        self.tags_dirs.append(full_tags_dir)
         self.switch_tags_dir(index=len(self.tags_dirs) - 1, manual=False)
 
         if self.directory_frame is not None:
@@ -582,8 +611,13 @@ class Mozzarilla(Binilla):
         if not tags_dir:
             return
 
-        tags_dir = Path(path_normalize(tags_dir))
-        if tags_dir in self.tags_dirs:
+        tags_dir = Path(tags_dir)
+        try:
+            full_tags_dir = tags_dir.resolve()
+        except FileNotFoundError:
+            full_tags_dir = tags_dir
+
+        if full_tags_dir in self.tags_dirs:
             print("That tags directory already exists.")
             return
 
