@@ -200,7 +200,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
             print("Change the current tag set.")
             return
 
-        tag_path = Path(path_normalize(tag_path))
+        tag_path = Path(tag_path)
         if not is_in_dir(tag_path, self.handler.tagsdir):
             print("Specified tag is not located within the tags directory")
             return
