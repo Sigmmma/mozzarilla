@@ -394,7 +394,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             return
 
         tags_dir = self.tags_dir.get()
-        data_dir = os.path.join(os.path.dirname(os.path.dirname(tags_dir)), "data", "")
+        data_dir = str(Path(tags_dir).parent.joinpath("data"))
         jma_dir = self.jma_dir.get()
         if tags_dir and not jma_dir:
             jma_dir = data_dir

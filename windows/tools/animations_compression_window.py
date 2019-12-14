@@ -1,8 +1,8 @@
-from pathlib import Path
 import os
 import tkinter as tk
 import time
 
+from pathlib import Path
 from tkinter import messagebox
 from traceback import format_exc
 
@@ -201,8 +201,8 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         if not fp.suffix:
             fp = fp.with_suffix(".model_animations")
 
-        self.app_root.last_load_dir = fp.parent
-        self.model_animations_path.set(fp)
+        self.app_root.last_load_dir = str(fp.parent)
+        self.model_animations_path.set(str(fp))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
@@ -342,7 +342,8 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         try:
             if not self.overwrite.get():
                 fp = Path(antr_tag.filepath)
-                antr_tag.filepath = Path(fp.parent, fp.stem+"_DECOMP"+fp.suffix)
+                antr_tag.filepath = fp.parent.joinpath(
+                    "%s_DECOMP%s" % (fp.stem, fp.suffix))
 
             antr_tag.calc_internal_data()
             antr_tag.serialize(temp=False, backup=False, calc_pointers=False,

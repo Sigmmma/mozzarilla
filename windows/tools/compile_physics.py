@@ -1,75 +1,72 @@
 import os
 
+from pathlib import Path
 from traceback import format_exc
 
 from reclaimer.model.jms import read_jms
 from reclaimer.physics.physics_compilation import compile_physics
-
+from supyr_struct.util import is_path_empty
 from binilla.windows.filedialog import askopenfilename
+
 
 def physics_from_jms(app, fp=None):
     load_dir = app.jms_load_dir
     tags_dir = app.tags_dir
     data_dir = app.data_dir
-    if not tags_dir:
-        tags_dir = ""
-    if not data_dir:
-        data_dir = ""
+    if is_path_empty(tags_dir):
+        tags_dir = Path("")
+    if is_path_empty(data_dir):
+        data_dir = Path("")
 
-    if not load_dir:
+    if is_path_empty(load_dir):
         load_dir = data_dir
 
-    if not fp:
+    if is_path_empty(fp):
         fp = askopenfilename(
             initialdir=load_dir, parent=app,
             filetypes=(("JMS model", "*.jms"), ("All", "*")),
             title="Select jms file to turn into a physics tag")
 
-    if not fp:
+    fp = Path(fp)
+    if is_path_empty(fp):
         return
 
     try:
-        app.jms_load_dir = os.path.dirname(fp)
-
-        print("Creating physics from this jms file:")
-        print("    %s" % fp)
-        with open(fp, "r") as f:
+        app.jms_load_dir = fp.parent
+        with fp.open("r") as f:
             jms_model = read_jms(f.read(), "regions")
     except Exception:
         print(format_exc())
         print("    Could not parse jms file")
         return
+    
+    try:
+        rel_filepath = fp.relative_to(data_dir).parent.parent
+        rel_filepath = rel_filepath.joinpath("%s.physics" % rel_filepath.stem)
+    except ValueError:
+        rel_filepath = Path("unnamed.physics")
 
-    tag_path = os.path.dirname(os.path.dirname(os.path.relpath(fp, data_dir)))
-    rel_tagpath = os.path.join(tag_path, "%s.physics" % os.path.basename(tag_path))
-    if not tag_path.startswith(".."):
-        tag_path = os.path.join(tags_dir, rel_tagpath)
-    else:
-        tag_path = ""
-
-    updating = False
-    if os.path.isfile(tag_path):
-        print("    Updating existing physics tag.")
-        tag_load_path = (tag_path, )
-        updating = True
-    else:
-        print("    Creating new physics tag.")
-        tag_load_path = ""
+    tag_path = Path("")
+    if not is_path_empty(rel_filepath):
+        tag_path = tags_dir.joinpath(rel_filepath)
 
     # make the tag window
-    window = app.load_tags(filepaths=tag_load_path, def_id='phys')
+    window = app.load_tags(
+        filepaths=(tag_path, ) if tag_path.is_file() else "",
+        def_id='phys')
     if not window:
         return
+
     window = window[0]
     window.is_new_tag = False
     window.tag.filepath = tag_path
-    window.tag.rel_filepath = rel_tagpath
+    window.tag.rel_filepath = rel_filepath
 
-    compile_physics(window.tag, jms_model.markers, updating)
+    compile_physics(window.tag, jms_model.markers, tag_path.is_file())
 
     # reload the window to display the newly entered info
     window.reload()
     app.update_tag_window_title(window)
-    if not os.path.isfile(tag_path):
+    if not tag_path.is_file():
         # save the tag if it doesnt already exist
         app.save_tag()

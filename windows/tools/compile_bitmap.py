@@ -1,21 +1,23 @@
 import os
-from pathlib import Path
 
+from pathlib import Path
 from struct import unpack
 from traceback import format_exc
 
 from reclaimer.bitmaps.bitmap_decompilation import extract_bitmap_tiff_data
 from reclaimer.bitmaps.bitmap_compilation import add_bitmap_to_bitmap_tag,\
      compile_bitmap_from_dds_files
-
+from supyr_struct.util import is_path_empty
 from binilla.windows.filedialog import askopenfilenames
+
 
 def bitmap_from_dds(app, fps=()):
     load_dir = app.bitmap_load_dir
     data_dir = app.data_dir
-    if not data_dir:
-        data_dir = ""
-    if not load_dir:
+    if is_path_empty(data_dir):
+        data_dir = Path("")
+
+    if is_path_empty(load_dir):
         load_dir = data_dir
 
     if not fps:
@@ -38,7 +40,7 @@ def bitmap_from_dds(app, fps=()):
         window = window[0]
         window.is_new_tag = True
 
-        compile_bitmap_from_dds_files(window.tag, (fp, ))
+        compile_bitmap_from_dds_files(window.tag, (Path(fp), ))
         window.update_title(list(Path(fp).parts)[-1])
 
         # reload the window to display the newly entered info
@@ -50,9 +52,9 @@ def bitmap_from_dds(app, fps=()):
 def bitmap_from_multiple_dds(app, fps=()):
     load_dir = app.bitmap_load_dir
     data_dir = app.data_dir
-    if not data_dir:
-        data_dir = ""
-    if not load_dir:
+    if is_path_empty(data_dir):
+        data_dir = Path("")
+    if is_path_empty(load_dir):
         load_dir = data_dir
 
     if not fps:
@@ -92,7 +94,7 @@ def bitmap_from_multiple_dds(app, fps=()):
 
 def bitmap_from_bitmap_source(app, e=None):
     load_dir = app.bitmap_load_dir
-    if not load_dir:
+    if is_path_empty(load_dir):
         load_dir = app.last_data_load_dir
 
     fps = askopenfilenames(initialdir=load_dir, parent=app,
@@ -127,8 +129,7 @@ def bitmap_from_bitmap_source(app, e=None):
             window.tag, width, height, 1, "texture_2d", "a8r8g8b8", 0, pixels)
 
         window.tag.rel_filepath = "untitled%s.bitmap" % app.untitled_num
-        window.tag.filepath = os.path.join(
-            app.tags_dir + window.tag.rel_filepath)
+        window.tag.filepath = app.tags_dir.joinpath(window.tag.rel_filepath)
 
         app.update_tag_window_title(window)
 
