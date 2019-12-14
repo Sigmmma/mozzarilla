@@ -342,8 +342,8 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         try:
             if not self.overwrite.get():
                 fp = Path(antr_tag.filepath)
-                antr_tag.filepath = fp.parent.joinpath(
-                    "%s_DECOMP%s" % (fp.stem, fp.suffix))
+                antr_tag.filepath = Path(
+                    fp.parent, fp.stem + "_DECOMP" + fp.suffix)
 
             antr_tag.calc_internal_data()
             antr_tag.serialize(temp=False, backup=False, calc_pointers=False,

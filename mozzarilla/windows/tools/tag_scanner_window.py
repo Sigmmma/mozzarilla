@@ -283,11 +283,11 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             rel_root = Path(root).relative_to(self.handler.tagsdir)
 
             for filename in files:
-                filepath = rel_root.joinpath(path_normalize(filename))
+                filepath = rel_root.joinpath(filename)
 
                 if time() - c_time > p_int:
                     c_time = time()
-                    print(' '*4 + filepath)
+                    print(' '*4, filepath, sep="")
                     self.app_root.update_idletasks()
 
                 if self.stop_scanning:
@@ -318,7 +318,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
                 if time() - c_time > p_int:
                     c_time = time()
-                    print(' '*4, filepath)
+                    print(' '*4, filepath, sep="")
                     self.app_root.update_idletasks()
 
                 tag = self.get_tag(self.handler.tagsdir.joinpath(filepath))
@@ -475,7 +475,9 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                                 "reference in part %s of event %s\n." % (j, i))
 
         if err:
-            errors[cls] = "%s\n%s:\n%s\n" % (
-                errors.get(cls, ""),
-                str(tag.filepath).split(str(self.handler.tagsdir), 1)[-1],
-                err)
+            rel_tag_path = str(tag.filepath.relative_to(self.handler.tagsdir))
+            errors[cls] = (
+                errors.get(cls, "") + "\n" +
+                rel_tag_path + "\n" +
+                err + "\n"
+                )

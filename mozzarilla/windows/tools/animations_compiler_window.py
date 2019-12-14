@@ -435,7 +435,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if not tags_dir:
             return
 
-        tags_dir = str(Path(path_normalize(tags_dir)))
+        tags_dir = str(Path(tags_dir))
 
         antr_path = self.model_animations_path.get()
         if old_tags_dir and antr_path and not is_in_dir(antr_path, tags_dir):

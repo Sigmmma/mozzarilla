@@ -16,7 +16,7 @@ from reclaimer.model.dae import jms_model_from_dae
 from reclaimer.model.obj import jms_model_from_obj
 from reclaimer.model.model_compilation import compile_gbxmodel
 from reclaimer.model.util import generate_shader
-from supyr_struct.util import path_replace, path_split
+from supyr_struct.util import path_replace, path_split, path_normalize
 
 from supyr_struct.util import is_in_dir
 
@@ -435,7 +435,7 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         if not tags_dir:
             return
 
-        tags_dir = str(Path(path_normalize(tags_dir)))
+        tags_dir = path_normalize(tags_dir)
 
         mod2_path = self.gbxmodel_path.get()
         if old_tags_dir and mod2_path and not is_in_dir(mod2_path, tags_dir):
