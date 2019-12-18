@@ -39,10 +39,10 @@ def physics_from_jms(app, fp=None):
         print(format_exc())
         print("    Could not parse jms file")
         return
-    
+
     try:
         rel_filepath = fp.relative_to(data_dir).parent.parent
-        rel_filepath = rel_filepath.joinpath("%s.physics" % rel_filepath.stem)
+        rel_filepath = rel_filepath.joinpath(rel_filepath.stem).with_suffix(".physics")
     except ValueError:
         rel_filepath = Path("unnamed.physics")
 

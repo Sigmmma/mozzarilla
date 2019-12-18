@@ -76,7 +76,7 @@ class Mozzarilla(Binilla):
     tags_dirs = ()
 
     _styles_dir  = Path(e_c.SETTINGS_DIR, "styles")
-    _config_path = Path(e_c.SETTINGS_DIR, "mek_config", "mozzarilla.cfg")
+    _config_path = Path(e_c.SETTINGS_DIR, "mozzarilla.cfg")
     _last_data_load_dir = Path("")
     _jms_load_dir = Path("")
     _bitmap_load_dir = Path("")
@@ -385,23 +385,11 @@ class Mozzarilla(Binilla):
     @tags_dir.setter
     def tags_dir(self, new_val):
         assert isinstance(new_val, (str, Path))
-        new_val = Path(new_val)
-        try:
-            new_val = new_val.resolve()
-        except FileNotFoundError:
-            pass
-        self.tags_dirs[self._curr_tags_dir_index] = new_val
+        self.tags_dirs[self._curr_tags_dir_index] = Path(new_val)
 
     def get_tags_dir_index(self, tags_dir):
         try:
-            # make sure to resolve tags dir otherwise the test for
-            # this tags dir existing will fail for non-absolute paths
-            tags_dir = Path(tags_dir)
-            try:
-                tags_dir = tags_dir.resolve()
-            except FileNotFoundError:
-                pass
-            return self.tags_dirs.index(tags_dir)
+            return self.tags_dirs.index(Path(tags_dir))
         except Exception:
             return None
 
@@ -428,30 +416,18 @@ class Mozzarilla(Binilla):
             if isinstance(index, str):
                 index = self.handler_names.index(index)
 
-            # make sure to resolve tags dir otherwise the test for
-            # this tags dir existing will fail for non-absolute paths
             tags_dir = Path(tags_dir)
-            try:
-                full_tags_dir = tags_dir.resolve()
-            except FileNotFoundError:
-                full_tags_dir = tags_dir
 
-            if (self.handlers[index].get(full_tags_dir) is None and
+            if (self.handlers[index].get(tags_dir) is None and
                     create_if_not_exists):
                 self.create_handlers(tags_dir, index)
 
-            return self.handlers[index].get(full_tags_dir)
+            return self.handlers[index].get(tags_dir)
         except Exception:
             return None
 
     def create_handlers(self, tags_dir, handler_indices=()):
-        # make sure to resolve tags dir otherwise the test for
-        # this tags dir existing will fail for non-absolute paths
         tags_dir = Path(tags_dir)
-        try:
-            full_tags_dir = tags_dir.resolve()
-        except FileNotFoundError:
-            full_tags_dir = tags_dir
 
         if isinstance(handler_indices, int):
             handler_indices = (handler_indices, )
@@ -462,13 +438,13 @@ class Mozzarilla(Binilla):
             if isinstance(i, str):
                 i = self.handler_names.index(i)
 
-            if self.handlers[i].get(full_tags_dir) is not None:
+            if self.handlers[i].get(tags_dir) is not None:
                 continue
 
             # TODO: Investigate.
             handler = self.handler_classes[i](debug=self.debug, case_sensitive=e_c.IS_LNX)
             handler.tagsdir = tags_dir
-            self.handlers[i][full_tags_dir] = handler
+            self.handlers[i][tags_dir] = handler
 
     def set_active_handler(self, handler=None, index=None, tags_dir=None):
         if handler is not None:
@@ -563,11 +539,7 @@ class Mozzarilla(Binilla):
                 print("That tags directory already exists.")
             return
 
-        try:
-            full_tags_dir = tags_dir.resolve()
-        except FileNotFoundError:
-            full_tags_dir = tags_dir
-        self.tags_dirs.append(full_tags_dir)
+        self.tags_dirs.append(tags_dir)
         self.switch_tags_dir(index=len(self.tags_dirs) - 1, manual=False)
 
         if self.directory_frame is not None:
@@ -612,12 +584,8 @@ class Mozzarilla(Binilla):
             return
 
         tags_dir = Path(tags_dir)
-        try:
-            full_tags_dir = tags_dir.resolve()
-        except FileNotFoundError:
-            full_tags_dir = tags_dir
 
-        if full_tags_dir in self.tags_dirs:
+        if tags_dir in self.tags_dirs:
             print("That tags directory already exists.")
             return
 
@@ -824,7 +792,7 @@ class Mozzarilla(Binilla):
             filepaths = askopenfilenames(initialdir=str(self.last_load_dir),
                                          filetypes=filetypes, parent=self,
                                          title="Select the tag to load")
-            
+
             if not filepaths:
                 return ()
             elif isinstance(filepaths, str) and filepaths.startswith('{'):

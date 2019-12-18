@@ -467,9 +467,7 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         self.gbxmodel_path.set(str(fp))
 
         self.tags_dir.set(
-            os.path.join(
-                path_split(self.app_root.last_load_dir, "tags"),
-                "tags"))
+                path_split(self.app_root.last_load_dir, "tags", after=True))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)

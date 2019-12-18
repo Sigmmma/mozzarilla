@@ -476,8 +476,5 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
         if err:
             rel_tag_path = str(tag.filepath.relative_to(self.handler.tagsdir))
-            errors[cls] = (
-                errors.get(cls, "") + "\n" +
-                rel_tag_path + "\n" +
-                err + "\n"
-                )
+            errors[cls] = "%s\n%s\n%s\n" %
+                (errors.get(cls, ""), rel_tag_path, err)
