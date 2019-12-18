@@ -39,7 +39,7 @@ BinillaWidget.font_settings.update(
 
 WORKING_DIR = Path.cwd()
 if b_e_c.IS_WIN:
-    SETTINGS_DIR = WORKING_DIR
+    SETTINGS_DIR = Path(WORKING_DIR, "mek_config")
 else:
     SETTINGS_DIR = Path(Path.home(), ".local", "share", "mek", "mozzarilla")
 

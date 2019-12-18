@@ -395,7 +395,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
         tags_dir = self.tags_dir.get()
         # Add data to the path and then use path_replace to match the case of any
-        # data directory that might already be here. 
+        # data directory that might already be here.
         data_dir = str(path_replace(Path(tags_dir).parent.joinpath("data"), "data", "data"))
         jma_dir = self.jma_dir.get()
         if tags_dir and not jma_dir:
@@ -469,9 +469,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.model_animations_path.set(str(fp))
 
         self.tags_dir.set(
-            os.path.join(
-                path_split(self.app_root.last_load_dir, "tags"),
-                "tags"))
+            path_split(self.app_root.last_load_dir, "tags", after=True))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)

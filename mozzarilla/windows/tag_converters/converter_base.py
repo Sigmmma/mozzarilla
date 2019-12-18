@@ -39,7 +39,7 @@ class ConverterBase(BinillaWidget):
             pass
 
         # do path_replace to make sure the path works on linux
-         tags_dir = Path(path_split(curr_dir, "tags", after=True))
+        tags_dir = Path(path_split(curr_dir, "tags", after=True))
         if self.app_root is not self and hasattr(self.app_root, "tags_dir"):
             tags_dir = getattr(self.app_root, "tags_dir")
 
