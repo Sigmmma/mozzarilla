@@ -47,7 +47,7 @@ encoding_names = {
 compression_menu_values = (
     constants.COMPRESSION_PCM_16_BE,
     constants.COMPRESSION_XBOX_ADPCM,
-    constants.COMPRESSION_IMA_ADPCM,
+    #constants.COMPRESSION_IMA_ADPCM,
     constants.COMPRESSION_OGG
     )
 sample_rate_menu_values = (
