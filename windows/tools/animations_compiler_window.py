@@ -394,7 +394,9 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             return
 
         tags_dir = self.tags_dir.get()
-        data_dir = str(Path(tags_dir).parent.joinpath("data"))
+        # Add data to the path and then use path_replace to match the case of any
+        # data directory that might already be here. 
+        data_dir = str(path_replace(Path(tags_dir).parent.joinpath("data"), "data", "data"))
         jma_dir = self.jma_dir.get()
         if tags_dir and not jma_dir:
             jma_dir = data_dir
