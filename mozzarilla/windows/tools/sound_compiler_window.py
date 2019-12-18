@@ -31,7 +31,8 @@ compression_names = {
     constants.COMPRESSION_PCM_24_BE: "24bit PCM",
     constants.COMPRESSION_PCM_32_LE: "32bit PCM",
     constants.COMPRESSION_PCM_32_BE: "32bit PCM",
-    constants.COMPRESSION_ADPCM: "ADPCM",
+    constants.COMPRESSION_XBOX_ADPCM: "Xbox ADPCM",
+    constants.COMPRESSION_IMA_ADPCM: "IMA ADPCM",
     constants.COMPRESSION_OGG: "Ogg Vorbis",
     }
 sample_rate_names = {
@@ -45,7 +46,8 @@ encoding_names = {
 
 compression_menu_values = (
     constants.COMPRESSION_PCM_16_BE,
-    constants.COMPRESSION_ADPCM,
+    constants.COMPRESSION_XBOX_ADPCM,
+    constants.COMPRESSION_IMA_ADPCM,
     constants.COMPRESSION_OGG
     )
 sample_rate_menu_values = (
@@ -152,7 +154,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
 
 
         self.compression_menu = ScrollMenu(
-            self.processing_frame,  variable=self.compression, menu_width=5,
+            self.processing_frame,  variable=self.compression, menu_width=10,
             options=tuple(
                 compression_names[const] for const in compression_menu_values
                 )
