@@ -180,6 +180,8 @@ class SoundSampleFrame(HaloRawdataFrame):
         if not filepath.suffix:
             filepath = filepath.with_suffix(def_ext)
 
+        ext = filepath.suffix
+
         if ext == '.wav':
             # if the file is wav, we need to give it a header
             try:
