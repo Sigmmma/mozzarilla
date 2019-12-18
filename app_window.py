@@ -75,8 +75,8 @@ class Mozzarilla(Binilla):
     '''Directories/filepaths'''
     tags_dirs = ()
 
-    _styles_dir  = Path(e_c.SETTINGS_DIR, "styles")
-    _config_path = Path(e_c.SETTINGS_DIR, "mozzarilla.cfg")
+    styles_dir  = Path(e_c.SETTINGS_DIR, "styles")
+    config_path = Path(e_c.SETTINGS_DIR, "mozzarilla.cfg")
     _last_data_load_dir = Path("")
     _jms_load_dir = Path("")
     _bitmap_load_dir = Path("")
