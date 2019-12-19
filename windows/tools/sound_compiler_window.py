@@ -11,7 +11,7 @@ from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.scroll_menu import ScrollMenu
 
 from reclaimer.hek.defs.snd_ import snd__def
-from reclaimer.sounds import constants
+from reclaimer.sounds import constants, adpcm
 from reclaimer.sounds.blam_sound_bank import BlamSoundBank
 from reclaimer.sounds.sound_compilation import compile_sound
 
@@ -42,6 +42,20 @@ sample_rate_names = {
 encoding_names = {
     constants.ENCODING_MONO: "mono",
     constants.ENCODING_STEREO: "stereo",
+    }
+
+adpcm_noise_shaping_names = {
+    adpcm.NOISE_SHAPING_OFF: "off",
+    adpcm.NOISE_SHAPING_STATIC: "static",
+    adpcm.NOISE_SHAPING_DYNAMIC: "dynamic",
+    }
+adpcm_lookahead_names = {
+    0: "off",
+    1: "slight",
+    2: "moderate",
+    3: "good",
+    4: "great",
+    5: "best",
     }
 
 compression_menu_values = (
@@ -77,6 +91,9 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
     compression = None
     sample_rate = None
     encoding = None
+
+    adpcm_lookahead = None
+    adpcm_noise_shaping = None
 
     _compiling = False
     _loading = False
@@ -117,6 +134,9 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         self.encoding = tk.IntVar(self, constants.ENCODING_MONO)
         self.update_mode = tk.IntVar(self, constants.SOUND_COMPILE_MODE_PRESERVE)
 
+        self.adpcm_lookahead = tk.IntVar(self, 3)
+        self.adpcm_noise_shaping = tk.IntVar(self, adpcm.NOISE_SHAPING_OFF)
+
         # make the frames
         self.main_frame = tk.Frame(self)
         self.wav_info_frame = tk.LabelFrame(
@@ -125,8 +145,8 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         self.dirs_frame = tk.LabelFrame(
             self.main_frame, text="Directories")
         self.buttons_frame = tk.Frame(self.main_frame)
-        self.settings_frame = tk.LabelFrame(
-            self.main_frame, text="Compilation settings")
+        self.settings_frame = tk.Frame(
+            self.main_frame)
 
         self.wav_dir_frame = tk.LabelFrame(
             self.dirs_frame, text="Wav files folder")
@@ -135,8 +155,12 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
 
         self.update_mode_frame = tk.LabelFrame(
             self.main_frame, text="What to do with existing sound tag")
-        self.processing_frame = tk.Frame(self.settings_frame)
-        self.flags_frame = tk.Frame(self.settings_frame)
+        self.processing_frame = tk.LabelFrame(
+            self.settings_frame, text="Format settings")
+        self.adpcm_frame = tk.LabelFrame(
+            self.settings_frame, text="ADPCM settings")
+        self.flags_frame = tk.LabelFrame(
+            self.settings_frame, text="Misc settings")
 
 
         self.compile_mode_replace_rbtn = tk.Radiobutton(
@@ -171,6 +195,20 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
                 encoding_names[const] for const in encoding_menu_values
                 )
             )
+
+        self.adpcm_lookahead_label = tk.Label(
+            self.adpcm_frame, text="Lookahead prediction")
+        self.adpcm_lookahead_menu = ScrollMenu(
+            self.adpcm_frame, variable=self.adpcm_lookahead,
+            menu_width=8, options=adpcm_lookahead_names
+            )
+        self.adpcm_noise_shaping_label = tk.Label(
+            self.adpcm_frame, text="Noise shaping")
+        self.adpcm_noise_shaping_menu = ScrollMenu(
+            self.adpcm_frame, variable=self.adpcm_noise_shaping,
+            menu_width=8, options=adpcm_noise_shaping_names
+            )
+
         self.compression_menu.sel_index = 0
         self.sample_rate_menu.sel_index = 0
         self.encoding_menu.sel_index = 0
@@ -244,7 +282,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         self.load_button.pack(side='left', fill='both', padx=3, expand=True)
         self.compile_button.pack(side='right', fill='both', padx=3, expand=True)
 
-        for w in (self.processing_frame, self.flags_frame):
+        for w in (self.processing_frame, self.adpcm_frame, self.flags_frame):
             w.pack(expand=True, fill='both')
         
         for w in (self.compile_mode_replace_rbtn,
@@ -256,6 +294,15 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
                   self.sample_rate_menu,
                   self.encoding_menu):
             w.pack(expand=True, side='left', fill='both')
+
+        i = 0
+        for w, lbl in (
+                (self.adpcm_lookahead_menu, self.adpcm_lookahead_label),
+                (self.adpcm_noise_shaping_menu, self.adpcm_noise_shaping_label)
+                ):
+            lbl.grid(row=i, column=0, sticky="w", padx=(17, 0))
+            w.grid(row=i, column=2, sticky="news", padx=(10, 0))
+            i += 1
 
         for w in (self.generate_mouth_data_cbtn,
                   self.split_into_smaller_chunks_cbtn,):
@@ -505,6 +552,8 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
             self.sample_rate.get()]
         self.blam_sound_bank.encoding = encoding_menu_values[
             self.encoding.get()]
+        self.blam_sound_bank.adpcm_noise_shaping = self.adpcm_noise_shaping.get()
+        self.blam_sound_bank.adpcm_lookahead = self.adpcm_lookahead.get()
         self.blam_sound_bank.split_into_smaller_chunks = bool(self.split_into_smaller_chunks.get())
 
         try:
