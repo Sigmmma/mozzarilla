@@ -80,18 +80,14 @@ def strings_from_txt(app, fp=None):
         return
 
     window = window[0]
-    tag = window.tag
-
     window.is_new_tag = True
-    print(tag_path)
-    print(rel_filepath)
     tag.filepath = tag_path
     tag.rel_filepath = rel_filepath
 
     if 'utf-16' in encoding:
-        compile_unicode_string_list(tag, string_data)
+        compile_unicode_string_list(window.tag, string_data)
     else:
-        compile_string_list(tag, string_data)
+        compile_string_list(window.tag, string_data)
 
     # reload the window to display the newly entered info
     window.reload()
