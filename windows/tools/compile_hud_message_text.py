@@ -45,9 +45,9 @@ def hud_message_text_from_hmt(app, fp=None):
     try:
         rel_filepath = fp.relative_to(data_dir)
     except ValueError:
-        rel_filepath = Path("")
+        rel_filepath = Path("hud messages")
 
-    rel_filepath = rel_filepath.joinpath("hud messages.hud_message_text")
+    rel_filepath = rel_filepath.with_suffix(".hud_message_text")
 
     tag_path = Path("")
     if not is_path_empty(rel_filepath):
