@@ -45,24 +45,23 @@ encoding_names = {
     }
 
 adpcm_noise_shaping_names = {
-    adpcm.NOISE_SHAPING_OFF: "off",
+    adpcm.NOISE_SHAPING_OFF: "off (recommended)",
     adpcm.NOISE_SHAPING_STATIC: "static",
     adpcm.NOISE_SHAPING_DYNAMIC: "dynamic",
     }
 adpcm_lookahead_names = {
     0: "off",
-    1: "slight",
-    2: "moderate",
-    3: "good",
-    4: "great",
-    5: "best",
+    1: "1 sample",
+    2: "2 samples",
+    3: "3 samples",
+    4: "4 samples",
+    5: "5 samples",
     }
 
 compression_menu_values = (
     constants.COMPRESSION_PCM_16_BE,
     constants.COMPRESSION_XBOX_ADPCM,
-    #constants.COMPRESSION_IMA_ADPCM,
-    constants.COMPRESSION_OGG
+    #constants.COMPRESSION_OGG
     )
 sample_rate_menu_values = (
     constants.SAMPLE_RATE_22K,
@@ -91,6 +90,14 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
     compression = None
     sample_rate = None
     encoding = None
+    chunk_size_string = None
+
+    # divide by 2 as the chunk size we want to show to users is in
+    # samples, but the chunk size the pipeline works with is in bytes.
+    # each sample is a sint16, so we divide by sizeof(sint16)
+    min_chunk_size = constants.DEF_SAMPLE_CHUNK_SIZE // 2
+    max_chunk_size = constants.MAX_SAMPLE_CHUNK_SIZE // 2
+    chunk_size = min_chunk_size
 
     adpcm_lookahead = None
     adpcm_noise_shaping = None
@@ -137,6 +144,10 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         self.adpcm_lookahead = tk.IntVar(self, 3)
         self.adpcm_noise_shaping = tk.IntVar(self, adpcm.NOISE_SHAPING_OFF)
 
+        self.chunk_size_string = tk.StringVar(self, str(self.chunk_size))
+        self.chunk_size_string.trace(
+            "w", lambda *a, s=self: s.set_chunk_size())
+
         # make the frames
         self.main_frame = tk.Frame(self)
         self.wav_info_frame = tk.LabelFrame(
@@ -159,7 +170,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
             self.settings_frame, text="Format settings")
         self.adpcm_frame = tk.LabelFrame(
             self.settings_frame, text="ADPCM settings")
-        self.flags_frame = tk.LabelFrame(
+        self.misc_frame = tk.LabelFrame(
             self.settings_frame, text="Misc settings")
 
 
@@ -197,16 +208,25 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
             )
 
         self.adpcm_lookahead_label = tk.Label(
-            self.adpcm_frame, text="Lookahead prediction")
+            self.adpcm_frame, text="Lookahead prediction �")
         self.adpcm_lookahead_menu = ScrollMenu(
             self.adpcm_frame, variable=self.adpcm_lookahead,
-            menu_width=8, options=adpcm_lookahead_names
+            menu_width=17, options=adpcm_lookahead_names
             )
         self.adpcm_noise_shaping_label = tk.Label(
-            self.adpcm_frame, text="Noise shaping")
+            self.adpcm_frame, text="Noise shaping �")
         self.adpcm_noise_shaping_menu = ScrollMenu(
             self.adpcm_frame, variable=self.adpcm_noise_shaping,
-            menu_width=8, options=adpcm_noise_shaping_names
+            menu_width=17, options=adpcm_noise_shaping_names
+            )
+        self.adpcm_lookahead_label.tooltip_string = self.adpcm_lookahead_menu.tooltip_string = (
+            "Number of samples to look ahead when determining minimum\n"
+            "ADPCM error. Higher numbers are typically better."
+            )
+        self.adpcm_noise_shaping_label.tooltip_string = self.adpcm_noise_shaping_menu.tooltip_string = (
+            "The type of noise shaping algorithm to apply to the sound.\n"
+            "Noise shaping is a form of dithering, but for audio.\n"
+            "Results will vary, so always test after turning this on."
             )
 
         self.compression_menu.sel_index = 0
@@ -214,11 +234,32 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         self.encoding_menu.sel_index = 0
 
         self.generate_mouth_data_cbtn = tk.Checkbutton(
-            self.flags_frame, variable=self.generate_mouth_data,
-            anchor="w", text="Generate mouth data")
+            self.misc_frame, variable=self.generate_mouth_data,
+            anchor="w", text="Generate mouth data �")
         self.split_into_smaller_chunks_cbtn = tk.Checkbutton(
-            self.flags_frame, variable=self.split_into_smaller_chunks,
-            anchor="w", text="Split long sounds into pieces")
+            self.misc_frame, variable=self.split_into_smaller_chunks,
+            anchor="w", text="Split into chunks �")
+        self.chunk_size_label = tk.Label(
+            self.misc_frame, text="Chunk size �")
+        self.chunk_size_spinbox = tk.Spinbox(
+            self.misc_frame, from_=self.min_chunk_size,
+            to=self.max_chunk_size, increment=1024*4,
+            textvariable=self.chunk_size_string, justify="right")
+
+        self.generate_mouth_data_cbtn.tooltip_string = (
+            "Whether or not to generate mouth data for this sound.\n"
+            "Mouth data animates a characters mouth to the sound."
+            )
+        self.split_into_smaller_chunks_cbtn.tooltip_string = (
+            "Whether or not to split long sounds into pieces.\n"
+            "Long sounds may not play properly ingame, and this\n"
+            "setting is recommended if the sound is over a few seconds."
+            )
+        self.chunk_size_label.tooltip_string = self.chunk_size_spinbox.tooltip_string = (
+            'The number of samples per chunk to split long sounds into.\n'
+            'NOTE 1:\tThis is for mono. A value of 2 equals 1 stereo sample.\n'
+            'NOTE 2:\tThis will be rounded down to a multiple of 64 for ADPCM.'
+            )
 
 
         self._pr_info_tree = tk.ttk.Treeview(
@@ -282,7 +323,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         self.load_button.pack(side='left', fill='both', padx=3, expand=True)
         self.compile_button.pack(side='right', fill='both', padx=3, expand=True)
 
-        for w in (self.processing_frame, self.adpcm_frame, self.flags_frame):
+        for w in (self.processing_frame, self.adpcm_frame, self.misc_frame):
             w.pack(expand=True, fill='both')
         
         for w in (self.compile_mode_replace_rbtn,
@@ -304,13 +345,33 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
             w.grid(row=i, column=2, sticky="news", padx=(10, 0))
             i += 1
 
-        for w in (self.generate_mouth_data_cbtn,
-                  self.split_into_smaller_chunks_cbtn,):
-            w.pack(expand=True, fill='both')
+
+        self.generate_mouth_data_cbtn.grid(
+            row=0, column=0, sticky="news", padx=(17, 0))
+        self.split_into_smaller_chunks_cbtn.grid(
+            row=0, column=1, sticky="news", padx=(17, 0))
+        self.chunk_size_label.grid(
+            row=1, column=0, sticky="w", padx=(17, 0))
+        self.chunk_size_spinbox.grid(
+            row=1, column=1, sticky="news", padx=(10, 10))
 
         self.apply_style()
         if self.app_root is not self:
             self.transient(self.app_root)
+
+    def set_chunk_size(self):
+        try:
+            new_chunk_size = int(self.chunk_size_string.get())
+            if new_chunk_size >= self.min_chunk_size:
+                self.chunk_size = new_chunk_size
+                return
+
+            self.chunk_size = self.min_chunk_size
+        except Exception:
+            return
+
+        self.chunk_size_string.set(
+            str(("%.20f" % self.chunk_size)).rstrip("0").rstrip("."))
 
     def populate_wav_info_tree(self):
         pr_tree = self._pr_info_tree
@@ -546,6 +607,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
 
         self.update()
 
+        self.blam_sound_bank.chunk_size = self.chunk_size * 2
         self.blam_sound_bank.compression = compression_menu_values[
             self.compression.get()]
         self.blam_sound_bank.sample_rate = sample_rate_menu_values[
