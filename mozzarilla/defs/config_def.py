@@ -40,7 +40,7 @@ new_method_enums = (
     {GUI_NAME:"switch tags directory", NAME:"switch_tags_dir"},
     {GUI_NAME:"add tags directory",    NAME:"add_tags_dir"},
     {GUI_NAME:"remove tags directory", NAME:"remove_tags_dir"},
-    # space for a total of 64 enums here
+    # space for (64 - 6) more enums here
 
     {GUI_NAME:"", NAME:"mozz_divider3", VALUE:1024 + 64},
     {GUI_NAME:"open dependency scanner", NAME:"show_dependency_viewer"},
@@ -58,7 +58,8 @@ new_method_enums = (
     {GUI_NAME:"open bitmap source extractor", NAME:"show_bitmap_source_extractor"},
     {GUI_NAME:"open model animations compiler", NAME:"show_animations_compiler_window"},
     {GUI_NAME:"open model animations compression", NAME:"show_animations_compression_window"},
-    # space for another 64 enums here
+    {GUI_NAME:"open sound compiler", NAME:"show_sound_compiler_window"},
+    # space for (64 - 17) more enums here
 
     {GUI_NAME:"", NAME:"mozz_divider4", VALUE:1024 + 64*2},
     {GUI_NAME:"open model converter", NAME:"show_model_converter"},
