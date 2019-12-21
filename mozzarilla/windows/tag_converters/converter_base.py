@@ -9,7 +9,7 @@ import threadsafe_tkinter as tk
 
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.windows.filedialog import askopenfilename, askdirectory
-from supyr_struct.util import path_replace
+from supyr_struct.util import path_replace, path_split
 from mozzarilla import editor_constants as e_c
 
 curr_dir = Path.cwd()
