@@ -35,7 +35,7 @@ import mozzarilla
 from mozzarilla import editor_constants as e_c
 from mozzarilla.widgets.field_widget_picker import def_halo_widget_picker
 from mozzarilla.widgets.directory_frame import DirectoryFrame
-from mozzarilla.windows.tag_window import HaloTagWindow
+from mozzarilla.windows.tag_window import HaloTagWindow, HaloConfigWindow
 from mozzarilla.windows.tools import \
      SearchAndReplaceWindow, SauceRemovalWindow, \
      BitmapSourceExtractorWindow, BitmapConverterWindow,\
@@ -134,6 +134,7 @@ class Mozzarilla(Binilla):
     _curr_tags_dir_index = 0
 
     widget_picker = def_halo_widget_picker
+    config_window_class = HaloConfigWindow
 
     tool_windows = None
 
@@ -1125,11 +1126,6 @@ class Mozzarilla(Binilla):
                                     window_cls=window_cls,
                                     is_new_tag=is_new_tag)
         self.update_tag_window_title(w)
-        try:
-            w.iconbitmap(MOZZ_ICON_PATH)
-        except Exception:
-            pass
-
         return w
 
     def make_window_panes(self):
