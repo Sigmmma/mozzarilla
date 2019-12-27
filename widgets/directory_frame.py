@@ -383,11 +383,11 @@ class DependencyFrame(HierarchyFrame):
             try:
                 ext = '.' + tag_ref_block.tag_class.enum_name
                 if (self.handler.treat_mode_as_mod2 and ext == '.model' and
-                not Path(tags_dir, filepath).with_suffix(".model").is_file()):
+                not Path(tags_dir, str(filepath) + ".model").is_file()):
                     ext = '.gbxmodel'
             except Exception:
                 ext = ''
-            tag_path = str(filepath.with_suffix(ext))
+            tag_path = str(filepath) + ext
 
             dependency_name = tag_ref_block.NAME
             last_block = tag_ref_block

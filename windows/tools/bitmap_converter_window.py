@@ -1227,7 +1227,9 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         if not fp:
             return
 
-        fp = Path(fp).with_suffix('.log')
+        fp = Path(fp)
+        if not fp.suffix:
+            fp = fp.with_suffix('.log')
 
         self.log_file_path.set(fp)
         if self.app_root:
