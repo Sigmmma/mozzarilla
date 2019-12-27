@@ -42,7 +42,7 @@ def physics_from_jms(app, fp=None):
 
     try:
         rel_filepath = fp.relative_to(data_dir).parent.parent
-        rel_filepath = rel_filepath.joinpath(rel_filepath.stem).with_suffix(".physics")
+        rel_filepath = rel_filepath.joinpath(rel_filepath.stem + ".physics")
     except ValueError:
         rel_filepath = Path("unnamed.physics")
 
