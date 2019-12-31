@@ -5,7 +5,6 @@ from binilla import editor_constants as b_e_c
 from binilla.editor_constants import *
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.font_config import FontConfig
-from binilla.util import get_cwd
 
 from supyr_struct.defs.frozen_dict import FrozenDict
 
@@ -39,8 +38,8 @@ BinillaWidget.font_settings.update(
     )
 
 
-WORKING_DIR = get_cwd()
-MOZZLIB_DIR = get_cwd(__file__)
+WORKING_DIR = Path.cwd()
+MOZZLIB_DIR = Path(__file__).parent
 
 if b_e_c.IS_WIN:
     SETTINGS_DIR = Path(WORKING_DIR, "mek_config")
@@ -72,4 +71,3 @@ IS_64BIT = sys.maxsize > 2**32
 del b_e_c
 del FontConfig
 del Path
-del get_cwd
