@@ -31,7 +31,7 @@ elif platform == "darwin":
     # the "open" argument and the -a argument before the application name.
     # leaving this here just in case it somehow works though.
     TEXT_EDITOR_NAME = "TextEdit"
-elif platform == "linux":
+elif "linux" in platform:
     TEXT_EDITOR_NAME = "vim"
 else:
     # idfk
@@ -354,8 +354,8 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                         debuglog += '%s%s\n' % (' '*8, block.STEPTREE + ext)
 
                 except Exception:
-                    print("    Could not scan '%s'" % tag.filepath)
                     print(format_exc())
+                    print("    Could not scan '%s'" % tag.filepath)
                     continue
 
             if self.stop_scanning:
