@@ -1,17 +1,16 @@
-import os
 import tkinter as tk
 import tkinter.ttk as ttk
 
 from copy import copy
-from tkinter.filedialog import askopenfilename
+from pathlib import Path, PureWindowsPath
 from traceback import format_exc
 
-from supyr_struct.defs.constants import PATHDIV
-from supyr_struct.util import sanitize_path
 
 from binilla import constants
+from binilla.windows.filedialog import askopenfilename
 from binilla.widgets.field_widgets.container_frame import ContainerFrame
 from mozzarilla.widgets.field_widgets.halo_1_bitmap_display import HaloBitmapDisplayButton
+from supyr_struct.util import tagpath_to_fullpath
 
 
 class DependencyFrame(ContainerFrame):
@@ -22,33 +21,35 @@ class DependencyFrame(ContainerFrame):
     validate_entry_str = None
 
     def browse_tag(self):
+        '''Opens a filepicker window to aid the user in referencing their
+        wished tag file.'''
         if self.node is None:
             return
 
         try:
             try:
                 tags_dir = self.tag_window.tag.tags_dir
-            except AttributeError as e:
+            except AttributeError:
                 return
 
-            if not tags_dir.endswith(PATHDIV):
-                tags_dir += PATHDIV
+            init_dir = tags_dir
 
-            init_dir = sanitize_path(tags_dir)
             try:
-                init_dir = os.path.dirname(
-                    os.path.join(tags_dir, sanitize_path(self.node.filepath))
-                    )
+                init_dir = Path(tagpath_to_fullpath(
+                        tags_dir, self.node.filepath,
+                        extension=self.tag_window.tag.ext, force_windows=True)
+                    ).parent
             except Exception:
+                # This path is not valid, so use our earlier assignment instead.
                 pass
-
-            init_dir = sanitize_path(init_dir)
 
             filetypes = []
             for ext in sorted(self.node.tag_class.NAME_MAP):
                 if ext == 'NONE':
                     continue
                 filetypes.append((ext, '*.%s' % ext))
+            # TODO: Create a function that can generate globs
+            # that support all types valid for this field.
             if len(filetypes) > 1:
                 filetypes = (('All', '*'),) + tuple(filetypes)
             else:
@@ -59,38 +60,56 @@ class DependencyFrame(ContainerFrame):
                 title="Select a tag", parent=self)
 
             if not filepath:
+                # askopenfilename returned nothing. Quit.
                 return
 
-            # ALWAYS store the path with \ as the separator. Halo tools expect
-            # the windows style '\' separator, not the unix/linux '/' separator
-            filepath = filepath.replace('/', '\\')
-            tag_path, ext = os.path.splitext(filepath.lower().split(
-                tags_dir.lower().replace('/', '\\'))[-1])
+            # Halo tagpaths require backslashes( \ ) as dividers.
+            # We take the path we got, interpret it as a native Path, then
+            # convert it to a PureWindowsPath to get the backslashes safely.
+            filepath = Path(filepath)
+            try:
+                tag_path = filepath.relative_to(tags_dir)
+            # If the path is not relative just only take the filename.
+            except ValueError:
+                tag_path = Path(filepath.name)
+
+            # get file extension.
+            ext = tag_path.suffix.lower()
+            # Remove file extension.
+            tag_path = tag_path.with_suffix('')
+
             orig_tag_class = copy(self.node.tag_class)
+            # Try to set the tagtype to the type that we selected.
             try:
                 self.node.tag_class.set_to(ext[1:])
+            # If we fail, try to set the tagtype to the first one that
+            # has a file that exists, otherwise, set type to NONE.
             except Exception:
                 self.node.tag_class.set_to('NONE')
                 for filetype in filetypes:
                     ext = filetype[1][1:]
-                    if os.path.exists(tags_dir + tag_path + ext):
+                    if tagpath_to_fullpath(
+                            tags_dir, tag_path, extension=ext) is not None:
                         self.node.tag_class.set_to(ext[1:])
                         break
+
+            internal_tag_path = str(PureWindowsPath(tag_path)).lower()
 
             self.edit_create(
                 attr_index=('tag_class', 'filepath'),
                 redo_node=dict(
-                    tag_class=self.node.tag_class, filepath=tag_path),
+                    tag_class=self.node.tag_class, filepath=internal_tag_path),
                 undo_node=dict(
                     tag_class=orig_tag_class, filepath=self.node.filepath))
 
-            self.node.filepath = tag_path
+            self.node.filepath = internal_tag_path
             self.reload()
             self.set_edited()
         except Exception:
             print(format_exc())
 
     def open_tag(self):
+        '''Open the referenced tag.'''
         if self.node is None:
             return
 
@@ -105,24 +124,28 @@ class DependencyFrame(ContainerFrame):
 
         try:
             tags_dir = tag.tags_dir
-            if not tags_dir.endswith(PATHDIV):
-                tags_dir += PATHDIV
 
             self.flush()
             if not self.node.filepath:
                 return
 
             ext = '.' + self.node.tag_class.enum_name
-            filepath = tags_dir + self.node.filepath
-            try:
-                if (new_handler.treat_mode_as_mod2 and
-                    ext == '.model' and not os.path.exists(filepath + ext)):
-                    ext = '.gbxmodel'
-            except AttributeError:
-                pass
+            # Get full path with proper capitalization if it points to a file.
+            filepath = tagpath_to_fullpath(
+                tags_dir, PureWindowsPath(self.node.filepath), extension=ext)
+
+            if filepath is None and (
+            new_handler.treat_mode_as_mod2 and ext == '.model'):
+                filepath = tagpath_to_fullpath(
+                    tags_dir,
+                    PureWindowsPath(self.node.filepath),
+                    extension='.gbxmodel')
+
+            if filepath is None:
+                return
 
             app.set_active_handler(new_handler)
-            app.load_tags(filepaths=filepath + ext)
+            app.load_tags(filepaths=filepath)
         except Exception:
             print(format_exc())
         finally:
@@ -139,21 +162,25 @@ class DependencyFrame(ContainerFrame):
             return
 
         try:
-            if not tags_dir.endswith(PATHDIV):
-                tags_dir += PATHDIV
-
             self.flush()
             if not self.node.filepath:
                 return
 
             ext = '.' + self.node.tag_class.enum_name
-            filepath = tags_dir + self.node.filepath
-            try:
-                if (handler.treat_mode_as_mod2 and
-                    ext == '.model' and not os.path.exists(filepath + ext)):
-                    ext = '.gbxmodel'
-            except AttributeError:
-                pass
+            # Get full path with proper capitalization if it points to a file.
+            filepath = tagpath_to_fullpath(
+                tags_dir, PureWindowsPath(self.node.filepath), extension=ext)
+
+            if filepath is None and (
+            handler.treat_mode_as_mod2 and ext == '.model'):
+                filepath = tagpath_to_fullpath(
+                    tags_dir,
+                    PureWindowsPath(self.node.filepath),
+                    extension='.gbxmodel')
+
+            if filepath is None:
+                return
+
         except Exception:
             print(format_exc())
 
@@ -161,7 +188,7 @@ class DependencyFrame(ContainerFrame):
             tag = handler.get_tag(filepath + ext)
         except Exception:
             try:
-                tag = handler.build_tag(filepath=filepath + ext)
+                tag = handler.build_tag(filepath=filepath)
             except Exception:
                 return None
 
@@ -169,6 +196,7 @@ class DependencyFrame(ContainerFrame):
         return tag
 
     def bitmap_preview(self, e=None):
+        '''Loads the referenced bitmap tag and displays its preview window.'''
         f = self.preview_btn.display_frame
         if f is not None and f() is not None:
             return
@@ -183,6 +211,8 @@ class DependencyFrame(ContainerFrame):
         self.preview_btn.show_window(None, self.tag_window.app_root)
 
     def validate_filepath(self, *args):
+        '''Checks if the referenced tag exists, sets text color to red if
+        it's invalid. Sets color to default if valid.'''
         if self.node is None:
             return
 
@@ -197,21 +227,29 @@ class DependencyFrame(ContainerFrame):
         except AttributeError:
             return
 
-        if not tags_dir.endswith(PATHDIV):
-            tags_dir += PATHDIV
-
-        ext = '.' + self.node.tag_class.enum_name
-        filepath = tags_dir + self.node.filepath
         try:
-            if (self.tag_window.handler.treat_mode_as_mod2 and
-                ext == '.model' and not os.path.exists(filepath + ext)):
-                ext = '.gbxmodel'
-        except AttributeError:
-            pass
+            # Get filepath directly from the typing box
+            filepath = widget.data_entry.get()
+            if filepath == '':
+                return
 
-        filepath = filepath + ext
-        filepath = sanitize_path(filepath)
-        if os.path.exists(filepath):
+            ext = '.' + self.node.tag_class.enum_name
+
+            # Get full path with proper capitalization if it points to a file.
+            filepath = tagpath_to_fullpath(
+                tags_dir, PureWindowsPath(filepath), extension=ext)
+
+            if filepath is None and (
+            self.tag_window.handler.treat_mode_as_mod2 and ext == '.model'):
+                filepath = tagpath_to_fullpath(
+                    tags_dir, PureWindowsPath(filepath), extension='.gbxmodel')
+
+        except Exception:
+            filepath = None
+            print("Validation of a filepath failed unexpectedly.")
+            print(format_exc())
+
+        if filepath is not None:
             widget.data_entry.config(fg=self.text_normal_color)
         else:
             widget.data_entry.config(fg=self.invalid_path_color)

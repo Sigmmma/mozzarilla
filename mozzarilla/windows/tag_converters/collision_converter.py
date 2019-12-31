@@ -5,12 +5,13 @@ try:
 except (ImportError, SystemError):
     from converter_base import ConverterBase
 
-import os
+from pathlib import Path
 import threadsafe_tkinter as tk
 
-from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 from struct import pack_into, pack
+
+from binilla.windows.filedialog import askopenfilename
 
 from reclaimer.hek.defs.coll import coll_def
 from reclaimer.hek.defs.mod2 import mod2_def
@@ -59,7 +60,7 @@ class Region():
 
 
 def get_tags(coll_path, model_in_path):
-    mod2_path = os.path.splitext(model_in_path)[0] + "_COLLISION.gbxmodel"
+    mod2_path = str(Path(model_in_path).with_suffix('')) + "_COLL.gbxmodel"
 
     # get whether or not the collision tag is stubbs
     stubbs = tag_header_def.build(filepath=coll_path).version == 11
@@ -80,12 +81,12 @@ def get_tags(coll_path, model_in_path):
         except Exception:
             if guessed_mode:
                 model_in_rawdata = None
-                model_in_path = askopenfilename(
-                    initialdir=os.path.dirname(model_in_path), filetypes=(
+                model_in_path = Path(askopenfilename(
+                    initialdir=model_in_path.parent, filetypes=(
                         ('All', '*'), ('Gbxmodel', '*.gbxmodel')),
-                    title="Select the gbxmodel to extract nodes from")
+                    title="Select the gbxmodel to extract nodes from"))
             else:
-                model_in_path = os.path.splitext(model_in_path)[0] + ".model"
+                model_in_path = model_in_path.with_suffix(".model")
                 guessed_mode = True
 
     if model_in_rawdata is not None:
@@ -110,8 +111,8 @@ def get_tags(coll_path, model_in_path):
         mod2_tag.data.tagdata.nodes.STEPTREE.append()
         node = mod2_tag.data.tagdata.nodes.STEPTREE[-1]
         node.name = "COLLISION ROOT"
-        print("    %s" %model_in_path)
-        print("    Could not load gbxmodel. Gbxmodel wont have nodes and " +
+        print("    %s" % model_in_path)
+        print("    Could not load gbxmodel. Gbxmodel wont have nodes and "
               "the geometry will not be positioned or rotated properly.")
 
     return coll_tag, model_in_tag, mod2_tag
@@ -334,14 +335,14 @@ def fill_parts_by_mats(parts_by_mats, edge_loops_by_mats):
 
 def coll_to_mod2(coll_path, model_in_path=None, guess_mod2=True, use_mats=True):
     if guess_mod2:
-        model_in_path = os.path.splitext(coll_path)[0] + ".gbxmodel"
+        model_in_path = Path(coll_path).with_suffix(".gbxmodel")
 
     print("    Loading tags")
     coll_tag, model_in_tag, mod2_tag = get_tags(coll_path, model_in_path)
     mod2_data = mod2_tag.data.tagdata
 
 
-    # MAKE SURE REGIONS AND PERMUTATIONS MATCH BETWEEN model_in_tag AND coll_tag
+    # TODO: MAKE SURE REGIONS AND PERMUTATIONS MATCH BETWEEN model_in_tag AND coll_tag
     mod2_data.flags.parts_have_local_nodes = True
     mod2_data.base_map_u_scale = 1.0
     mod2_data.base_map_v_scale = 1.0
