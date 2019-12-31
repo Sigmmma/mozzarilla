@@ -82,7 +82,7 @@ class Mozzarilla(Binilla):
     _bitmap_load_dir = Path("")
 
 
-    issue_tracker_url = "https://github.com/MosesofEgypt/mozzarilla/issues"
+    issue_tracker_url = mozzarilla.__website__ + "/issues"
 
     _mozzarilla_initialized = False
     guerilla_workspace_def  = None
