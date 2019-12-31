@@ -37,13 +37,14 @@ BinillaWidget.font_settings.update(
         )
     )
 
-WORKING_DIR = Path.cwd()
-if b_e_c.IS_WIN:
-    SETTINGS_DIR = WORKING_DIR
-else:
-    SETTINGS_DIR = Path(Path.home(), ".local", "share", "mek", "mozzarilla")
 
+WORKING_DIR = Path.cwd()
 MOZZLIB_DIR = Path(__file__).parent
+
+if b_e_c.IS_WIN:
+    SETTINGS_DIR = Path(WORKING_DIR, "mek_config")
+else:
+    SETTINGS_DIR = Path(Path.home(), ".local", "share", "mek")
 
 MOZZ_ICON_PATH = Path(MOZZLIB_DIR, "mozzarilla.ico")
 if not MOZZ_ICON_PATH.is_file():
@@ -69,3 +70,4 @@ IS_64BIT = sys.maxsize > 2**32
 
 del b_e_c
 del FontConfig
+del Path

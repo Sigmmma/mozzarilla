@@ -41,8 +41,8 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
 
         self.tags_dir = tk.StringVar(self)
         self.data_dir = tk.StringVar(self)
-        self.tags_dir.set(os.path.join(e_c.WORKING_DIR, 'tags'))
-        self.data_dir.set(os.path.join(e_c.WORKING_DIR, 'data'))
+        self.tags_dir.set(e_c.WORKING_DIR.joinpath('tags'))
+        self.data_dir.set(e_c.WORKING_DIR.joinpath('data'))
 
         # make the frames
         self.tags_dir_frame = tk.LabelFrame(self, text="Tags directory")

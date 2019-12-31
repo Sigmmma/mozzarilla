@@ -16,7 +16,7 @@ from reclaimer.model.dae import jms_model_from_dae
 from reclaimer.model.obj import jms_model_from_obj
 from reclaimer.model.model_compilation import compile_gbxmodel
 from reclaimer.model.util import generate_shader
-from supyr_struct.util import path_replace, path_split
+from supyr_struct.util import path_replace, path_split, path_normalize
 
 from supyr_struct.util import is_in_dir
 
@@ -407,6 +407,7 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         if not dirpath:
             return
 
+        dirpath = str(Path(dirpath))
         if tags_dir and data_dir and os.path.basename(dirpath).lower() == "models":
             object_dir = os.path.dirname(dirpath)
 
@@ -434,6 +435,8 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         if not tags_dir:
             return
 
+        tags_dir = path_normalize(tags_dir)
+
         mod2_path = self.gbxmodel_path.get()
         if old_tags_dir and mod2_path and not is_in_dir(mod2_path, tags_dir):
             # adjust mod2 filepath to be relative to the new tags directory
@@ -460,12 +463,11 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
 
         fp = Path(fp).with_suffix(".gbxmodel")
 
-        self.app_root.last_load_dir = os.path.dirname(fp)
-        self.gbxmodel_path.set(fp)
+        self.app_root.last_load_dir = str(fp.parent)
+        self.gbxmodel_path.set(str(fp))
 
         self.tags_dir.set(
-            Path(path_split(self.app_root.last_load_dir, "tags"), "tags")
-        )
+                path_split(self.app_root.last_load_dir, "tags", after=True))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
