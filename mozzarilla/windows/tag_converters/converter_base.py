@@ -9,7 +9,7 @@ import threadsafe_tkinter as tk
 
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.windows.filedialog import askopenfilename, askdirectory
-from supyr_struct.util import path_replace
+from supyr_struct.util import path_replace, path_split
 from mozzarilla import editor_constants as e_c
 
 curr_dir = Path.cwd()
@@ -38,7 +38,8 @@ class ConverterBase(BinillaWidget):
         except Exception:
             pass
 
-        tags_dir = path_replace(Path(curr_dir, 'tags'), 'tags', 'tags')
+        # do path_replace to make sure the path works on linux
+        tags_dir = Path(path_split(curr_dir, "tags", after=True))
         if self.app_root is not self and hasattr(self.app_root, "tags_dir"):
             tags_dir = getattr(self.app_root, "tags_dir")
 
@@ -114,8 +115,7 @@ class ConverterBase(BinillaWidget):
                           for ext in self.src_exts if ext != self.src_ext)
         filetypes += (('All', '*'), )
         tag_path = askopenfilename(
-            initialdir=initialdir,
-            filetypes=filetypes)
+            initialdir=initialdir, filetypes=filetypes)
         if tag_path:
             self.tag_path.set(tag_path)
 
@@ -139,12 +139,9 @@ class ConverterBase(BinillaWidget):
         try:
             self.lock_ui()
             func(*args, **kwargs)
+        finally:
             self.unlock_ui()
             self._running_thread = None
-        except Exception:
-            self.unlock_ui()
-            self._running_thread = None
-            raise
 
     def convert_tag(self):
         if self._running_thread is None:
@@ -197,7 +194,7 @@ class ConverterBase(BinillaWidget):
 
                 filepath = Path(root, filename)
                 if filepath.suffix.lower() == valid_ext:
-                    self.do_convert_tag(filepath)
+                    self.do_convert_tag(str(filepath))
 
             if self.stop_conversion:
                 print("    Conversion cancelled by user.")

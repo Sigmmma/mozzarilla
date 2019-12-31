@@ -1,8 +1,8 @@
-from pathlib import Path
 import os
 import tkinter as tk
 import time
 
+from pathlib import Path
 from tkinter import messagebox
 from traceback import format_exc
 
@@ -15,6 +15,7 @@ from reclaimer.animation.animation_compression import \
      compress_animation, decompress_animation
 
 from mozzarilla import editor_constants as e_c
+from supyr_struct.util import is_path_empty
 
 if __name__ == "__main__":
     window_base_class = tk.Tk
@@ -200,8 +201,8 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         if not fp.suffix:
             fp = fp.with_suffix(".model_animations")
 
-        self.app_root.last_load_dir = fp.parent
-        self.model_animations_path.set(fp)
+        self.app_root.last_load_dir = str(fp.parent)
+        self.model_animations_path.set(str(fp))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
@@ -264,9 +265,8 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
 
         for root, _, files in os.walk(antr_dir):
             for fname in files:
-                fname = Path(fname)
                 try:
-                    if fname.suffix.lower() != ".model_animations":
+                    if Path(fname).suffix.lower() != ".model_animations":
                         continue
                     self._do_compression(compress, Path(root, fname))
                 except Exception:
@@ -277,10 +277,12 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         if not antr_path:
             antr_path = self.model_animations_path.get()
 
-        while not antr_path:
+        antr_path = Path(antr_path)
+
+        while is_path_empty(antr_path):
             self.model_animations_path_browse(True)
-            antr_path = self.model_animations_path.get()
-            if not antr_path and self.warn_cancel():
+            antr_path = Path(self.model_animations_path.get())
+            if is_path_empty(antr_path) and self.warn_cancel():
                 return
 
         print("%sing %s." % (state.capitalize(), antr_path))
@@ -288,7 +290,7 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         self.app_root.update()
         antr_def = None
         try:
-            with open(antr_path, 'rb') as f:
+            with antr_path.open('rb') as f:
                 f.seek(36)
                 tag_type = f.read(4)
                 if tag_type == b'antr':
@@ -340,7 +342,8 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         try:
             if not self.overwrite.get():
                 fp = Path(antr_tag.filepath)
-                antr_tag.filepath = Path(fp.parent, fp.stem+"_DECOMP"+fp.suffix)
+                antr_tag.filepath = Path(
+                    fp.parent, fp.stem + "_DECOMP" + fp.suffix)
 
             antr_tag.calc_internal_data()
             antr_tag.serialize(temp=False, backup=False, calc_pointers=False,

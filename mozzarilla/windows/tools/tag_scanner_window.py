@@ -1,9 +1,9 @@
 import ctypes
-from pathlib import Path
 import os
 import sys
 import tkinter as tk
 
+from pathlib import Path
 from time import time
 from threading import Thread
 from traceback import format_exc
@@ -40,7 +40,6 @@ else:
 
 class TagScannerWindow(tk.Toplevel, BinillaWidget):
     app_root = None
-    tags_dir = ''
     handler = None
 
     _scanning = False
@@ -179,7 +178,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         try:
             if tag is None:
                 return handler.build_tag(
-                    filepath=os.path.join(self.tags_dir, filepath)
+                    filepath=self.handler.tagsdir.joinpath(filepath)
                     )
         except Exception:
             pass
@@ -195,8 +194,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             return
 
         self.app_root.last_load_dir = dirpath
-        tags_dir = self.handler.tagsdir
-        if not is_in_dir(dirpath, tags_dir):
+        if not is_in_dir(dirpath, self.handler.tagsdir):
             print("Specified directory is not located within the tags directory")
             return
 
@@ -214,7 +212,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             return
 
         filepath = Path(filepath)
-        self.app_root.last_load_dir = Path(filepath).parent
+        self.app_root.last_load_dir = filepath.parent
 
         self.logfile_path.set(filepath)
 
@@ -249,11 +247,10 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         handler = self.handler
         self.stop_scanning = False
 
-        tags_dir = self.tags_dir = path_normalize(self.handler.tagsdir)
-        dirpath = path_normalize(self.directory_path.get())
         logpath = path_normalize(self.logfile_path.get())
+        dirpath = path_normalize(self.directory_path.get())
 
-        if not is_in_dir(dirpath, tags_dir):
+        if not is_in_dir(dirpath, self.handler.tagsdir):
             print("Specified directory is not located within the tags directory")
             return
 
@@ -262,7 +259,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         debuglog = "\n%s%s%s\n\n" % (
             "-"*30, log_name, "-" * (50-len(log_name)))
         debuglog += "tags directory = %s\nscan directory = %s\n\n" % (
-            tags_dir, dirpath)
+            self.handler.tagsdir, dirpath)
         debuglog += "Broken dependencies are listed below.\n"
         tag_specific_errors = {}
 
@@ -283,14 +280,14 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
         for root, directories, files in os.walk(dirpath):
             root = path_normalize(os.path.join(root, ""))
 
-            rel_root = os.path.relpath(root, tags_dir)
+            rel_root = Path(root).relative_to(self.handler.tagsdir)
 
             for filename in files:
-                filepath = os.path.join(rel_root, path_normalize(filename))
+                filepath = rel_root.joinpath(filename)
 
                 if time() - c_time > p_int:
                     c_time = time()
-                    print(' '*4 + filepath)
+                    print(' '*4, filepath, sep="")
                     self.app_root.update_idletasks()
 
                 if self.stop_scanning:
@@ -321,10 +318,10 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
 
                 if time() - c_time > p_int:
                     c_time = time()
-                    print(' '*4 + filepath)
+                    print(' '*4, filepath, sep="")
                     self.app_root.update_idletasks()
 
-                tag = self.get_tag(os.path.join(tags_dir, filepath))
+                tag = self.get_tag(self.handler.tagsdir.joinpath(filepath))
                 if tag is None:
                     print("    Could not load '%s'" % filepath)
                     continue
@@ -411,7 +408,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                         bad_ogg.append((pr.name, perm.name))
 
             if bad_ogg:
-                err += ("    Bad OGG sample count. " +
+                err += ("    Bad PCM buffer size. " +
                         "Fix by recompiling this sound.")
         elif cls == "coll":
             bad_nodes = {}
@@ -478,7 +475,6 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                                 "reference in part %s of event %s\n." % (j, i))
 
         if err:
-            errors[cls] = "%s\n%s:\n%s\n" % (
-                errors.get(cls, ""),
-                tag.filepath.split(self.tags_dir, 1)[-1],
-                err)
+            rel_tag_path = str(tag.filepath.relative_to(self.handler.tagsdir))
+            errors[cls] = "%s\n%s\n%s\n" % (
+                errors.get(cls, ""), rel_tag_path, err)
