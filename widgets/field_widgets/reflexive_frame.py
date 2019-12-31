@@ -62,8 +62,7 @@ class ReflexiveFrame(DynamicArrayFrame):
             # if it is a dependency filepath
             for i in options_to_generate:
                 name = str(node[i].get_neighbor(dyn_name_path))\
-                       .replace('/', '\\').split('\\')[-1]\
-                       .split('\n')[0]
+                       .split('\\')[-1].split('\n')[0]
                 if name:
                     options[i] = name
             return

@@ -1,12 +1,14 @@
-import os
 import tkinter as tk
 
 from binilla.widgets.binilla_widget import BinillaWidget
-from binilla.util import get_cwd
 
-curr_dir = get_cwd(__file__)
+from mozzarilla import editor_constants as e_c
+
 
 class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
+    '''
+    Finds (and replaces) occurances of a string in the last touched tag window.
+    '''
     app_root = None
 
     def __init__(self, app_root, *args, **kwargs):
@@ -19,14 +21,10 @@ class SearchAndReplaceWindow(BinillaWidget, tk.Toplevel):
         self.minsize(width=450, height=270)
         self.resizable(1, 0)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except Exception:
+            print("Could not load window icon.")
 
         # make the tkinter variables
         self.find_var = tk.StringVar(self)

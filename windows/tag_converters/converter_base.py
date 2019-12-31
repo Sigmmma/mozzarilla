@@ -1,15 +1,18 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
+from threading import Thread
+from time import time
+from traceback import format_exc
 import os
 import threadsafe_tkinter as tk
 
-from time import time
-from threading import Thread
-from tkinter.filedialog import askdirectory, askopenfilename
-from traceback import format_exc
 from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.windows.filedialog import askopenfilename, askdirectory
+from supyr_struct.util import path_replace, path_split
+from mozzarilla import editor_constants as e_c
 
-curr_dir = os.path.join(os.path.abspath(os.curdir), "")
+curr_dir = Path.cwd()
 
 class ConverterBase(BinillaWidget):
     src_ext = "*"
@@ -30,16 +33,13 @@ class ConverterBase(BinillaWidget):
         self.title(kwargs.pop("title"))
         self.resizable(0, 0)
         self.update()
-        for sub_dirs in ((), ('..', '..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except Exception:
+            pass
 
-        tags_dir = os.path.join(curr_dir + 'tags', "")
+        # do path_replace to make sure the path works on linux
+        tags_dir = Path(path_split(curr_dir, "tags", after=True))
         if self.app_root is not self and hasattr(self.app_root, "tags_dir"):
             tags_dir = getattr(self.app_root, "tags_dir")
 
@@ -115,8 +115,7 @@ class ConverterBase(BinillaWidget):
                           for ext in self.src_exts if ext != self.src_ext)
         filetypes += (('All', '*'), )
         tag_path = askopenfilename(
-            initialdir=initialdir,
-            filetypes=filetypes)
+            initialdir=initialdir, filetypes=filetypes)
         if tag_path:
             self.tag_path.set(tag_path)
 
@@ -140,12 +139,9 @@ class ConverterBase(BinillaWidget):
         try:
             self.lock_ui()
             func(*args, **kwargs)
+        finally:
             self.unlock_ui()
             self._running_thread = None
-        except Exception:
-            self.unlock_ui()
-            self._running_thread = None
-            raise
 
     def convert_tag(self):
         if self._running_thread is None:
@@ -196,9 +192,9 @@ class ConverterBase(BinillaWidget):
                 if self.stop_conversion:
                     break
 
-                filepath = os.path.join(root, filename)
-                if os.path.splitext(filename)[-1].lower() == valid_ext:
-                    self.do_convert_tag(filepath)
+                filepath = Path(root, filename)
+                if filepath.suffix.lower() == valid_ext:
+                    self.do_convert_tag(str(filepath))
 
             if self.stop_conversion:
                 print("    Conversion cancelled by user.")

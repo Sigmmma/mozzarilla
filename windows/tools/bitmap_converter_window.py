@@ -1,35 +1,35 @@
 import ctypes
-import os
 import gc
+import os
 import sys
 import tkinter as tk
 import weakref
-import arbytmap as ab
 
 from copy import deepcopy
+from pathlib import Path
 from threading import Thread
-from tkinter.filedialog import asksaveasfilename, askdirectory
 from time import time
 from traceback import format_exc
+
+import arbytmap as ab
 
 from reclaimer.bitmaps.p8_palette import HALO_P8_PALETTE, STUBBS_P8_PALETTE
 from reclaimer.hek.defs.bitm import bitm_def
 from reclaimer.constants import TYPE_NAME_MAP, FORMAT_NAME_MAP,\
-     I_FORMAT_NAME_MAP, PATHDIV
+     I_FORMAT_NAME_MAP
 
-from binilla.util import get_cwd, sanitize_path, do_subprocess, ProcController
-     
+from binilla.util import do_subprocess, ProcController
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.scroll_menu import ScrollMenu
+from binilla.windows.filedialog import askdirectory, asksaveasfilename
 from mozzarilla.widgets.field_widgets import HaloBitmapDisplayFrame,\
      HaloBitmapDisplayBase
+from mozzarilla import editor_constants as e_c
 
 window_base_class = tk.Toplevel
 if __name__ == "__main__":
     window_base_class = tk.Tk
 
-
-curr_dir = get_cwd(__file__)
 
 #                      (A, R, G, B)
 PC_ARGB_TO_XBOX_ARGB = (1, 3, 2, 0)
@@ -52,6 +52,9 @@ DXT_ALPHA_FORMATS = (ab.FORMAT_DXT2, ab.FORMAT_DXT3,
 VALID_FORMAT_ENUMS = (0, 1, 2, 3, 6, 8, 9, 10, 11, 14, 15, 16, 17)
 PARAM_FORMAT_TO_FORMAT = (-1, ) + VALID_FORMAT_ENUMS
 FORMAT_OPTIONS = ("Unchanged", ) + tuple(BITMAP_FORMATS[i] for i in VALID_FORMAT_ENUMS)
+
+HALO_1_TYPE_COUNT   = 4
+HALO_1_FORMAT_COUNT = 18
 
 
 platform = sys.platform.lower()
@@ -397,14 +400,10 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         self.title("Bitmap converter")
         self.resizable(0, 1)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except Exception:
+            print("Could not load window icon.")
 
         # make the tkinter variables
         self.read_only = tk.BooleanVar(self)
@@ -865,22 +864,32 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
             c_time = s_time
             p_int = self.print_interval
 
+            seen_files = set()  # keep track of all absolute filepaths seen
             scan_dir = self.loaded_tags_dir
             for root, _, files in os.walk(scan_dir):
-                if not root.endswith(PATHDIV):
-                    root += PATHDIV
-
-                rel_root = os.path.relpath(root, scan_dir)
+                rel_root = Path(os.path.relpath(root, scan_dir))
+                root = Path(root)
 
                 for filename in files:
-                    if os.path.splitext(filename)[-1].lower() != ".bitmap":
+                    if Path(filename).suffix.lower() != ".bitmap":
                         continue
 
-                    fp = os.path.join(sanitize_path(rel_root), filename)
+                    # We use an absolute path here because we later store the
+                    # bitmap tag info as hash keys. This is just so that we
+                    # don't do any double conversions.
+                    try:
+                        filepath = root.joinpath(filename).resolve()
+                        if filepath in seen_files:
+                            continue
 
+                        seen_files.add(filepath)
+                    except FileNotFoundError:
+                        continue
+
+                    rel_filepath = str(rel_root.joinpath(filename))
                     if time() - c_time > p_int:
                         c_time = time()
-                        print(' '*4 + fp)
+                        print('    ' + rel_filepath)
                         if self.app_root:
                             self.app_root.update_idletasks()
 
@@ -890,17 +899,16 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
                         return
 
                     try:
-                        bitm_tag = self.bitm_def.build(
-                            filepath=os.path.join(root, filename))
+                        bitm_tag = self.bitm_def.build(filepath=filepath)
                     except Exception:
                         print(format_exc())
                         bitm_tag = None
 
                     if not bitm_tag:
-                        print("Could not load: %s" % os.path.join(root, filename))
+                        print("Could not load: %s" % filepath)
                         continue
 
-                    self.bitmap_tag_infos[fp] = BitmapTagInfo(bitm_tag)
+                    self.bitmap_tag_infos[rel_filepath] = BitmapTagInfo(bitm_tag)
 
             print("    Finished in %s seconds." % int(time() - s_time))
         except Exception:
@@ -942,7 +950,7 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         else:
             print("Converting bitmaps...")
             tags_dir = self.loaded_tags_dir
-    
+
             for fp in sorted(self.bitmap_tag_infos):
                 try:
                     if self._cancel_processing:
@@ -1174,13 +1182,11 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         if not dirpath:
             return
 
-        dirpath = sanitize_path(dirpath)
-        if not dirpath.endswith(PATHDIV):
-            dirpath += PATHDIV
+        dirpath = Path(dirpath)
 
         self.scan_dir_path.set(dirpath)
         if self.app_root:
-            self.app_root.last_load_dir = os.path.dirname(dirpath)
+            self.app_root.last_load_dir = dirpath.parent
 
     def data_dir_browse(self):
         if self._processing:
@@ -1194,17 +1200,16 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         if not dirpath:
             return
 
-        dirpath = sanitize_path(dirpath)
-        if not dirpath.endswith(PATHDIV):
-            dirpath += PATHDIV
+        dirpath = Path(dirpath)
 
         curr_data_dir = self.data_dir_path.get()
         for flags in self.conversion_flags.values():
             if not flags:
                 continue
 
-            flags.extract_path = os.path.join(
-                dirpath, os.path.relpath(flags.extract_path, curr_data_dir))
+            flags.extract_path = dirpath.join_path(
+                Path(flags.extract_path).relative_to(curr_data_dir)
+            )
 
         self.data_dir_path.set(dirpath)
 
@@ -1222,12 +1227,13 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         if not fp:
             return
 
-        if not os.path.splitext(fp)[-1]:
-            fp += ".log"
+        fp = Path(fp)
+        if not fp.suffix:
+            fp = fp.with_suffix('.log')
 
-        self.log_file_path.set(sanitize_path(fp))
+        self.log_file_path.set(fp)
         if self.app_root:
-            self.app_root.last_load_dir = os.path.dirname(self.log_file_path.get())
+            self.app_root.last_load_dir = Path(self.log_file_path.get()).parent
 
     def get_will_be_processed(self, tag_path):
         info = self.bitmap_tag_infos.get(tag_path)
@@ -1274,18 +1280,18 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
         logstr += "%s bitmaps total\n%sKB of bitmap data\n%sKB of TIFF data" % (
             len(self.bitmap_tag_infos), total_size // 1024, tiff_data_size // 1024)
 
-        formatted_strs = {}
         tag_counts = [0, 0, 0]
         tag_header_strs = ("2D Textures", "3D Textures", "Cubemaps")
         base_str = "Bitmap %s\t--- WxHxD: %sx%sx%s\t--- Mipmaps: %s\n"
 
         tag_info_strs = {}
+        formatted_strs = {}
 
-        for typ in range(3):
-            formatted_strs[typ] = [''] * 18
-            tag_info_strs[typ]  = [''] * 18
+        for typ in range(HALO_1_TYPE_COUNT):
+            formatted_strs[typ] = [''] * HALO_1_FORMAT_COUNT
+            tag_info_strs[typ]  = [''] * HALO_1_FORMAT_COUNT
 
-            for fmt in range(len(BITMAP_FORMATS)):
+            for fmt in range(HALO_1_FORMAT_COUNT):
                 if "?" not in BITMAP_FORMATS[fmt]:
                     formatted_strs[typ][fmt] = "\n\n\t%s" % BITMAP_FORMATS[fmt]
                     tag_info_strs[typ][fmt] = {}
@@ -1314,14 +1320,14 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
             tag_strs.setdefault(filesize, [])
             tag_strs[filesize].append(tagstr)
 
-        for typ in range(3):
+        for typ in range(HALO_1_TYPE_COUNT):
             for fmt in VALID_FORMAT_ENUMS:
                 for size in reversed(sorted(tag_info_strs[typ][fmt])):
                     for tagstr in tag_info_strs[typ][fmt][size]:
                         tag_counts[typ] += 1
                         formatted_strs[typ][fmt] += tagstr
 
-        for typ in range(3):
+        for typ in range(HALO_1_TYPE_COUNT):
             logstr += "\n\n%s:\n\tCount = %s%s" % (
                 tag_header_strs[typ], tag_counts[typ],
                 ''.join(formatted_strs[typ]))
@@ -1352,15 +1358,12 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
     _populating = False
 
-    format_count = 18
-    type_count = 4
-
     def __init__(self, master, **options):
         BinillaWidget.__init__(self, master, **options)
         tk.Frame.__init__(self, master, **options)
 
-        self.formats_shown = [True] * self.format_count
-        self.types_shown   = [True] * self.type_count
+        self.formats_shown = [True] * HALO_1_FORMAT_COUNT
+        self.types_shown   = [True] * HALO_1_TYPE_COUNT
         self.displayed_paths = []
         self.type_format_map = []
         self.selected_paths = set()
@@ -1614,7 +1617,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
     def toggle_types_allowed(self, menu_idx, typ):
         if typ == -1:
-            for typ in range(self.type_count):
+            for typ in range(HALO_1_TYPE_COUNT):
                 self.types_shown[typ] = not self.types_shown[typ]
                 typ_str = BITMAP_TYPES[typ]
                 if self.types_shown[typ]: typ_str += u' \u2713'
@@ -1633,7 +1636,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
     def toggle_formats_allowed(self, menu_idx, fmt):
         if fmt == -1:
             i = 1 if menu_idx == 0 else 0
-            for fmt in range(self.format_count):
+            for fmt in range(HALO_1_FORMAT_COUNT):
                 if fmt in VALID_FORMAT_ENUMS:
                     self.formats_shown[fmt] = not self.formats_shown[fmt]
                     fmt_str = BITMAP_FORMATS[fmt]
@@ -1657,9 +1660,9 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
         self.type_format_map = []
         self.size_map = {}
 
-        for typ in range(4):
+        for typ in range(HALO_1_TYPE_COUNT):
             self.type_format_map.append([])
-            for fmt in range(18):
+            for fmt in range(HALO_1_FORMAT_COUNT):
                 self.type_format_map[typ].append([])
 
         remove = set()

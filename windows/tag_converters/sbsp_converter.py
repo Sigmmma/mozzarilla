@@ -5,7 +5,7 @@ try:
 except (ImportError, SystemError):
     from converter_base import ConverterBase
 
-import os
+from pathlib import Path, PureWindowsPath
 import threadsafe_tkinter as tk
 
 from copy import deepcopy
@@ -250,7 +250,7 @@ def make_bsp_coll_jms_models(bsps, materials, nodes, node_transforms=(),
                 material.collision_only = not material.large_collideable
                 material.double_sided &= not material.large_collideable
                 material.name = material.name + material.properties
-                material.shader_path = material.shader_path + material.properties 
+                material.shader_path = material.shader_path + material.properties
                 material.properties = ""
 
             mat_info_to_mat_id[mat_info] = len(coll_materials)
@@ -350,7 +350,7 @@ def make_bsp_renderable_jms_models(sbsp_body, base_nodes):
         materials = lightmaps[i].materials.STEPTREE
         for j in range(len(materials)):
             material = materials[j]
-            mat_name = os.path.basename(material.shader.filepath.lower())
+            mat_name = PureWindowsPath(material.shader.filepath).name.lower()
             mat_name += "!$" if material.flags.fog_plane else "!"
 
             if mat_name not in mat_indices_by_mat_name:
@@ -509,7 +509,7 @@ def sbsp_to_mod2(
             print("    Could not convert lightmaps")
 
     print("    Compiling gbxmodel...")
-    mod2_tag.filepath = os.path.splitext(sbsp_path)[0] + "_SBSP.gbxmodel"
+    mod2_tag.filepath = str(Path(sbsp_path).with_suffix('')) + "_SBSP.gbxmodel"
     compile_gbxmodel(mod2_tag, MergedJmsModel(*jms_models), True)
     return mod2_tag
 
@@ -611,7 +611,7 @@ class SbspConverter(ConverterBase, window_base_class):
             self.weather_tolerance_frame, from_=self.min_weather_tolerance,
             to=100, width=25, increment=self.weather_tolerance,
             textvariable=self.weather_tolerance_string, justify="right")
-        
+
         self.pack_widgets()
         self.apply_style()
 

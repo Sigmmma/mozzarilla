@@ -1,13 +1,13 @@
 import os
 import tkinter as tk
 
+from pathlib import Path, PureWindowsPath
+from sys import platform
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
-from supyr_struct.defs.constants import PATHDIV
-from supyr_struct.util import sanitize_path
 
-# injject this default color
+# inject this default color
 BinillaWidget.active_tags_directory_color = '#%02x%02x%02x' % (40, 170, 80)
 
 
@@ -117,11 +117,24 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         self.insert_root_dir(root_dir)
 
     def add_root_dir(self, root_dir):
+        '''
+        Alias for insert_root_dir.
+        '''
         self.insert_root_dir(root_dir)
 
     def insert_root_dir(self, root_dir, index='end'):
+        '''
+        Add new top tag directory to the HierarchyFrame.
+        '''
+        # Turn "/home/currentuser/" into "~/"
+        text = str(root_dir)
+        if "linux" in platform:
+            home = str(Path.home())
+            if text.startswith(home):
+                text = "~/" + text[1+len(home):]
+
         iid = self.tags_tree.insert(
-            '', index, iid=root_dir, text=root_dir[:-1],
+            '', index, iid=root_dir, text=text,
             tags=(root_dir, 'tagdir',))
         self.tags_dir_items.append(iid)
         self.destroy_subitems(iid)
@@ -145,15 +158,13 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
     def generate_subitems(self, directory):
         dir_tree = self.tags_tree
 
+        directory = str(directory)
         for root, subdirs, files in os.walk(directory):
-            for subdir in sorted(subdirs):
-                folderpath = directory + subdir + PATHDIV
+            for subdir in sorted(subdirs, key=str.casefold):
+                folderpath = os.path.join(root, subdir)
 
-                dir_info_str = ""
-                for _, subsubdirs, subfiles in os.walk(folderpath):
-                    dir_info_str = "%s items" % (len(subfiles) + len(subsubdirs))
-                    break
-                    
+                dir_info_str = "%s items" % len(list(os.scandir(folderpath)))
+
                 dir_tree.insert(
                     directory, 'end', text=subdir,
                     iid=folderpath, tags=('item',),
@@ -163,9 +174,10 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                 # at least one item so they can be expanded.
                 self.destroy_subitems(folderpath)
 
-            for file in sorted(files):
+            for file in sorted(files, key=str.casefold):
+                fullpath = os.path.join(root, file)
                 try:
-                    filesize = os.stat(directory + file).st_size
+                    filesize = os.stat(fullpath).st_size
                     if filesize < 1024:
                         filesize = "%d Bytes" % (filesize)
                     elif filesize < 1024**2:
@@ -175,7 +187,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                 except Exception:
                     filesize = 'ERROR'
                 dir_tree.insert(directory, 'end', text=file,
-                                iid=directory + file, tags=('item',),
+                                iid=fullpath, tags=('item',),
                                 values=(filesize, ))
 
             # just do the toplevel of the hierarchy
@@ -186,7 +198,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         dir_tree = self.tags_tree
         prev_parent = iid
         parent = dir_tree.parent(prev_parent)
-        
+
         while parent:
             prev_parent = parent
             parent = dir_tree.parent(prev_parent)
@@ -208,7 +220,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         if tag_path is None:
             return
 
-        if os.path.isdir(tag_path):
+        if Path(tag_path).is_dir():
             self.destroy_subitems(tag_path)
 
     def highlight_tags_dir(self, tags_dir=None):
@@ -217,15 +229,18 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         if tags_dir is None:
               tags_dir = self.app_root.tags_dir
 
+        tags_dir = Path(tags_dir)
         for td in app.tags_dirs:
             if td == tags_dir:
                 dir_tree.tag_configure(
-                    td, background=self.active_tags_directory_color,
+                    str(td),
+                    background=self.active_tags_directory_color,
                     foreground=self.text_highlighted_color)
                 self.active_tags_dir = td
             else:
                 dir_tree.tag_configure(
-                    td, background=self.entry_normal_color,
+                    str(td),
+                    background=self.entry_normal_color,
                     foreground=self.text_normal_color)
 
     def activate_item(self, e=None):
@@ -236,17 +251,20 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
 
         try:
             app = self.app_root
-            tags_dir = self.get_item_tags_dir(tag_path)
-            if tags_dir not in app.tags_dirs:
+            tags_dir = Path(self.get_item_tags_dir(tag_path))
+            tags_dir_index = self.app_root.get_tags_dir_index(
+                self.get_item_tags_dir(tag_path))
+            if tags_dir_index is None:
                 print("'%s' is not a registered tags directory." % tags_dir)
                 return
 
             self.highlight_tags_dir(tags_dir)
-            app.switch_tags_dir(index=app.tags_dirs.index(tags_dir))
+            app.switch_tags_dir(index=tags_dir_index)
         except Exception:
             print(format_exc())
 
-        if os.path.isdir(tag_path):
+        tag_path = Path(tag_path)
+        if tag_path.is_dir():
             app.last_load_dir = tag_path
             return
 
@@ -279,7 +297,11 @@ class DependencyFrame(HierarchyFrame):
 
     def reload(self):
         dir_tree = self.tags_tree
-        self.tags_dir = self.app_root.tags_dir
+        if self.handler is not None:
+            self.tags_dir = self.handler.tagsdir
+        else:
+            self.tags_dir = Path("")
+
         if not dir_tree['columns']:
             dir_tree["columns"]=("dependency", )
             dir_tree.heading("#0", text='Filepath')
@@ -308,6 +330,7 @@ class DependencyFrame(HierarchyFrame):
             print(("Unable to load '%s'.\n" % tag_path) +
                   "    You may need to change the tag set to load this tag.")
             return ()
+
         handler = self.handler
         d_id = tag.def_id
         dependency_cache = handler.tag_ref_cache.get(d_id)
@@ -335,8 +358,8 @@ class DependencyFrame(HierarchyFrame):
             dir_tree.delete(child)
 
         # add an empty node to make an "expand" button appear
-        tag_path = dir_tree.item(iid)['values'][-1]
-        if not os.path.exists(tag_path):
+        tag_path = Path(dir_tree.item(iid)['values'][-1])
+        if not tag_path.is_file():
             dir_tree.item(iid, tags=('badref', 'item'))
         elif self.get_dependencies(tag_path):
             dir_tree.insert(iid, 'end')
@@ -348,23 +371,23 @@ class DependencyFrame(HierarchyFrame):
             self.destroy_subitems(iid)
 
     def generate_subitems(self, parent_iid):
-        tags_dir = sanitize_path(self.tags_dir)
+        tags_dir = self.handler.tagsdir
         dir_tree = self.tags_tree
-        parent_tag_path = dir_tree.item(parent_iid)['values'][-1]
+        parent_tag_path = Path(dir_tree.item(parent_iid)['values'][-1])
 
-        if not os.path.exists(parent_tag_path):
+        if not parent_tag_path.is_file():
             return
 
         for tag_ref_block in self.get_dependencies(parent_tag_path):
+            filepath = Path(PureWindowsPath(tag_ref_block.filepath))
             try:
                 ext = '.' + tag_ref_block.tag_class.enum_name
                 if (self.handler.treat_mode_as_mod2 and ext == '.model' and
-                    (not os.path.exists(sanitize_path(
-                        os.path.join(tags_dir, tag_ref_block.filepath + '.model'))))):
+                not Path(tags_dir, str(filepath) + ".model").is_file()):
                     ext = '.gbxmodel'
             except Exception:
                 ext = ''
-            tag_path = sanitize_path(tag_ref_block.filepath + ext)
+            tag_path = str(filepath) + ext
 
             dependency_name = tag_ref_block.NAME
             last_block = tag_ref_block
@@ -387,7 +410,7 @@ class DependencyFrame(HierarchyFrame):
 
             iid = dir_tree.insert(
                 parent_iid, 'end', text=tag_path, tags=('item',),
-                values=(dependency_name, tags_dir + tag_path))
+                values=(dependency_name, Path(tags_dir, tag_path)))
 
             self.destroy_subitems(iid)
 
@@ -396,8 +419,8 @@ class DependencyFrame(HierarchyFrame):
         active = dir_tree.focus()
         if active is None:
             return
-        tag_path = dir_tree.item(active)['values'][-1]
 
+        tag_path = Path(dir_tree.item(active)['values'][-1])
         try:
             app = self.app_root
             tags_dir = self.get_item_tags_dir(tag_path)
@@ -405,7 +428,7 @@ class DependencyFrame(HierarchyFrame):
         except Exception:
             print(format_exc())
 
-        if os.path.isdir(tag_path):
+        if tag_path.is_dir():
             return
 
         try:
