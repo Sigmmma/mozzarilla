@@ -25,7 +25,7 @@ setup(
                 'games built with the Blam engine.',
     long_description=long_desc,
     version='%s.%s.%s' % mozzarilla.__version__,
-    url='http://bitbucket.org/moses_of_egypt/mozzarilla',
+    url=mozzarilla.__website__,
     author='Devin Bobadilla',
     author_email='MosesBobadilla@gmail.com',
     license='MIT',
