@@ -21,8 +21,8 @@ except Exception:
 
 setup(
     name='mozzarilla',
-    description='A variant of Binilla for editing binary structures for \
-games built with the Blam engine.',
+    description='A variant of Binilla for editing binary structures for '
+                'games built with the Blam engine.',
     long_description=long_desc,
     version='%s.%s.%s' % mozzarilla.__version__,
     url='http://bitbucket.org/moses_of_egypt/mozzarilla',
