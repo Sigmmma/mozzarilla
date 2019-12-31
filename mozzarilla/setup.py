@@ -26,7 +26,7 @@ setup(
     long_description=long_desc,
     version='%s.%s.%s' % mozzarilla.__version__,
     url=mozzarilla.__website__,
-    author='Devin Bobadilla',
+    author=mozzarilla.__author__,
     author_email='MosesBobadilla@gmail.com',
     license='MIT',
     packages=[
