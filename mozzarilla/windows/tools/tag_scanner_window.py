@@ -8,7 +8,7 @@ from time import time
 from threading import Thread
 from traceback import format_exc
 
-from binilla.util import ProcController, do_subprocess
+from binilla.util import ProcController, open_in_default_program
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.windows.filedialog import askdirectory, asksaveasfilename
 
@@ -24,18 +24,7 @@ if "linux" in platform:
 
 SetFileAttributesW = None
 if platform == "win32":
-    TEXT_EDITOR_NAME = "notepad"
     SetFileAttributesW = ctypes.windll.kernel32.SetFileAttributesW
-elif platform == "darwin":
-    # I don't actually think this will work since mac seems to require
-    # the "open" argument and the -a argument before the application name.
-    # leaving this here just in case it somehow works though.
-    TEXT_EDITOR_NAME = "TextEdit"
-elif "linux" in platform:
-    TEXT_EDITOR_NAME = "vim"
-else:
-    # idfk
-    TEXT_EDITOR_NAME = "vim"
 
 
 class TagScannerWindow(tk.Toplevel, BinillaWidget):
@@ -378,8 +367,8 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
             try:
                 print("Scan completed.\n")
                 if self.open_logfile.get():
-                    do_subprocess(TEXT_EDITOR_NAME, exec_args=(logpath,),
-                                  proc_controller=ProcController(abandon=True))
+                    open_in_default_program(logpath)
+
             except Exception:
                 print("Could not open written log.")
             return

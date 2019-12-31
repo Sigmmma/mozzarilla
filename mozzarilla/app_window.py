@@ -16,7 +16,8 @@ inject_halo_constants()
 from binilla.handler import Handler
 from binilla.app_window import Binilla, default_hotkeys,\
      default_tag_window_hotkeys
-from binilla.util import do_subprocess, ProcController, is_main_frozen
+from binilla.util import do_subprocess, open_in_default_program,\
+    ProcController, is_main_frozen
 from binilla.windows.def_selector_window import DefSelectorWindow
 from binilla.windows.filedialog import askopenfilename, askopenfilenames,\
     askdirectory, asksaveasfilename
@@ -1251,9 +1252,4 @@ class Mozzarilla(Binilla):
         return new_config
 
     def show_config_folder(self, **kw):
-        if e_c.IS_MAC:
-            subprocess.check_call(['open', str(e_c.SETTINGS_DIR)])
-        elif e_c.IS_LNX:
-            subprocess.check_call(['xdg-open', str(e_c.SETTINGS_DIR)])
-        elif e_c.IS_WIN:
-            subprocess.check_call(['explorer', str(e_c.SETTINGS_DIR)])
+        open_in_default_program(e_c.SETTINGS_DIR)
