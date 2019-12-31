@@ -1,5 +1,6 @@
 import re
 import tkinter as tk
+import subprocess
 
 from pathlib import Path, PureWindowsPath, PurePath
 from threading import Thread
@@ -207,6 +208,8 @@ class Mozzarilla(Binilla):
         self.settings_menu.add_separator()
         self.settings_menu.add_command(
             label="Edit config", command=self.show_config_file)
+        self.settings_menu.add_command(
+            label="Open config directory", command=self.show_config_folder)
         self.settings_menu.add_separator()
         self.settings_menu.add_command(
             label="Load style", command=self.load_style)
@@ -1246,3 +1249,11 @@ class Mozzarilla(Binilla):
             raise ValueError("Config header version is not valid")
 
         return new_config
+
+    def show_config_folder(self, **kw):
+        if e_c.IS_MAC:
+            subprocess.check_call(['open', str(e_c.SETTINGS_DIR)])
+        elif e_c.IS_LNX:
+            subprocess.check_call(['xdg-open', str(e_c.SETTINGS_DIR)])
+        elif e_c.IS_WIN:
+            subprocess.check_call(['explorer', str(e_c.SETTINGS_DIR)])
