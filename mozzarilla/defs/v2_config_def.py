@@ -1,3 +1,12 @@
+#
+# This file is part of Mozzarilla.
+#
+# For authors and copyright check AUTHORS.TXT
+#
+# Mozzarilla is free software under the GNU General Public License v3.0.
+# See LICENSE for more information.
+#
+
 from binilla.defs.v1_config_def import v1_general, v1_array_counts,\
      tag_window_hotkeys, padding, directory_paths, v1_app_window, \
      recent_tags, open_tags

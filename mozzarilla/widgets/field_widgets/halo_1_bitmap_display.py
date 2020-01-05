@@ -1,3 +1,12 @@
+#
+# This file is part of Mozzarilla.
+#
+# For authors and copyright check AUTHORS.TXT
+#
+# Mozzarilla is free software under the GNU General Public License v3.0.
+# See LICENSE for more information.
+#
+
 import tkinter as tk
 import weakref
 
@@ -264,7 +273,7 @@ class HaloBitmapDisplayFrame(BitmapDisplayFrame):
 
         self.image_canvas.create_rectangle(
             (rx0, ry0, rx1, ry1), fill=None,
-            tags=SPRITE_CENTER_TAG, 
+            tags=SPRITE_CENTER_TAG,
             outline=self.bitmap_canvas_bg_color)
 
     def change_textures(self, textures):
