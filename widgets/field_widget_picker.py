@@ -1,3 +1,12 @@
+#
+# This file is part of Mozzarilla.
+#
+# For authors and copyright check AUTHORS.TXT
+#
+# Mozzarilla is free software under the GNU General Public License v3.0.
+# See LICENSE for more information.
+#
+
 from traceback import format_exc
 
 from binilla.widgets.field_widget_picker import WidgetPicker
@@ -13,7 +22,7 @@ from reclaimer.field_types import StrTagRef, TagRef, ZoneAsset, StringID, \
 from supyr_struct.field_types import Struct, Array, Float, StrUtf16,\
      UInt16, SInt16, UEnum16, SEnum16, Bool16,\
      UInt32, SInt32, UEnum32, SEnum32, Bool32
-     
+
 
 BinillaWidget.title_width = e_c.TITLE_WIDTH
 BinillaWidget.def_string_entry_width = e_c.DEF_STRING_ENTRY_WIDTH

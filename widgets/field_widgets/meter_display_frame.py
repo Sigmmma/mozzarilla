@@ -1,3 +1,12 @@
+#
+# This file is part of Mozzarilla.
+#
+# For authors and copyright check AUTHORS.TXT
+#
+# Mozzarilla is free software under the GNU General Public License v3.0.
+# See LICENSE for more information.
+#
+
 import array
 import weakref
 import tkinter as tk
@@ -82,4 +91,3 @@ class MeterImageFrame(SimpleImageFrame):
             texture_block.append([[array.array("I", pixels)], tex_info])
 
         return texture_block
-    
