@@ -216,6 +216,8 @@ class Mozzarilla(Binilla):
             label="Load style", command=self.load_style)
         self.settings_menu.add_command(
             label="Save current style", command=self.make_style)
+        self.settings_menu.add_command(
+            label="Reset style", command=self.reset_style)
 
         # make the tools and tag set menus
         self.tools_menu = tk.Menu(self.main_menu, tearoff=0)
