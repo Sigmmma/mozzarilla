@@ -1,3 +1,12 @@
+#
+# This file is part of Mozzarilla.
+#
+# For authors and copyright check AUTHORS.TXT
+#
+# Mozzarilla is free software under the GNU General Public License v3.0.
+# See LICENSE for more information.
+#
+
 import tkinter as tk
 
 from traceback import format_exc
@@ -5,7 +14,7 @@ from traceback import format_exc
 from supyr_struct.field_types import UInt8
 
 from binilla.widgets.field_widgets import FieldWidget, NumberEntryFrame,\
-     ContainerFrame, ColorPickerFrame 
+     ContainerFrame, ColorPickerFrame
 
 from mozzarilla import editor_constants as e_c
 
