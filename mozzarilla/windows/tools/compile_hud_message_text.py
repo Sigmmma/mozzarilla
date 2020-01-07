@@ -1,3 +1,12 @@
+#
+# This file is part of Mozzarilla.
+#
+# For authors and copyright check AUTHORS.TXT
+#
+# Mozzarilla is free software under the GNU General Public License v3.0.
+# See LICENSE for more information.
+#
+
 import os
 
 from pathlib import Path
@@ -41,7 +50,7 @@ def hud_message_text_from_hmt(app, fp=None):
         print(format_exc())
         print("    Could not load hmt file.")
         return
-    
+
     try:
         rel_filepath = fp.relative_to(data_dir)
     except ValueError:
