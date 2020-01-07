@@ -2,27 +2,25 @@ import os
 import tkinter as tk
 import time
 
+from pathlib import Path
 from tkinter import messagebox
-from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import sanitize_path, get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.windows.filedialog import askdirectory, askopenfilename
 
 from reclaimer.hek.defs.antr import antr_def as halo_antr_def
 from reclaimer.stubbs.defs.antr import antr_def as stubbs_antr_def
 from reclaimer.animation.animation_compression import \
      compress_animation, decompress_animation
 
-from supyr_struct.defs.constants import PATHDIV
+from mozzarilla import editor_constants as e_c
+from supyr_struct.util import is_path_empty
 
 if __name__ == "__main__":
     window_base_class = tk.Tk
 else:
     window_base_class = tk.Toplevel
-
-
-curr_dir = get_cwd(__file__)
 
 
 class AnimationsCompressionWindow(window_base_class, BinillaWidget):
@@ -48,16 +46,12 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         #self.resizable(1, 1)
         self.resizable(0, 0)
         self.update()
-        anims_dir = getattr(app_root, "tags_dir", get_cwd(__file__))
+        anims_dir = getattr(app_root, "tags_dir", str(Path.cwd()))
 
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except Exception:
+            print("Could not load window icon.")
 
         self.model_animations_path = tk.StringVar(self)
         self.model_animations_dir = tk.StringVar(self, anims_dir if anims_dir else "")
@@ -137,7 +131,7 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         self.model_animations_path_frame.pack(fill='x')
         self.model_animations_path_buttons_frame.pack(fill="x", pady=3, padx=3)
         self.settings_frame.pack(fill="both")
-        
+
         for w in (self.preserve_compressed_cbtn, self.overwrite_cbtn):
             w.pack(expand=True, fill='both')
 
@@ -178,15 +172,13 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         if not force and (self._working or self._loading):
             return
 
-        antr_dir = os.path.dirname(self.model_animations_dir.get())
         dirpath = askdirectory(
-            initialdir=antr_dir, parent=self,
+            initialdir=self.model_animations_dir.get(), parent=self,
             title="Directory of model_animations to compress/decompress")
 
         if not dirpath:
             return
 
-        dirpath = sanitize_path(dirpath)
         self.app_root.last_load_dir = dirpath
         self.model_animations_dir.set(dirpath)
 
@@ -198,19 +190,19 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         if self.model_animations_dir.get() and not antr_dir:
             antr_dir = self.model_animations_dir.get()
 
-        fp = asksaveasfilename(
+        fp = askopenfilename(
             initialdir=antr_dir, title="Model_animations to compress/decompress", parent=self,
             filetypes=(("Model animations graph", "*.model_animations"), ('All', '*')))
 
         if not fp:
             return
 
-        fp = sanitize_path(fp)
-        if not os.path.splitext(fp)[-1]:
-            fp += ".model_animations"
+        fp = Path(fp)
+        if not fp.suffix:
+            fp = fp.with_suffix(".model_animations")
 
-        self.app_root.last_load_dir = os.path.dirname(fp)
-        self.model_animations_path.set(fp)
+        self.app_root.last_load_dir = str(fp.parent)
+        self.model_animations_path.set(str(fp))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
@@ -274,9 +266,9 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         for root, _, files in os.walk(antr_dir):
             for fname in files:
                 try:
-                    if os.path.splitext(fname)[-1].lower() != ".model_animations":
+                    if Path(fname).suffix.lower() != ".model_animations":
                         continue
-                    self._do_compression(compress, os.path.join(root, fname))
+                    self._do_compression(compress, Path(root, fname))
                 except Exception:
                     pass#print(format_exc())
 
@@ -285,10 +277,12 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         if not antr_path:
             antr_path = self.model_animations_path.get()
 
-        while not antr_path:
+        antr_path = Path(antr_path)
+
+        while is_path_empty(antr_path):
             self.model_animations_path_browse(True)
-            antr_path = self.model_animations_path.get()
-            if not antr_path and self.warn_cancel():
+            antr_path = Path(self.model_animations_path.get())
+            if is_path_empty(antr_path) and self.warn_cancel():
                 return
 
         print("%sing %s." % (state.capitalize(), antr_path))
@@ -296,7 +290,7 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         self.app_root.update()
         antr_def = None
         try:
-            with open(antr_path, 'rb') as f:
+            with antr_path.open('rb') as f:
                 f.seek(36)
                 tag_type = f.read(4)
                 if tag_type == b'antr':
@@ -347,8 +341,9 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
 
         try:
             if not self.overwrite.get():
-                base, ext = os.path.splitext(antr_tag.filepath)
-                antr_tag.filepath = base + "_DECOMP" + ext
+                fp = Path(antr_tag.filepath)
+                antr_tag.filepath = Path(
+                    fp.parent, fp.stem + "_DECOMP" + fp.suffix)
 
             antr_tag.calc_internal_data()
             antr_tag.serialize(temp=False, backup=False, calc_pointers=False,

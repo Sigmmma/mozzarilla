@@ -1,6 +1,8 @@
-from binilla.windows.tag_window import TagWindow
+from mozzarilla import editor_constants as e_c
+from binilla.windows.tag_window import TagWindow, ConfigWindow
+from supyr_struct.util import is_path_empty
 
-__all__ = ("HaloTagWindow", )
+__all__ = ("HaloTagWindow", "HaloConfigWindow", )
 
 
 class HaloTagWindow(TagWindow):
@@ -8,6 +10,12 @@ class HaloTagWindow(TagWindow):
         app_root   = kwargs.get('app_root', master)
         is_new_tag = kwargs.get('is_new_tag', self.is_new_tag)
         TagWindow.__init__(self, master, *args, tag=tag, **kwargs)
+
+    def post_toplevel_init(self):
+        if not is_path_empty(e_c.MOZZ_ICON_PATH):
+            self.iconbitmap_filepath = e_c.MOZZ_ICON_PATH
+
+        TagWindow.post_toplevel_init(self)
 
     def save(self, **kwargs):
         '''Flushes any lingering changes in the widgets to the tag.'''
@@ -31,3 +39,12 @@ class HaloTagWindow(TagWindow):
                         flags.use_scenario_names_in_scripts)
         except Exception:
             return False
+
+
+class HaloConfigWindow(ConfigWindow):
+
+    def post_toplevel_init(self):
+        if not is_path_empty(e_c.MOZZ_ICON_PATH):
+            self.iconbitmap_filepath = e_c.MOZZ_ICON_PATH
+
+        ConfigWindow.post_toplevel_init(self)

@@ -1,14 +1,14 @@
+from pathlib import Path
 import os
-import tkinter as tk
 import time
+import tkinter as tk
 
 from tkinter import messagebox
-from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import sanitize_path, get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.scroll_menu import ScrollMenu
+from binilla.windows.filedialog import askdirectory, asksaveasfilename
 
 from reclaimer.hek.defs.mod2 import mod2_def
 from reclaimer.model.jms import read_jms, write_jms, MergedJmsModel, JmsModel
@@ -16,16 +16,16 @@ from reclaimer.model.dae import jms_model_from_dae
 from reclaimer.model.obj import jms_model_from_obj
 from reclaimer.model.model_compilation import compile_gbxmodel
 from reclaimer.model.util import generate_shader
+from supyr_struct.util import path_replace, path_split, path_normalize
 
-from supyr_struct.defs.constants import PATHDIV
 from supyr_struct.util import is_in_dir
+
+from mozzarilla import editor_constants as e_c
 
 if __name__ == "__main__":
     window_base_class = tk.Tk
 else:
     window_base_class = tk.Toplevel
-
-curr_dir = get_cwd(__file__)
 
 shader_types = (
     "model",
@@ -72,14 +72,10 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         self.title("Gbxmodel compiler")
         self.resizable(1, 1)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except Exception:
+            print("Could not load window icon.")
 
 
         self.superhigh_lod_cutoff = tk.StringVar(self)
@@ -399,7 +395,7 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
             return
 
         tags_dir = self.tags_dir.get()
-        data_dir = os.path.join(os.path.dirname(os.path.dirname(tags_dir)), "data", "")
+        data_dir = path_replace(tags_dir, "tags", "data")
         jms_dir = self.jms_dir.get()
         if tags_dir and not jms_dir:
             jms_dir = data_dir
@@ -408,10 +404,10 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
             initialdir=jms_dir, parent=self,
             title="Select the folder of models to compile...")
 
-        dirpath = os.path.join(sanitize_path(dirpath), "")
         if not dirpath:
             return
 
+        dirpath = str(Path(dirpath))
         if tags_dir and data_dir and os.path.basename(dirpath).lower() == "models":
             object_dir = os.path.dirname(dirpath)
 
@@ -423,10 +419,9 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         self.app_root.last_load_dir = os.path.dirname(dirpath)
         self.jms_dir.set(dirpath)
         if not self.tags_dir.get():
-            path_pieces = self.app_root.last_load_dir.split(
-                "%sdata%s" % (PATHDIV, PATHDIV))
-            if len(path_pieces) > 1:
-                self.tags_dir.set(os.path.join(path_pieces[0], "tags"))
+            self.tags_dir.set(
+                Path(path_split(self.app_root.last_load_dir, "data"), "tags")
+            )
 
     def tags_dir_browse(self):
         if self._compiling or self._loading or self._saving:
@@ -437,9 +432,10 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
             initialdir=old_tags_dir, parent=self,
             title="Select the root of the tags directory")
 
-        tags_dir = sanitize_path(os.path.join(tags_dir, ""))
         if not tags_dir:
             return
+
+        tags_dir = path_normalize(tags_dir)
 
         mod2_path = self.gbxmodel_path.get()
         if old_tags_dir and mod2_path and not is_in_dir(mod2_path, tags_dir):
@@ -465,17 +461,13 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         if not fp:
             return
 
-        fp = sanitize_path(fp)
-        if not os.path.splitext(fp)[-1]:
-            fp += ".gbxmodel"
+        fp = Path(fp).with_suffix(".gbxmodel")
 
-        self.app_root.last_load_dir = os.path.dirname(fp)
-        self.gbxmodel_path.set(fp)
+        self.app_root.last_load_dir = str(fp.parent)
+        self.gbxmodel_path.set(str(fp))
 
-        path_pieces = os.path.join(self.app_root.last_load_dir, '').split(
-            "%stags%s" % (PATHDIV, PATHDIV))
-        if len(path_pieces) > 1:
-            self.tags_dir.set(os.path.join(path_pieces[0], "tags"))
+        self.tags_dir.set(
+                path_split(self.app_root.last_load_dir, "tags", after=True))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
@@ -536,7 +528,7 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         if self._compiling or self._loading or self._saving:
             return
 
-        tags_dir = sanitize_path(os.path.join(self.tags_dir.get(), ""))
+        tags_dir = self.tags_dir.get()
         if not tags_dir or not os.path.exists(tags_dir):
             return
 
@@ -550,7 +542,7 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
             filetypes=shader_exts + (('All', '*'), )
             )
 
-        fp, ext = os.path.splitext(sanitize_path(fp))
+        fp, ext = os.path.splitext(fp)
         if fp:
             if not is_in_dir(fp, tags_dir):
                 print("Specified shader is not located in the tags directory.")

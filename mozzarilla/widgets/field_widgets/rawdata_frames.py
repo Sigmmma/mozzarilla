@@ -1,15 +1,14 @@
+from pathlib import Path
 import copy
-import os
 import tkinter as tk
 
-from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
 
 from supyr_struct.buffer import get_rawdata
 from supyr_struct.defs.audio.wav import wav_def
-from supyr_struct.util import sanitize_path
 
 from binilla.widgets.field_widgets import FieldWidget, RawdataFrame
+from binilla.windows.filedialog import askopenfilename, asksaveasfilename
 
 from reclaimer.meta.wrappers.byteswapping import byteswap_pcm16_samples
 
@@ -93,7 +92,8 @@ class SoundSampleFrame(HaloRawdataFrame):
         if not filepath:
             return
 
-        ext = os.path.splitext(filepath)[1].lower()
+        filepath = Path(filepath)
+        ext = filepath.suffix.lower()
 
         curr_size = None
         index = self.attr_index
@@ -192,17 +192,16 @@ class SoundSampleFrame(HaloRawdataFrame):
 
         filepath = asksaveasfilename(
             initialdir=initialdir, title="Export sound data to...",
-            parent=self, filetypes=[(self.name, '*' + def_ext),
-                                    ('All', '*')])
+            parent=self, filetypes=[(self.name, '*' + def_ext), ('All', '*')])
 
         if not filepath:
             return
 
-        filepath, ext = os.path.splitext(filepath)
-        if not ext: ext = def_ext
-        filepath += ext
+        filepath = Path(filepath)
+        if not filepath.suffix:
+            filepath = filepath.with_suffix(def_ext)
 
-        if ext == '.wav':
+        if filepath.suffix.lower() == '.wav':
             # if the file is wav, we need to give it a header
             try:
                 wav_file = wav_def.build()

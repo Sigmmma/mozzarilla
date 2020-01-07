@@ -1,16 +1,16 @@
 import os
 import tkinter as tk
 
-from tkinter.filedialog import askopenfilename
 from traceback import format_exc
 from struct import unpack, pack
 
-from binilla.util import get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.windows.filedialog import askopenfilename
 
 from reclaimer.halo_script.hsc_decompilation import extract_h1_scripts
 
-curr_dir = get_cwd(__file__)
+from mozzarilla import editor_constants as e_c
+
 
 class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
     app_root = None
@@ -18,7 +18,7 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
 
     print_interval = 5
 
-    def __init__(self, app_root, *args, **kwargs): 
+    def __init__(self, app_root, *args, **kwargs):
         self.handler = app_root.get_handler("Halo 1 OS v4")
         self.app_root = app_root
         kwargs.update(bd=0, highlightthickness=0, bg=self.default_bg_color)
@@ -29,14 +29,10 @@ class SauceRemovalWindow(BinillaWidget, tk.Toplevel):
         self.geometry("400x80+0+0")
         self.resizable(0, 0)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except Exception:
+            print("Could not load window icon.")
 
         # make the tkinter variables
         self.scenario_path = tk.StringVar(self)

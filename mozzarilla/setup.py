@@ -21,12 +21,12 @@ except Exception:
 
 setup(
     name='mozzarilla',
-    description='A variant of Binilla for editing binary structures for \
-games built with the Blam engine.',
+    description='A variant of Binilla for editing binary structures for '
+                'games built with the Blam engine.',
     long_description=long_desc,
     version='%s.%s.%s' % mozzarilla.__version__,
-    url='http://bitbucket.org/moses_of_egypt/mozzarilla',
-    author='Devin Bobadilla',
+    url=mozzarilla.__website__,
+    author=mozzarilla.__author__,
     author_email='MosesBobadilla@gmail.com',
     license='MIT',
     packages=[
@@ -46,8 +46,8 @@ games built with the Blam engine.',
         },
     platforms=["POSIX", "Windows"],
     keywords="binilla, binary, data structure",
-    install_requires=['reclaimer', 'binilla'],
-    requires=['reclaimer', 'binilla'],
+    install_requires=['reclaimer>=2.6.0', 'binilla>=1.2.0'],
+    requires=['reclaimer>=2.6.0', 'binilla>=1.2.0'],
     provides=['mozzarilla'],
     classifiers=[
         "Development Status :: 4 - Beta",
