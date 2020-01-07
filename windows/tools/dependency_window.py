@@ -1,19 +1,19 @@
+from pathlib import Path, PureWindowsPath
 import os
 import tkinter as tk
 import zipfile
 
 from threading import Thread
-from tkinter.filedialog import askopenfilename, asksaveasfilename
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
-from binilla.util import get_cwd
+from binilla.windows.filedialog import askopenfilename, asksaveasfilename
 
-from supyr_struct.util import sanitize_path, is_in_dir
+from supyr_struct.util import path_normalize, is_in_dir, tagpath_to_fullpath
 from mozzarilla.widgets.directory_frame import DirectoryFrame,\
      HierarchyFrame, DependencyFrame
+from mozzarilla import editor_constants as e_c
 
-curr_dir = get_cwd(__file__)
 
 class DependencyWindow(tk.Toplevel, BinillaWidget):
     app_root = None
@@ -22,7 +22,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
     _zipping = False
     stop_zipping = False
 
-    def __init__(self, app_root, *args, **kwargs): 
+    def __init__(self, app_root, *args, **kwargs):
         self.handler = app_root.handler
         self.app_root = app_root
         kwargs.update(width=400, height=500, bd=0,
@@ -33,14 +33,10 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
                    app_root.handler_names[app_root._curr_handler_index])
         self.minsize(width=400, height=100)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except Exception:
+            print("Could not load window icon.")
 
         # make the tkinter variables
         self.tag_filepath = tk.StringVar(self)
@@ -57,7 +53,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
             self.button_frame, width=25, text='Zip tag recursively',
             command=self.recursive_zip)
 
-        self.dependency_window = DependencyFrame(self, app_root=self.app_root)
+        self.dependency_frame = DependencyFrame(self, app_root=self.app_root)
 
         self.filepath_entry = tk.Entry(
             self.filepath_frame, textvariable=self.tag_filepath)
@@ -73,7 +69,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
 
         self.filepath_frame.pack(fill='x', padx=1)
         self.button_frame.pack(fill='x', padx=1)
-        self.dependency_window.pack(fill='both', padx=1, expand=True)
+        self.dependency_frame.pack(fill='both', padx=1, expand=True)
 
         self.transient(app_root)
         self.apply_style()
@@ -98,8 +94,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         if not fp:
             return
 
-        fp = sanitize_path(fp)
-        self.app_root.last_load_dir = os.path.dirname(fp)
+        self.app_root.last_load_dir = Path(fp).parent
         self.tag_filepath.set(fp)
 
     def destroy(self):
@@ -110,33 +105,22 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         self.stop_zipping = True
         tk.Toplevel.destroy(self)
 
-    def get_tag(self, filepath):
-        handler = self.handler
-        def_id = handler.get_def_id(filepath)
+    def get_tag(self, tag_path):
         try:
-            tag = handler.get_tag(filepath, def_id)
+            return self.handler.get_tag(tag_path, load_unloaded=True)
         except KeyError:
-            tag = None
-        try:
-            if tag is None:
-                return handler.build_tag(
-                    filepath=os.path.join(
-                        self.dependency_window.tags_dir, filepath))
-        except Exception:
-            pass
-        return tag
+            print(format_exc())
+            return None
 
     def get_dependencies(self, tag):
-        handler = self.handler
         def_id = tag.def_id
-        dependency_cache = handler.tag_ref_cache.get(def_id)
-        tags_dir = self.dependency_window.tags_dir
+        dependency_cache = self.handler.tag_ref_cache.get(def_id)
 
         if not dependency_cache:
             return ()
 
-        nodes = handler.get_nodes_by_paths(
-            handler.tag_ref_cache[def_id], tag.data)
+        nodes = self.handler.get_nodes_by_paths(
+            self.handler.tag_ref_cache[def_id], tag.data)
 
         dependencies = []
 
@@ -145,14 +129,13 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
             if not node.filepath:
                 continue
 
-            try:
-                ext = '.' + node.tag_class.enum_name
-                if (handler.treat_mode_as_mod2 and ext == '.model' and
-                    (not os.path.exists(sanitize_path(
-                        os.path.join(tags_dir, node.filepath + '.model'))))):
-                    ext = '.gbxmodel'
-            except Exception:
-                ext = ''
+            ext = '.' + node.tag_class.enum_name
+
+            if tagpath_to_fullpath(
+                self.handler.tagsdir, PureWindowsPath(node.filepath), extension=ext
+            ) is not None and (self.handler.treat_mode_as_mod2 and ext == '.model'):
+                ext = '.gbxmodel'
+
             dependencies.append(node.filepath + ext)
         return dependencies
 
@@ -167,27 +150,26 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         if handler_name not in app.tags_dir_relative:
             print("Change the current tag set.")
             return
-        else:
-            tags_dir = sanitize_path(handler.tagsdir)
 
-        filepath = sanitize_path(filepath)
+        filepath = path_normalize(filepath)
 
-        if not is_in_dir(filepath, tags_dir, 0):
-            print("Specified tag is not located within the tags directory")
+        if not is_in_dir(filepath, self.handler.tagsdir):
+            print("%s\nis not in tagsdir\n%s" %
+                  (filepath, self.handler.tagsdir))
             return
 
-        rel_filepath = os.path.relpath(filepath, tags_dir)
+        rel_filepath = Path(filepath).relative_to(self.handler.tagsdir)
         tag = self.get_tag(rel_filepath)
         if tag is None:
             print("Could not load tag:\n    %s" % filepath)
             return
 
-        self.dependency_window.handler = handler
-        self.dependency_window.tags_dir = tags_dir
-        self.dependency_window.root_tag_path = tag.filepath
-        self.dependency_window.root_tag_text = rel_filepath
+        self.dependency_frame.handler = handler
+        self.dependency_frame.tags_dir = self.handler.tagsdir
+        self.dependency_frame.root_tag_path = tag.filepath
+        self.dependency_frame.root_tag_text = rel_filepath
 
-        self.dependency_window.reload()
+        self.dependency_frame.reload()
 
     def recursive_zip(self):
         if self._zipping:
@@ -217,11 +199,9 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         if handler_name not in app.tags_dir_relative:
             print("Change the current tag set.")
             return
-        else:
-            tags_dir = sanitize_path(handler.tagsdir)
 
-        tag_path = sanitize_path(tag_path)
-        if not is_in_dir(tag_path, tags_dir, 0):
+        tag_path = Path(tag_path)
+        if not is_in_dir(tag_path, self.handler.tagsdir):
             print("Specified tag is not located within the tags directory")
             return
 
@@ -232,8 +212,12 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         if not tagzip_path:
             return
 
-        rel_filepath = os.path.relpath(tag_path, tags_dir)
-        tag = self.get_tag(rel_filepath)
+        try:
+            rel_filepath = tag_path.relative_to(self.handler.tagsdir)
+            tag = self.get_tag(rel_filepath)
+        except ValueError:
+            tag = None
+
         if tag is None:
             print("Could not load tag:\n    %s" % tag_path)
             return
@@ -245,11 +229,12 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
         new_tags_to_zip = []
         seen_tags = set()
 
-        with zipfile.ZipFile(tagzip_path, mode='w') as tagzip:
+        with zipfile.ZipFile(str(tagzip_path), mode='w') as tagzip:
             # loop over all the tags and add them to the zipfile
             while tags_to_zip:
                 for rel_filepath in tags_to_zip:
-                    tag_path = os.path.join(tags_dir, rel_filepath)
+                    tag_path = tagpath_to_fullpath(
+                        self.handler.tagsdir, PureWindowsPath(rel_filepath))
                     if self.stop_zipping:
                         print('Recursive zip operation cancelled.\n')
                         return
@@ -267,8 +252,9 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
                         # try to conserve memory a bit
                         del tag
 
-                        tagzip.write(tag_path, arcname=rel_filepath)
+                        tagzip.write(str(tag_path), arcname=str(rel_filepath))
                     except Exception:
+                        print(format_exc())
                         print("    Could not add '%s' to zipfile." %
                               rel_filepath)
 

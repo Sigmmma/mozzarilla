@@ -121,6 +121,11 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
         if self.f_widget_parent is None:
             self.pack_padx = self.pack_pady = 0
 
+        if 'a' in self.desc['COLOR_CHANNELS']:
+            self.has_alpha = True
+        else:
+            self.has_alpha = False
+
         tk.Frame.__init__(self, *args, **e_c.fix_kwargs(**kwargs))
 
         self._initialized = True

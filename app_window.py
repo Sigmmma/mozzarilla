@@ -1,15 +1,13 @@
-import os
 import re
 import tkinter as tk
+import subprocess
 
+from pathlib import Path, PureWindowsPath, PurePath
 from threading import Thread
 from tkinter import messagebox
-from tkinter.filedialog import askopenfilename, askopenfilenames,\
-     askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from reclaimer.constants import PATHDIV, inject_halo_constants
-from supyr_struct.util import is_in_dir
+from reclaimer.constants import inject_halo_constants
 
 # before we do anything, we need to inject these constants so any definitions
 # that are built that use them will have them in their descriptor entries.
@@ -18,9 +16,11 @@ inject_halo_constants()
 from binilla.handler import Handler
 from binilla.app_window import Binilla, default_hotkeys,\
      default_tag_window_hotkeys
-from binilla.util import do_subprocess, ProcController, is_main_frozen,\
-     get_cwd, sanitize_path
+from binilla.util import do_subprocess, open_in_default_program,\
+    ProcController, is_main_frozen
 from binilla.windows.def_selector_window import DefSelectorWindow
+from binilla.windows.filedialog import askopenfilename, askopenfilenames,\
+    askdirectory, asksaveasfilename
 from binilla.windows.tag_window import read_hotkey_string
 
 from reclaimer.hek.handler import HaloHandler
@@ -29,14 +29,15 @@ from reclaimer.os_v3_hek.handler import OsV3HaloHandler
 from reclaimer.os_v4_hek.handler import OsV4HaloHandler
 from reclaimer.misc.handler import MiscHaloLoader
 from reclaimer.stubbs.handler import StubbsHandler
+from supyr_struct.util import tagpath_to_fullpath, path_split,\
+     path_replace, path_normalize, is_in_dir, is_path_empty
 
 import mozzarilla
 
 from mozzarilla import editor_constants as e_c
 from mozzarilla.widgets.field_widget_picker import def_halo_widget_picker
-from mozzarilla.widgets.directory_frame import DirectoryFrame,\
-     HierarchyFrame, DependencyFrame
-from mozzarilla.windows.tag_window import HaloTagWindow
+from mozzarilla.widgets.directory_frame import DirectoryFrame
+from mozzarilla.windows.tag_window import HaloTagWindow, HaloConfigWindow
 from mozzarilla.windows.tools import \
      SearchAndReplaceWindow, SauceRemovalWindow, \
      BitmapSourceExtractorWindow, BitmapConverterWindow,\
@@ -67,22 +68,25 @@ default_hotkeys.update({
     #'<F12>': "create_hek_pool_window",
     })
 
-this_curr_dir = get_cwd(__file__)
-
-
 class Mozzarilla(Binilla):
     app_name = 'Mozzarilla'
     version = "%s.%s.%s" % mozzarilla.__version__
     log_filename = 'mozzarilla.log'
     debug = 0
 
-    issue_tracker_url = "https://github.com/MosesofEgypt/mozzarilla/issues"
+    '''Directories/filepaths'''
+    tags_dirs = ()
 
-    curr_dir = this_curr_dir
+    _styles_dir  = Path(e_c.SETTINGS_DIR, "styles")
+    _config_path = Path(e_c.SETTINGS_DIR, "mozzarilla.cfg")
+    _last_data_load_dir = Path("")
+    _jms_load_dir = Path("")
+    _bitmap_load_dir = Path("")
+
+
+    issue_tracker_url = mozzarilla.__website__ + "/issues"
+
     _mozzarilla_initialized = False
-
-    styles_dir  = this_curr_dir + PATHDIV + "styles"
-    config_path = this_curr_dir + '%smozzarilla.cfg' % PATHDIV
     guerilla_workspace_def  = None
     config_version = 3
 
@@ -115,8 +119,6 @@ class Mozzarilla(Binilla):
         "Halo 3"
         ))
 
-    tags_dirs = ()
-
     about_module_names = (
         "arbytmap",
         "binilla",
@@ -134,15 +136,13 @@ class Mozzarilla(Binilla):
     _curr_tags_dir_index = 0
 
     widget_picker = def_halo_widget_picker
+    config_window_class = HaloConfigWindow
 
     tool_windows = None
 
     window_panes = None
     directory_frame = None
     directory_frame_width = 200
-    last_data_load_dir = ""
-    jms_load_dir = ""
-    bitmap_load_dir = ""
 
     def __init__(self, *args, **kwargs):
         self.debug = kwargs.pop('debug', self.debug)
@@ -152,12 +152,17 @@ class Mozzarilla(Binilla):
         # the config requires using methods in the handler.
         kwargs['handler'] = MiscHaloLoader(debug=self.debug)
         try:
-            with open(os.path.join(self.curr_dir, "tad.gsm"[::-1]), 'r', -1, "037") as f:
+            with Path(e_c.MOZZLIB_DIR, "tad.gsm"[::-1]).open('r', -1, "037") as f:
                 setattr(self, 'segassem_tuoba'[::-1], list(l for l in f))
         except Exception:
             pass
 
-        self.tags_dirs = ["%s%stags%s" % (this_curr_dir, PATHDIV, PATHDIV)]
+        tags_dir_fullpath = tagpath_to_fullpath(
+            e_c.WORKING_DIR, "tags", folder=True)
+        if tags_dir_fullpath is None:
+            tags_dir_fullpath = e_c.WORKING_DIR.joinpath("tags")
+
+        self.tags_dirs = [Path(tags_dir_fullpath)]
         self.handlers = list({} for i in range(len(self.handler_classes)))
         self.handler_names = list(self.handler_names)
 
@@ -179,23 +184,15 @@ class Mozzarilla(Binilla):
 
         Binilla.__init__(self, *args, **kwargs)
 
-        self.app_bitmap_filepath = os.path.join(this_curr_dir, 'mozzarilla.png')
-        if not os.path.isfile(self.app_bitmap_filepath):
-            self.app_bitmap_filepath = os.path.join(this_curr_dir, 'icons', 'mozzarilla.png')
-        if not os.path.isfile(self.app_bitmap_filepath):
-            self.app_bitmap_filepath = ""
+        self.app_bitmap_filepath = e_c.MOZZ_BITMAP_PATH
 
         if not e_c.IS_LNX:
-            try:
-                try:
-                    self.icon_filepath = os.path.join(this_curr_dir, 'mozzarilla.ico')
-                    self.iconbitmap(self.icon_filepath)
-                except Exception:
-                    self.icon_filepath = os.path.join(this_curr_dir, 'icons', 'mozzarilla.ico')
-                    self.iconbitmap(self.icon_filepath)
-            except Exception:
-                self.icon_filepath = ""
-                print("Could not load window icon.")
+            self.icon_filepath = e_c.MOZZ_ICON_PATH
+            if self.icon_filepath:
+                self.iconbitmap(str(self.icon_filepath))
+
+        if is_path_empty(self.icon_filepath):
+            print("Could not load window icon.")
 
         self.file_menu.insert_command("Exit", label="Load guerilla config",
                                       command=self.load_guerilla_config)
@@ -212,11 +209,15 @@ class Mozzarilla(Binilla):
         self.settings_menu.add_separator()
         self.settings_menu.add_command(
             label="Edit config", command=self.show_config_file)
+        self.settings_menu.add_command(
+            label="Open config directory", command=self.show_config_folder)
         self.settings_menu.add_separator()
         self.settings_menu.add_command(
             label="Load style", command=self.load_style)
         self.settings_menu.add_command(
             label="Save current style", command=self.make_style)
+        self.settings_menu.add_command(
+            label="Reset style", command=self.reset_style)
 
         # make the tools and tag set menus
         self.tools_menu = tk.Menu(self.main_menu, tearoff=0)
@@ -224,7 +225,7 @@ class Mozzarilla(Binilla):
         self.defs_menu = tk.Menu(self.main_menu, tearoff=0,
                                  postcommand=self.generate_defs_menu)
         self.converters_menu = tk.Menu(self.tools_menu, tearoff=0)
-        
+
         self.main_menu.delete(0, "end")  # clear the menu
         self.main_menu.add_cascade(label="File",    menu=self.file_menu)
         self.main_menu.add_cascade(label="Settings", menu=self.settings_menu)
@@ -350,33 +351,55 @@ class Mozzarilla(Binilla):
                 parent=self)
 
     @property
-    def data_dir(self):
-        try:
-            tags_dir = self.tags_dir
-            if not tags_dir:
-                return ""
+    def last_data_load_dir(self):
+        return self._last_data_load_dir
+    @last_data_load_dir.setter
+    def last_data_load_dir(self, new_val):
+        if not isinstance(new_val, Path):
+            new_val = Path(new_val)
+        self._last_data_load_dir = new_val
 
-            return os.path.join(os.path.dirname(tags_dir.rstrip(PATHDIV)), "data")
-        except IndexError:
-            return None
+    @property
+    def jms_load_dir(self):
+        return self._jms_load_dir
+    @jms_load_dir.setter
+    def jms_load_dir(self, new_val):
+        if not isinstance(new_val, Path):
+            new_val = Path(new_val)
+        self._jms_load_dir = new_val
+
+    @property
+    def bitmap_load_dir(self):
+        return self._bitmap_load_dir
+    @bitmap_load_dir.setter
+    def bitmap_load_dir(self, new_val):
+        if not isinstance(new_val, Path):
+            new_val = Path(new_val)
+        self._bitmap_load_dir = new_val
+
+    @property
+    def data_dir(self):
+        tags_dir = self.tags_dir
+        if tags_dir is None:
+            return e_c.WORKING_DIR
+
+        return path_replace(tags_dir, "tags", "data")
 
     @property
     def tags_dir(self):
         try:
-            return self.tags_dirs[self._curr_tags_dir_index]
+            return Path(self.tags_dirs[self._curr_tags_dir_index])
         except IndexError:
             return None
 
     @tags_dir.setter
     def tags_dir(self, new_val):
-        assert isinstance(new_val, str)
-        new_val = os.path.join(sanitize_path(new_val), '')  # ensure it ends with a \
-        self.tags_dirs[self._curr_tags_dir_index] = new_val
+        assert isinstance(new_val, (str, Path))
+        self.tags_dirs[self._curr_tags_dir_index] = Path(new_val)
 
     def get_tags_dir_index(self, tags_dir):
         try:
-            tags_dir = os.path.join(sanitize_path(tags_dir), '')
-            return self.tags_dirs.index(tags_dir)
+            return self.tags_dirs.index(Path(tags_dir))
         except Exception:
             return None
 
@@ -403,20 +426,19 @@ class Mozzarilla(Binilla):
             if isinstance(index, str):
                 index = self.handler_names.index(index)
 
-            tags_dir = os.path.join(sanitize_path(tags_dir), '')
-            if not self.handlers[index].get(tags_dir.lower(), None):
-                if create_if_not_exists:
-                    self.create_handlers(tags_dir, index)
-                else:
-                    return None
+            tags_dir = Path(tags_dir)
 
-            return self.handlers[index][tags_dir.lower()]
+            if (self.handlers[index].get(tags_dir) is None and
+                    create_if_not_exists):
+                self.create_handlers(tags_dir, index)
+
+            return self.handlers[index].get(tags_dir)
         except Exception:
             return None
 
     def create_handlers(self, tags_dir, handler_indices=()):
-        tags_dir = os.path.join(sanitize_path(tags_dir), '')
-        tags_dir_key = tags_dir.lower()
+        tags_dir = Path(tags_dir)
+
         if isinstance(handler_indices, int):
             handler_indices = (handler_indices, )
         elif not handler_indices:
@@ -426,13 +448,13 @@ class Mozzarilla(Binilla):
             if isinstance(i, str):
                 i = self.handler_names.index(i)
 
-            handlers_by_dir = self.handlers[i]
-            if handlers_by_dir.get(tags_dir_key, None):
+            if self.handlers[i].get(tags_dir) is not None:
                 continue
 
+            # TODO: Investigate.
             handler = self.handler_classes[i](debug=self.debug, case_sensitive=e_c.IS_LNX)
             handler.tagsdir = tags_dir
-            handlers_by_dir[tags_dir_key] = handler
+            self.handlers[i][tags_dir] = handler
 
     def set_active_handler(self, handler=None, index=None, tags_dir=None):
         if handler is not None:
@@ -450,9 +472,10 @@ class Mozzarilla(Binilla):
         else:
             if not tags_dir:
                 tags_dir = self.tags_dir
-            elif not isinstance(tags_dir, str):
+            elif not isinstance(tags_dir, (str, PurePath)):
                 raise TypeError("Invalid type for tags_dir argument. Must be "
-                                "of type %s, not %s" % (str, type(tags_dir)))
+                                "of type %s, or %s, not %s" % (
+                                    str, PurePath, type(tags_dir)))
 
             if index is None:
                 index = self._curr_handler_index
@@ -503,7 +526,6 @@ class Mozzarilla(Binilla):
             # Update window title to reflect tag set that we're using.
         self.title('%s v%s [%s]' % (self.app_name, self.version, self.handler_names[menu_index]))
 
-
     def generate_defs_menu(self):
         self.defs_menu.delete(0, "end")  # clear the menu
         for i in range(len(self.handler_names)):
@@ -521,7 +543,7 @@ class Mozzarilla(Binilla):
         if not tags_dir:
             return
 
-        tags_dir = os.path.join(sanitize_path(tags_dir), '')
+        tags_dir = Path(tags_dir)
         if self.get_tags_dir_index(tags_dir) is not None:
             if manual:
                 print("That tags directory already exists.")
@@ -541,6 +563,8 @@ class Mozzarilla(Binilla):
         dirs_count = len(self.tags_dirs)
         # need at least 2 tags dirs to delete one manually
         if dirs_count < 2 and manual:
+            print("You need more than one tags directory before you're "
+                  "allowed to remove one.")
             return
 
         if index is None:
@@ -569,7 +593,8 @@ class Mozzarilla(Binilla):
         if not tags_dir:
             return
 
-        tags_dir = os.path.join(sanitize_path(tags_dir), '')
+        tags_dir = Path(tags_dir)
+
         if tags_dir in self.tags_dirs:
             print("That tags directory already exists.")
             return
@@ -631,11 +656,11 @@ class Mozzarilla(Binilla):
 
         for s in ("last_data_load_dir", "jms_load_dir",
                   "bitmap_load_dir")[:len(load_dirs)]:
-            try: setattr(self, s, load_dirs[s].path)
+            try: setattr(self, s, Path(load_dirs[s].path))
             except IndexError: pass
 
         if not self.tags_dir:
-            self.tags_dir = self.curr_dir + "%stags%s" % (PATHDIV, PATHDIV)
+            self.tags_dir = tagpath_to_fullpath(e_c.WORKING_DIR, "tags", folder=True)
 
     def record_open_tags(self):
         try:
@@ -675,7 +700,7 @@ class Mozzarilla(Binilla):
                 header.tags_dir_index = tags_dir_index
                 header.handler_index = handler_index
 
-                open_tag.def_id, open_tag.path = tag.def_id, tag.filepath
+                open_tag.def_id, open_tag.path = tag.def_id, str(tag.filepath)
             except Exception:
                 print(format_exc())
 
@@ -722,7 +747,7 @@ class Mozzarilla(Binilla):
             print("Change the current tag set.")
             return
 
-        fp = askopenfilename(initialdir=self.last_load_dir, parent=self,
+        fp = askopenfilename(initialdir=str(self.last_load_dir), parent=self,
                              title="Select the tag to load",
                              filetypes=(('Guerilla config', '*.cfg'),
                                         ('All', '*')))
@@ -730,14 +755,16 @@ class Mozzarilla(Binilla):
         if not fp:
             return
 
-        self.last_load_dir = os.path.dirname(fp)
-        tags_dir = os.path.join(os.path.dirname(fp), "tags", "")
-        if not os.path.exists(tags_dir):
+        fp = Path(fp)
+
+        self.last_load_dir = fp.parent
+        tags_dir = tagpath_to_fullpath(fp.parent, "tags", folder=True)
+        if tags_dir is None:
             print("Specified guerilla.cfg has no corresponding tags directory.")
             return
 
+        tags_dir = Path(tags_dir)
         workspace = self.guerilla_workspace_def.build(filepath=fp)
-        tags_dir = os.path.join(sanitize_path(tags_dir), '')
         if self.get_tags_dir_index(tags_dir) is None:
             print("Adding tags directory:\n    %s" % tags_dir)
             self.add_tags_dir(tags_dir=tags_dir)
@@ -745,7 +772,7 @@ class Mozzarilla(Binilla):
         self.set_active_handler(tags_dir=tags_dir)
 
         for tag in workspace.data.tags:
-            if not(tag.is_valid_tag and tag.filepath):
+            if not(tag.is_valid_tag and not is_path_empty(tag.filepath)):
                 continue
 
             windows = self.load_tags(tag.filepath)
@@ -772,42 +799,46 @@ class Mozzarilla(Binilla):
             defs = self.handler.defs
             for id in sorted(defs.keys()):
                 filetypes.append((id, defs[id].ext))
-            filepaths = askopenfilenames(initialdir=self.last_load_dir,
+            filepaths = askopenfilenames(initialdir=str(self.last_load_dir),
                                          filetypes=filetypes, parent=self,
                                          title="Select the tag to load")
+
             if not filepaths:
                 return ()
-
-        if isinstance(filepaths, str):
-            # account for a stupid bug with certain versions of windows
-            if filepaths.startswith('{'):
+            elif isinstance(filepaths, str) and filepaths.startswith('{'):
+                # account for a stupid bug with certain versions of windows
                 filepaths = re.split("\}\W\{", filepaths[1:-1])
-            else:
-                filepaths = (filepaths, )
 
-        sani = sanitize_path
-        sanitized_paths = [sani(path) for path in filepaths]
+        if isinstance(filepaths, (str, PurePath)):
+            filepaths = (filepaths, )
+
+        if not filepaths:
+            return ()
+
+        filepaths = list(Path(fp) for fp in filepaths)
 
         # make sure all the chosen tag paths are relative
         # to the current tags directory if they must be
         last_load_dir = self.last_load_dir
-        tags_dir = os.path.realpath(tags_dir)
         if self.handler_name in self.tags_dir_relative:
-            for i in range(len(sanitized_paths)):
-                path = sanitized_paths[i]
-                if not path:
+            for path in filepaths:
+                if is_path_empty(path):
                     # path is empty, so making a new tag
                     continue
-                elif is_in_dir(path, tags_dir, 0):
-                    # make the path relative to the tags_dir
-                    last_load_dir = os.path.dirname(path)
-                    sanitized_paths[i] = os.path.relpath(path, tags_dir)
+                elif is_in_dir(path, tags_dir):
+                    last_load_dir = path.parent
                     continue
+                else:
+                    print(
+                        "Not loading tag:\n"
+                        "    %s\n"
+                        "\n"
+                        "Reason: Not located in current tags folder:\n"
+                        "    %s"
+                        % (path, tags_dir))
+                    return ()
 
-                print("Specified tag(s) are not located in the tags directory")
-                return ()
-
-        windows = Binilla.load_tags(self, sanitized_paths, def_id)
+        windows = Binilla.load_tags(self, filepaths, def_id)
         self.last_load_dir = last_load_dir
 
         if not windows:
@@ -826,14 +857,14 @@ class Mozzarilla(Binilla):
         for def_id in sorted(defs.keys()):
             filetypes.append((def_id, defs[def_id].ext))
 
-        fp = askopenfilename(initialdir=self.last_load_dir,
+        fp = askopenfilename(initialdir=str(self.last_load_dir),
                              filetypes=filetypes, parent=self,
                              title="Select the tag to load")
 
         if not fp:
             return
 
-        self.last_load_dir = os.path.dirname(fp)
+        self.last_load_dir = Path(fp).parent
         dsw = DefSelectorWindow(
             self, title="Which tag is this", action=lambda def_id:
             self.load_tags(filepaths=fp, def_id=def_id))
@@ -862,7 +893,11 @@ class Mozzarilla(Binilla):
 
         # change the tags filepath to be relative to the current tags directory
         if hasattr(tag, "rel_filepath"):
-            tag.filepath = os.path.join(tag.tags_dir, tag.rel_filepath)
+            full_filepath = tagpath_to_fullpath(tag.tags_dir, tag.rel_filepath)
+            if full_filepath:
+                tag.filepath = full_filepath
+            else:
+                tag.filepath = Path(tag.tags_dir, tag.rel_filepath)
 
         return Binilla.save_tag(self, tag)
 
@@ -879,38 +914,34 @@ class Mozzarilla(Binilla):
         if filepath is None:
             ext = tag.ext
             filepath = asksaveasfilename(
-                initialdir=os.path.dirname(tag.filepath), parent=self,
+                initialdir=Path(tag.filepath).parent, parent=self,
                 defaultextension=ext, title="Save tag as...",
                 filetypes=[(ext[1:], "*" + ext), ('All', '*')])
         else:
             filepath = tag.filepath
 
-        if not filepath:
+        if is_path_empty(filepath):
             return
 
         # make sure to flush any changes made using widgets to the tag
         w = self.get_tag_window_by_tag(tag)
 
         # make sure the filepath is sanitized
-        filepath = sanitize_path(filepath)
+        filepath = Path(path_normalize(filepath))
 
         handler = tag.handler
         tags_dir = self.tags_dir
         tagsdir_rel = handler.tagsdir_relative
 
         try:
-            self.last_load_dir = os.path.dirname(filepath)
-            if tagsdir_rel:
-                filepath = os.path.relpath(filepath, tag.tags_dir)
-
-                if tag.tags_dir != tags_dir:
-                    # trying to save outside tags directory
-                    messagebox.showerror(
-                        "Saving outside tags directory", ("Cannot save:\n\n" +
-                         "    %s\n\noutside the tags directory:\n\n    %s\n\n" +
-                         "Change the tags directory back to save this tag.") %
-                        (filepath, tag.tags_dir), parent=self.focus_get())
-                    return
+            self.last_load_dir = filepath.parent
+            if tagsdir_rel and not is_in_dir(filepath, tag.tags_dir):
+                messagebox.showerror(
+                    "Saving outside tags directory", ("Cannot save:\n\n"
+                    "    %s\n\noutside the tags directory:\n\n    %s\n\n"
+                    "Change the tags directory back to save this tag.") %
+                    (filepath, tag.tags_dir), parent=self.focus_get())
+                return
 
             self.add_tag(tag, filepath)
             w.save(temp=False)
@@ -948,6 +979,11 @@ class Mozzarilla(Binilla):
         if filepath is None:
             filepath = self.config_path
 
+        filepath = Path(filepath)
+
+        # Make directory if it doesn't exist
+        filepath.parent.mkdir(parents=True, exist_ok=True)
+
         # create the config file from scratch
         self.config_file = self.config_def.build()
         self.config_file.filepath = filepath
@@ -962,7 +998,7 @@ class Mozzarilla(Binilla):
         tags_dirs = data.mozzarilla.tags_dirs
         for tags_dir in self.tags_dirs:
             tags_dirs.append()
-            tags_dirs[-1].path = tags_dir
+            tags_dirs[-1].path = str(tags_dir)
 
         self.update_config()
 
@@ -996,17 +1032,16 @@ class Mozzarilla(Binilla):
         mozz.selected_handler.data = self._curr_handler_index
         mozz.last_tags_dir = self._curr_tags_dir_index
 
-        sani = sanitize_path
         del tags_dirs[:]
         for tags_dir in self.tags_dirs:
             tags_dirs.append()
-            tags_dirs[-1].path = sani(tags_dir)
+            tags_dirs[-1].path = str(path_normalize(tags_dir))
 
         if len(load_dirs.NAME_MAP) > len(load_dirs):
             load_dirs.extend(len(load_dirs.NAME_MAP) - len(load_dirs))
 
         for s in ("last_data_load_dir", "jms_load_dir", "bitmap_load_dir"):
-            try: load_dirs[s].path = getattr(self, s)
+            try: load_dirs[s].path = str(getattr(self, s))
             except IndexError: pass
 
         if mozz.flags.show_hierarchy_window and mozz.flags.show_console_window:
@@ -1042,13 +1077,11 @@ class Mozzarilla(Binilla):
             except Exception:
                 show_full = False
 
-            tags_dir_str = tags_dir[:-1]
+            tags_dir_str = tags_dir
             if not show_full:
-                tags_dir_str = tags_dir_str.split(PATHDIV)
-                if tags_dir_str[-1].lower() != "tags":
-                    tags_dir_str = tags_dir_str[-1]
-                else:
-                    tags_dir_str = tags_dir_str[-2]
+                tags_dir_str = Path(tags_dir).name
+                if tags_dir_str.lower() == 'tags':
+                    tags_dir_str = Path(tags_dir).parent.name
 
             handler_i = self.get_handler_index(window.handler)
 
@@ -1102,14 +1135,6 @@ class Mozzarilla(Binilla):
                                     window_cls=window_cls,
                                     is_new_tag=is_new_tag)
         self.update_tag_window_title(w)
-        try:
-            try:
-                w.iconbitmap(os.path.join(this_curr_dir, 'mozzarilla.ico'))
-            except Exception:
-                w.iconbitmap(os.path.join(this_curr_dir, 'icons', 'mozzarilla.ico'))
-        except Exception:
-            pass
-
         return w
 
     def make_window_panes(self):
@@ -1223,12 +1248,15 @@ class Mozzarilla(Binilla):
         strings_from_txt(self)
 
     def upgrade_config_version(self, filepath):
-        old_version = self.config_version_def.build(filepath=filepath).data.version
+        old_version = self.config_version_def.build(filepath=str(filepath)).data.version
         if old_version in (1, 2):
             new_config = mozzarilla.defs.upgrade_config.upgrade_v2_to_v3(
-                self.config_defs[2].build(filepath=filepath),
+                self.config_defs[2].build(filepath=str(filepath)),
                 self.config_defs[3].build())
         else:
             raise ValueError("Config header version is not valid")
 
         return new_config
+
+    def show_config_folder(self, **kw):
+        open_in_default_program(e_c.SETTINGS_DIR)

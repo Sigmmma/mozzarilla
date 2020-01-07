@@ -5,7 +5,7 @@ try:
 except (ImportError, SystemError):
     from converter_base import ConverterBase
 
-import os
+from pathlib import PurePath
 import threadsafe_tkinter as tk
 
 from math import sqrt
@@ -147,7 +147,7 @@ class ModelConverter(ConverterBase, window_base_class):
             src_tag = mod2_def.build(filepath=tag_path)
             dst_tag = mode_def.build()
 
-        dst_tag.filepath = os.path.splitext(tag_path)[0] + "." + self.dst_ext
+        dst_tag.filepath = PurePath(tag_path).with_suffix("." + self.dst_ext)
         convert_model(src_tag, dst_tag, self.to_gbxmodel)
         return dst_tag
 

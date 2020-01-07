@@ -1,13 +1,13 @@
 import os
-import tkinter as tk
 import time
+import tkinter as tk
 
+from pathlib import Path
 from tkinter import messagebox
-from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import sanitize_path, get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.windows.filedialog import askdirectory, asksaveasfilename
 
 from reclaimer.hek.defs.antr import antr_def
 from reclaimer.animation.jma import read_jma, write_jma,\
@@ -17,15 +17,15 @@ from reclaimer.animation.animation_compilation import \
      ANIMATION_COMPILE_MODE_PRESERVE, ANIMATION_COMPILE_MODE_ADDITIVE
 from reclaimer.animation.util import partial_mod2_def
 
-from supyr_struct.defs.constants import PATHDIV
-from supyr_struct.util import is_in_dir
+from supyr_struct.util import is_in_dir, path_normalize,\
+     path_split, path_replace
+
+from mozzarilla import editor_constants as e_c
 
 if __name__ == "__main__":
     window_base_class = tk.Tk
 else:
     window_base_class = tk.Toplevel
-
-curr_dir = get_cwd(__file__)
 
 
 class AnimationsCompilerWindow(window_base_class, BinillaWidget):
@@ -56,14 +56,10 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.title("Model_animations compiler")
         self.resizable(1, 1)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except Exception:
+            print("Could not load window icon.")
 
         tags_dir = getattr(app_root, "tags_dir", "")
 
@@ -212,7 +208,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         for w in (self.update_mode_frame,
                   self.animation_delta_tolerance_frame):
             w.pack(expand=True, fill='both')
-        
+
         for w in (self.compile_mode_replace_rbtn,
                   self.compile_mode_preserve_rbtn,
                   self.compile_mode_additive_rbtn,):
@@ -398,19 +394,21 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             return
 
         tags_dir = self.tags_dir.get()
-        data_dir = os.path.join(os.path.dirname(os.path.dirname(tags_dir)), "data", "")
+        # Add data to the path and then use path_replace to match the case of any
+        # data directory that might already be here.
+        data_dir = str(path_replace(Path(tags_dir).parent.joinpath("data"), "data", "data"))
         jma_dir = self.jma_dir.get()
         if tags_dir and not jma_dir:
             jma_dir = data_dir
 
-        dirpath = askdirectory(
+        dirpath = path_normalize(askdirectory(
             initialdir=jma_dir, parent=self,
-            title="Select the folder of animations to compile...")
+            title="Select the folder of animations to compile..."))
 
-        dirpath = os.path.join(sanitize_path(dirpath), "")
         if not dirpath:
             return
 
+        dirpath = str(Path(dirpath))
         if tags_dir and data_dir and os.path.basename(dirpath).lower() == "animations":
             object_dir = os.path.dirname(dirpath)
 
@@ -422,10 +420,10 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.app_root.last_load_dir = os.path.dirname(dirpath)
         self.jma_dir.set(dirpath)
         if not self.tags_dir.get():
-            path_pieces = self.app_root.last_load_dir.split(
-                "%sdata%s" % (PATHDIV, PATHDIV))
-            if len(path_pieces) > 1:
-                self.tags_dir.set(os.path.join(path_pieces[0], "tags"))
+            self.tags_dir.set(
+                os.path.join(
+                    path_split(self.app_root.last_load_dir, "data"),
+                    "tags"))
 
     def tags_dir_browse(self):
         if self._compiling or self._loading or self._saving:
@@ -436,9 +434,10 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             initialdir=old_tags_dir, parent=self,
             title="Select the root of the tags directory")
 
-        tags_dir = sanitize_path(os.path.join(tags_dir, ""))
         if not tags_dir:
             return
+
+        tags_dir = str(Path(tags_dir))
 
         antr_path = self.model_animations_path.get()
         if old_tags_dir and antr_path and not is_in_dir(antr_path, tags_dir):
@@ -464,17 +463,13 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if not fp:
             return
 
-        fp = sanitize_path(fp)
-        if not os.path.splitext(fp)[-1]:
-            fp += ".model_animations"
+        fp = Path(fp).with_suffix(".model_animations")
 
-        self.app_root.last_load_dir = os.path.dirname(fp)
-        self.model_animations_path.set(fp)
+        self.app_root.last_load_dir = str(fp.parent)
+        self.model_animations_path.set(str(fp))
 
-        path_pieces = os.path.join(self.app_root.last_load_dir, '').split(
-            "%stags%s" % (PATHDIV, PATHDIV))
-        if len(path_pieces) > 1:
-            self.tags_dir.set(os.path.join(path_pieces[0], "tags"))
+        self.tags_dir.set(
+            path_split(self.app_root.last_load_dir, "tags", after=True))
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)

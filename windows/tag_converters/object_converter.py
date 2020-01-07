@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 
+from pathlib import Path
+
 try:
     from .converter_base import ConverterBase
 except (ImportError, SystemError):
     from converter_base import ConverterBase
-import os
 import threadsafe_tkinter as tk
 
 from traceback import format_exc
@@ -67,7 +68,7 @@ def obje_to_obje(obje_path, src_type, dst_type):
 
     src_tag = src_def.build(filepath=obje_path)
     dst_tag = dst_def.build()
-    dst_tag.filepath = (os.path.splitext(obje_path)[0] + "." + dst_type)
+    dst_tag.filepath = Path(obje_path).with_suffix("." + dst_type)
 
     src_tagdata = src_tag.data.tagdata
     dst_tagdata = dst_tag.data.tagdata
@@ -164,7 +165,7 @@ class ObjectConverter(ConverterBase, window_base_class):
         if curr_tag_path == self.tag_path.get(): return
 
         try:
-            ext = os.path.splitext(self.tag_path.get())[-1].lower().strip(". ")
+            ext = Path(curr_tag_path).suffix[1:].lower()
             self.src_menu.sel_index = self.object_types.index(ext)
         except Exception:
             pass

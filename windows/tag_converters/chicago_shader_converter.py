@@ -5,7 +5,7 @@ try:
 except (ImportError, SystemError):
     from converter_base import ConverterBase
 
-import os
+from pathlib import Path
 import threadsafe_tkinter as tk
 
 from traceback import format_exc
@@ -21,8 +21,7 @@ if __name__ == "__main__":
 def scex_to_schi(scex_path):
     scex_tag = scex_def.build(filepath=scex_path)
     schi_tag = schi_def.build()
-    schi_tag.filepath = (os.path.splitext(scex_path)[0] +
-                         ".shader_transparent_chicago")
+    schi_tag.filepath = Path(scex_path).with_suffix(".shader_transparent_chicago")
 
     scex_attrs = scex_tag.data.tagdata.scex_attrs
     schi_attrs = schi_tag.data.tagdata.schi_attrs
