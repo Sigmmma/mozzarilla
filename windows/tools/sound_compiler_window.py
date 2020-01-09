@@ -2,25 +2,28 @@ import os
 import tkinter as tk
 import time
 
+from pathlib import Path
+
 from tkinter import messagebox
-from tkinter.filedialog import askdirectory, asksaveasfilename
 from traceback import format_exc
 
-from binilla.util import sanitize_path, get_cwd
 from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.widgets.scroll_menu import ScrollMenu
+from binilla.windows.filedialog import askdirectory, asksaveasfilename
 
 from reclaimer.hek.defs.snd_ import snd__def
 from reclaimer.sounds import constants, adpcm
 from reclaimer.sounds.blam_sound_bank import BlamSoundBank
 from reclaimer.sounds.sound_compilation import compile_sound
 
+from mozzarilla import editor_constants as e_c
+
 if __name__ == "__main__":
     window_base_class = tk.Tk
 else:
     window_base_class = tk.Toplevel
 
-curr_dir = get_cwd(__file__)
+curr_dir = Path(__file__).parent
 
 compression_names = {
     constants.COMPRESSION_PCM_8_SIGNED: "8bit PCM signed",
@@ -59,9 +62,9 @@ adpcm_lookahead_names = {
     }
 
 compression_menu_values = (
-    constants.COMPRESSION_PCM_16_BE,
     constants.COMPRESSION_XBOX_ADPCM,
-    #constants.COMPRESSION_OGG
+    #constants.COMPRESSION_OGG,
+    constants.COMPRESSION_PCM_16_BE,
     )
 sample_rate_menu_values = (
     constants.SAMPLE_RATE_22K,
@@ -78,10 +81,10 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
 
     blam_sound_bank = None
     snd__tag = None
-    
+
     wav_dir = None
     sound_path = None
-    
+
     generate_mouth_data = None
     split_into_smaller_chunks = None
 
@@ -121,14 +124,10 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         self.title("Sound compiler")
         self.resizable(1, 1)
         self.update()
-        for sub_dirs in ((), ('..', '..'), ('icons', )):
-            try:
-                self.iconbitmap(os.path.os.path.join(
-                    *((curr_dir,) + sub_dirs + ('mozzarilla.ico', ))
-                    ))
-                break
-            except Exception:
-                pass
+        try:
+            self.iconbitmap(e_c.MOZZ_ICON_PATH)
+        except Exception:
+            print("Could not load window icon.")
 
         self.wav_dir = tk.StringVar(self)
         self.sound_path = tk.StringVar(self)
@@ -325,7 +324,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
 
         for w in (self.processing_frame, self.adpcm_frame, self.misc_frame):
             w.pack(expand=True, fill='both')
-        
+
         for w in (self.compile_mode_replace_rbtn,
                   self.compile_mode_preserve_rbtn,
                   self.compile_mode_additive_rbtn,):
@@ -471,9 +470,10 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
             initialdir=wav_dir, parent=self,
             title="Select the folder of wav files to compile...")
 
-        dirpath = os.path.join(sanitize_path(dirpath), "")
         if not dirpath:
             return
+
+        dirpath = Path(dirpath)
 
         self.app_root.last_load_dir = os.path.dirname(dirpath)
         self.wav_dir.set(dirpath)
@@ -490,7 +490,6 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         if not fp:
             return
 
-        fp = sanitize_path(fp)
         if not os.path.splitext(fp)[-1]:
             fp += ".sound"
 
