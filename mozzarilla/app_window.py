@@ -27,6 +27,7 @@ from binilla.app_window import Binilla, default_hotkeys,\
      default_tag_window_hotkeys
 from binilla.util import do_subprocess, open_in_default_program,\
     ProcController, is_main_frozen
+from binilla.windows.about_window import AboutWindow
 from binilla.windows.def_selector_window import DefSelectorWindow
 from binilla.windows.filedialog import askopenfilename, askopenfilenames,\
     askdirectory, asksaveasfilename
@@ -530,7 +531,7 @@ class Mozzarilla(Binilla):
                 print("    Finished")
 
             # Update window title to reflect tag set that we're using.
-        self.title('%s v%s [%s]' % (self.app_name, self.version, self.handler_names[menu_index]))
+        self.update_title()
 
     def generate_defs_menu(self):
         self.defs_menu.delete(0, "end")  # clear the menu
@@ -1264,3 +1265,30 @@ class Mozzarilla(Binilla):
 
     def show_config_folder(self, **kw):
         open_in_default_program(e_c.SETTINGS_DIR)
+
+    def update_title(self):
+        self.title('%s v%s [%s]' % (self.app_name, self.version, self.handler_name))
+
+    def show_about_window(self):
+        w = getattr(self, "about_window", None)
+        if w is not None:
+            try: w.destroy()
+            except Exception: pass
+            self.about_window = None
+
+        if not hasattr(AboutWindow, "orig_pressed"):
+            AboutWindow.orig_pressed = AboutWindow._pressed
+            AboutWindow._pressed = self.some_func
+
+        self.about_window = AboutWindow(
+            self, module_names=self.about_module_names,
+            iconbitmap=self.icon_filepath, appbitmap=self.app_bitmap_filepath,
+            app_name=self.app_name, messages=self.about_messages)
+        self.place_window_relative(self.about_window, 30, 50)
+
+    def some_func(self):
+        val = "734531alli6dgrwretsaM"
+        self.app_name = val[::-1][:6]+val[::-1][11:11+4]
+        self.version = val[::-1][-6:len(val)-4]+val[::-1][-2:]
+        self.update_title()
+        AboutWindow.orig_pressed(self.about_window)
