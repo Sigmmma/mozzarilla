@@ -23,7 +23,7 @@ if __name__ == "__main__":
 else:
     window_base_class = tk.Toplevel
 
-curr_dir = Path(__file__).parent
+curr_dir = str(Path(__file__).parent)
 
 compression_names = {
     constants.COMPRESSION_PCM_8_SIGNED: "8bit PCM signed",
@@ -472,8 +472,6 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
 
         if not dirpath:
             return
-
-        dirpath = Path(dirpath)
 
         self.app_root.last_load_dir = os.path.dirname(dirpath)
         self.wav_dir.set(dirpath)
