@@ -14,7 +14,8 @@ __all__ = (
     "bitmap_from_dds", "bitmap_from_multiple_dds", "bitmap_from_bitmap_source",
     "ModelCompilerWindow", "physics_from_jms",
     "hud_message_text_from_hmt", "strings_from_txt",
-    "AnimationsCompilerWindow", "AnimationsCompressionWindow",)
+    "AnimationsCompilerWindow", "AnimationsCompressionWindow",
+    "SoundCompilerWindow",)
 
 from mozzarilla.windows.tools.sauce_removal_window import SauceRemovalWindow
 from mozzarilla.windows.tools.dependency_window import DependencyWindow
@@ -27,6 +28,7 @@ from mozzarilla.windows.tools.tag_scanner_window import TagScannerWindow
 from mozzarilla.windows.tools.animations_compression_window import AnimationsCompressionWindow
 from mozzarilla.windows.tools.animations_compiler_window import AnimationsCompilerWindow
 from mozzarilla.windows.tools.model_compiler_window import ModelCompilerWindow
+from mozzarilla.windows.tools.sound_compiler_window import SoundCompilerWindow
 
 from mozzarilla.windows.tools.compile_bitmap import bitmap_from_dds, bitmap_from_multiple_dds,\
      bitmap_from_bitmap_source

@@ -54,8 +54,8 @@ from mozzarilla.windows.tools import \
      DependencyWindow, TagScannerWindow, DataExtractionWindow,\
      bitmap_from_dds, bitmap_from_multiple_dds, bitmap_from_bitmap_source, \
      AnimationsCompilerWindow, AnimationsCompressionWindow,\
-     ModelCompilerWindow, physics_from_jms, hud_message_text_from_hmt,\
-     strings_from_txt
+     SoundCompilerWindow, ModelCompilerWindow,\
+     physics_from_jms, hud_message_text_from_hmt, strings_from_txt
 from mozzarilla.windows.tag_converters import ObjectConverter,\
      GbxmodelConverter, ModelConverter, ChicagoShaderConverter,\
      ModelAnimationsConverter, CollisionConverter, SbspConverter
@@ -308,6 +308,9 @@ class Mozzarilla(Binilla):
             label="Bitmap(s) from dds texture(s)", command=self.bitmap_from_dds)
         self.compile_menu.add_command(
             label="Bitmap(s) from bitmap source", command=self.bitmap_from_bitmap_source)
+        self.compile_menu.add_separator()
+        self.compile_menu.add_command(
+            label="Sound from wav", command=self.show_sound_compiler_window)
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
             label="Model_animations from jma", command=self.show_animations_compiler_window)
@@ -1217,6 +1220,8 @@ class Mozzarilla(Binilla):
         self.show_tool_window("animations_compiler_window", AnimationsCompilerWindow, True)
     def show_model_compiler_window(self, e=None):
         self.show_tool_window("model_compiler_window", ModelCompilerWindow, True)
+    def show_sound_compiler_window(self, e=None):
+        self.show_tool_window("sound_compiler_window", SoundCompilerWindow, False)
 
     def show_search_and_replace(self, e=None):
         self.show_tool_window("s_and_r_window", SearchAndReplaceWindow)

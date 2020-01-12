@@ -116,31 +116,52 @@ class SoundSampleFrame(HaloRawdataFrame):
                 sound_data = self.parent.get_root().data.tagdata
                 channel_count = sound_data.encoding.data + 1
                 sample_rate = 22050 * (sound_data.sample_rate.data + 1)
-                wav_fmt = wav_file.data.format
-                typ = wav_fmt.fmt.enum_name
-                block_align = (2 if typ == "pcm" else 36) * wav_fmt.channels
 
-                if typ not in ('ima_adpcm', 'xbox_adpcm', 'pcm'):
+                wav_header = wav_file.data.wav_header
+                wav_format = wav_file.data.wav_format
+                wav_chunks = wav_file.data.wav_chunks
+                typ = wav_format.fmt.enum_name
+                block_align = (2 if typ == "pcm" else 36) * wav_format.channels
+
+                data_chunk = None
+                for chunk in wav_chunks:
+                    if chunk.sig.enum_name == "data":
+                        data_chunk = chunk
+                        break
+
+                if wav_header.riff_sig != wav_header.get_desc("DEFAULT", "riff_sig"):
+                    raise ValueError(
+                        "RIFF signature is invalid. Not a valid wav file.")
+                elif wav_header.wave_sig != wav_header.get_desc("DEFAULT", "wave_sig"):
+                    raise ValueError(
+                        "WAVE signature is invalid. Not a valid wav file.")
+                elif wav_format.sig != wav_format.get_desc("DEFAULT", "sig"):
+                    raise ValueError(
+                        "Format signature is invalid. Not a valid wav file.")
+                elif data_chunk is None:
+                    raise ValueError(
+                        "Data chunk not present. Not a valid wav file.")
+                elif typ not in ('ima_adpcm', 'xbox_adpcm', 'pcm'):
                     raise TypeError(
-                        "Wav file audio format must be either ImaADPCM " +
-                        "XboxADPCM, or PCM, not %s" % wav_fmt.fmt.enum_name)
-                elif sound_data.encoding.data + 1 != wav_fmt.channels:
+                        "Wav file audio format must be either IMA ADPCM " +
+                        "Xbox ADPCM, or PCM, not %s" % wav_format.fmt.enum_name)
+                elif sound_data.encoding.data + 1 != wav_format.channels:
                     raise TypeError(
                         "Wav file channel count does not match this sound " +
                         "tags channel count. Expected %s, not %s" %
-                        (channel_count, wav_fmt.channels))
-                elif sample_rate != wav_fmt.sample_rate:
+                        (channel_count, wav_format.channels))
+                elif sample_rate != wav_format.sample_rate:
                     raise TypeError(
                         "Wav file sample rate does not match this sound " +
                         "tags sample rate. Expected %skHz, not %skHz" %
-                        (sample_rate, wav_fmt.sample_rate))
-                elif block_align != wav_fmt.block_align:
+                        (sample_rate, wav_format.sample_rate))
+                elif block_align != wav_format.block_align:
                     raise TypeError(
                         "Wav file block size does not match this sound " +
                         "tags block size. Expected %sbytes, not %sbytes" %
-                        (block_align, wav_fmt.block_align))
+                        (block_align, wav_format.block_align))
 
-                rawdata = wav_file.data.wav_data.audio_data
+                rawdata = data_chunk.data
                 do_pcm_byteswap = (typ == 'pcm')
             else:
                 rawdata = get_rawdata(filepath=filepath, writable=False)
@@ -196,14 +217,18 @@ class SoundSampleFrame(HaloRawdataFrame):
                 wav_file.filepath = filepath
                 sound_data = self.parent.get_root().data.tagdata
 
-                wav_fmt = wav_file.data.format
-                wav_fmt.bits_per_sample = 16
-                wav_fmt.channels = sound_data.encoding.data + 1
-                wav_fmt.sample_rate = 22050 * (sound_data.sample_rate.data + 1)
+                wav_format = wav_file.data.wav_format
+                wav_chunks = wav_file.data.wav_chunks
+                wav_chunks.append(case="data")
+                data_chunk = wav_chunks[-1]
 
-                wav_fmt.byte_rate = ((wav_fmt.sample_rate *
-                                      wav_fmt.bits_per_sample *
-                                      wav_fmt.channels) // 8)
+                wav_format.bits_per_sample = 16
+                wav_format.channels = sound_data.encoding.data + 1
+                wav_format.sample_rate = 22050 * (sound_data.sample_rate.data + 1)
+
+                wav_format.byte_rate = ((wav_format.sample_rate *
+                                      wav_format.bits_per_sample *
+                                      wav_format.channels) // 8)
 
                 typ = "ima_adpcm"
                 if self.parent.parent.compression.enum_name == 'none':
@@ -211,14 +236,14 @@ class SoundSampleFrame(HaloRawdataFrame):
 
                 audio_data = copy.deepcopy(self.parent)
                 if typ == "pcm":
-                    wav_fmt.fmt.set_to('pcm')
-                    wav_fmt.block_align = 2 * wav_fmt.channels
+                    wav_format.fmt.set_to('pcm')
+                    wav_format.block_align = 2 * wav_format.channels
                     byteswap_pcm16_samples(audio_data)
                 else:
-                    wav_fmt.fmt.set_to('ima_adpcm')
-                    wav_fmt.block_align = 36 * wav_fmt.channels
+                    wav_format.fmt.set_to('ima_adpcm')
+                    wav_format.block_align = 36 * wav_format.channels
 
-                wav_file.data.wav_data.audio_data = audio_data.data
+                data_chunk.data = audio_data.data
                 wav_file.data.wav_header.filesize = wav_file.data.binsize - 12
 
                 wav_file.serialize(temp=False, backup=False, int_test=False)
