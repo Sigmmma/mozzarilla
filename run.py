@@ -14,7 +14,7 @@ info = sys.version_info
 
 if info[0] < 3:
     input(
-        "You must have python 3 or higher installed to run Mozzarilla.\n" +
+        "You must have python 3.5 or higher installed to run Mozzarilla.\n"
         "You currently have %s.%s.%s installed instead." % info[:3])
     raise SystemExit(0)
 
