@@ -12,7 +12,7 @@ import sys
 
 info = sys.version_info
 
-if info[0] < 3:
+if info[0] < 3 or info[1] < 5:
     input(
         "You must have python 3.5 or higher installed to run Mozzarilla.\n"
         "You currently have %s.%s.%s installed instead." % info[:3])
