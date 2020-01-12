@@ -20,11 +20,7 @@ import mozzarilla
 
 
 try:
-    try:
-        long_desc = open(join(curr_dir, "readme.rst")).read()
-    except Exception:
-        long_desc = "Since PyPI refuses to let me upload due to my readme being Markdown, I wont be using a readme."
-        #long_desc = open(join(curr_dir, "readme.md")).read()
+    long_desc = open(join(curr_dir, "README.MD")).read()
 except Exception:
     long_desc = 'Could not read long description from readme.'
 
@@ -33,11 +29,12 @@ setup(
     description='A variant of Binilla for editing binary structures for '
                 'games built with the Blam engine.',
     long_description=long_desc,
+    long_description_content_type='text/markdown',
     version='%s.%s.%s' % mozzarilla.__version__,
     url=mozzarilla.__website__,
     author=mozzarilla.__author__,
     author_email='MosesBobadilla@gmail.com',
-    license='MIT',
+    license='GPLv3',
     packages=[
         'mozzarilla',
         'mozzarilla.defs',
