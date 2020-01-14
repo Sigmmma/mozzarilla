@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This project also inherits changes from [Binilla](https://github.com/MosesofEgypt/binilla).
 
+## [1.7.1]
+
+### Changed
+ - Remove minimum version requirement for reclaimer. Fixes setuptools installing the broken 2.6.0 package of reclaimer.
+
 ## [1.7.0] Into the GPLv3
 Something that is very important to us is collaboration and the ability to share knowledge. Since this library is just to help mod some games, we've decided that switching to GPLv3 is the right thing to do for us to avoid any future loss of knowledge.
 
