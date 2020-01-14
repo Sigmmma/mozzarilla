@@ -53,7 +53,7 @@ setup(
     platforms=["POSIX", "Windows"],
     keywords="binilla, binary, data structure",
     install_requires=['reclaimer>=2.6.0', 'binilla>=1.2.0'],
-    requires=['reclaimer>=2.6.0', 'binilla>=1.2.0'],
+    requires=['reclaimer', 'binilla'],
     provides=['mozzarilla'],
     classifiers=[
         "Development Status :: 4 - Beta",
