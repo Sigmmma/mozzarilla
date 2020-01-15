@@ -8,6 +8,9 @@
 # See LICENSE for more information.
 #
 
+import shutil
+shutil.copyfile("README.MD", "mozzarilla/README.MD")
+
 from os.path import dirname, join
 try:
     from setuptools import setup
@@ -18,11 +21,8 @@ curr_dir = dirname(__file__)
 
 import mozzarilla
 
+long_desc = open("README.MD").read()
 
-try:
-    long_desc = open(join(curr_dir, "README.MD")).read()
-except Exception:
-    long_desc = 'Could not read long description from readme.'
 
 setup(
     name='mozzarilla',
