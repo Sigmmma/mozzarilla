@@ -8,21 +8,14 @@
 # See LICENSE for more information.
 #
 
-import shutil
-shutil.copyfile("README.MD", "mozzarilla/README.MD")
-
-from os.path import dirname, join
 try:
     from setuptools import setup
 except ImportError:
     from distutils.core import setup
 
-curr_dir = dirname(__file__)
-
 import mozzarilla
 
 long_desc = open("README.MD").read()
-
 
 setup(
     name='mozzarilla',
@@ -45,9 +38,8 @@ setup(
         'mozzarilla.windows.tag_converters',
         ],
     package_data={
-        '': ['*.txt', '*.md', '*.rst', '*.pyw', '*.ico', '*.png', 'msg.dat'],
         'mozzarilla': [
-            'styles/*.*',
+            'styles/*.*', '*.txt', '*.MD', '*.rst', '*.pyw', '*.ico', '*.png', 'msg.dat',
             ]
         },
     platforms=["POSIX", "Windows"],
@@ -55,6 +47,7 @@ setup(
     install_requires=['reclaimer', 'binilla'],
     requires=['reclaimer', 'binilla'],
     provides=['mozzarilla'],
+    python_requires=">=3.5",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: End Users/Desktop",
