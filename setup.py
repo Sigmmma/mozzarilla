@@ -39,21 +39,27 @@ setup(
         ],
     package_data={
         'mozzarilla': [
-            'styles/*.*', '*.txt', '*.MD', '*.rst', '*.pyw', '*.ico', '*.png', 'msg.dat',
+            'styles/*.*', '*.[tT][xX][tT]', '*.MD', '*.pyw', '*.ico', '*.png',
+            'msg.dat',
             ]
         },
     platforms=["POSIX", "Windows"],
-    keywords="binilla, binary, data structure",
-    install_requires=['reclaimer', 'binilla'],
+    keywords=["binilla", "binary", "data structure"],
+    install_requires=['reclaimer', 'binilla', 'supyr_struct'],
     requires=['reclaimer', 'binilla'],
     provides=['mozzarilla'],
     python_requires=">=3.5",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: End Users/Desktop",
-        "License :: OSI Approved :: MIT License",
+        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
         "Programming Language :: Python",
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3 :: Only",
         ],
     zip_safe=False,
     )
