@@ -6,8 +6,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This project also inherits changes from [Binilla](https://github.com/MosesofEgypt/binilla).
 
-## [1.7.1]
+## [1.7.2] Meta update
+### Changed
+ - Add a bunch of useful metadata to setup.py
+ - Better .gitignore.
+ - .gitattributes now enforces LF line endings for operating system agnostic files.
+ - Project structure got updated to make it easier for people to install the package from the repository.
+ - Readme updated for PyPI.
 
+## [1.7.1]
 ### Changed
  - Remove minimum version requirement for reclaimer. Fixes setuptools installing the broken 2.6.0 package of reclaimer.
 
