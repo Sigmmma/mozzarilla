@@ -830,8 +830,8 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
             print("    Existing gbxmodel tag not detected or could not be loaded.\n"
                   "        A new gbxmodel tag will be created.")
 
-        print("Finished loading models. Took %s seconds.\n" %
-              str(time.time() - start).split('.')[0])
+        print("Finished loading models. Took %.6f seconds.\n" %
+              (time.time() - start))
         self.select_shader(0)
 
     def _save_models(self):
