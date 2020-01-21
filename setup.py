@@ -25,6 +25,11 @@ setup(
     long_description_content_type='text/markdown',
     version='%s.%s.%s' % mozzarilla.__version__,
     url=mozzarilla.__website__,
+    project_urls={
+        #"Documentation": <Need a string entry here>,
+        "Source": mozzarilla.__website__,
+        "Funding": "https://liberapay.com/MEK/",
+    },
     author=mozzarilla.__author__,
     author_email='MosesBobadilla@gmail.com',
     license='GPLv3',
