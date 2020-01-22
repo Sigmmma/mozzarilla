@@ -12,6 +12,13 @@ import sys
 
 info = sys.version_info
 
+try:
+    from binilla import stdout_redirect
+    stdout_redirect.start_storing_output()
+except ImportError:
+    # Well, I guess we're not logging anything
+    pass
+
 if info[0] < 3 or info[1] < 5:
     input(
         "You must have python 3.5 or higher installed to run Mozzarilla.\n"
@@ -24,6 +31,11 @@ from traceback import format_exc
 try:
     from mozzarilla.app_window import Mozzarilla
     main_window = Mozzarilla(debug=1)
+    try:
+        stdout_redirect.flush_buffered_output()
+    except Exception:
+        # I eat poo
+        pass
     main_window.mainloop()
 
 except Exception:
