@@ -20,8 +20,9 @@ from copy import deepcopy
 from struct import Struct as PyStruct
 from traceback import format_exc
 
-from reclaimer.model.jms import JmsNode, JmsMaterial, JmsMarker, \
-     JmsVertex, JmsTriangle, JmsModel, MergedJmsModel, edge_loop_to_tris
+from reclaimer.model.jms import ( JmsNode, JmsMaterial, JmsMarker,
+     JmsVertex, JmsTriangle, JmsModel, MergedJmsModel, )
+from reclaimer.model.jms.util import edge_loop_to_tris
 from reclaimer.model.model_compilation import compile_gbxmodel
 from reclaimer.util.matrices import euler_to_quaternion, Ray
 from reclaimer.util.geometry import planes_to_verts_and_edge_loops
