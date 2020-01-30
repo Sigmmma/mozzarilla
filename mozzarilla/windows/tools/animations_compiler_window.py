@@ -681,6 +681,8 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             print("Creating new model_animations tag.")
             antr_tag = antr_def.build()
 
+        # whether we're making a new tag or updating it, update
+        # the filepath to wherever it is currently directed
         antr_tag.filepath = self.model_animations_path.get()
 
         self.update()

@@ -896,7 +896,9 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
                         print("    Gbxmodel compilation cancelled.")
                         return
 
-            mod2_tag.filepath = self.gbxmodel_path.get()
+        # whether we're making a new tag or updating it, update
+        # the filepath to wherever it is currently directed
+        mod2_tag.filepath = self.gbxmodel_path.get()
 
         self.app_root.update()
 
