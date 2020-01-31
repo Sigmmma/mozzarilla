@@ -90,8 +90,8 @@ def strings_from_txt(app, fp=None):
 
     window = window[0]
     window.is_new_tag = True
-    tag.filepath = tag_path
-    tag.rel_filepath = rel_filepath
+    window.tag.filepath = tag_path
+    window.tag.rel_filepath = rel_filepath
 
     if 'utf-16' in encoding:
         compile_unicode_string_list(window.tag, string_data)
