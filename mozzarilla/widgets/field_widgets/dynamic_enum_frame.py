@@ -6,6 +6,7 @@
 # Mozzarilla is free software under the GNU General Public License v3.0.
 # See LICENSE for more information.
 #
+from traceback import format_exc
 
 from binilla.widgets.field_widgets.enum_frame import DynamicEnumFrame
 from binilla.constants import DYN_NAME_PATH, DYN_I
