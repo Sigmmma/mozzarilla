@@ -6,7 +6,7 @@ name: mozzarilla
 #These get copied into the distribution
 include_files:
     - "README.MD"
-    - "LICENSE.TXT"
+    - "LICENSE"
     - "CHANGELOG.MD"
     - "AUTHORS.TXT"
 
