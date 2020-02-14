@@ -6,6 +6,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This project also inherits changes from [Binilla](https://github.com/MosesofEgypt/binilla).
 
+## [1.8.1]
+ - Fix readme potentially breaking setup.
+
+## [1.8.0]
+### Changed
+ - Update includes to be compatible with new version of reclaimer.
+
 ## [1.7.2] Meta update
 ### Changed
  - Add a bunch of useful metadata to setup.py
