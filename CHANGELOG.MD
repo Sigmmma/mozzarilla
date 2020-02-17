@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This project also inherits changes from [Binilla](https://github.com/MosesofEgypt/binilla).
 
+## [1.8.2]
+### Changed
+ - Add arbytmap to requirements to account for future versions not installing it by default.
+
 ## [1.8.1]
 ### Changed
  - Fix readme potentially breaking setup.
