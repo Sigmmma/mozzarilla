@@ -54,8 +54,8 @@ setup(
         },
     platforms=["POSIX", "Windows"],
     keywords=["binilla", "binary", "data structure"],
-    install_requires=['reclaimer', 'binilla', 'supyr_struct'],
-    requires=['reclaimer', 'binilla'],
+    install_requires=['reclaimer', 'binilla', 'arbytmap', 'supyr_struct'],
+    requires=['reclaimer', 'arbytmap', 'binilla'],
     provides=['mozzarilla'],
     python_requires=">=3.5",
     classifiers=[
