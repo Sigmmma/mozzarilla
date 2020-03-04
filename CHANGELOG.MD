@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This project also inherits changes from [Binilla](https://github.com/MosesofEgypt/binilla).
 
+## [1.9.0]
+### Added
+ - Added \_\_main\_\_ so Mozzarilla can be executed using `python -m mozzarilla` or just `mozzarilla` on some systems.
+
 ## [1.8.2]
 ### Changed
  - Add arbytmap to requirements to account for future versions not installing it by default.

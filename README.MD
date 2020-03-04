@@ -39,4 +39,4 @@ Mozzarilla also contains a few special tools for aiding in modding:
 
 
 
-* Devin Bobadilla (Author of mozzarilla) mosesbobadilla@gmail.com
+* Devin Bobadilla (Original author of mozzarilla) MoeMakesStuff@gmail.com

@@ -35,7 +35,7 @@ setup(
         "Funding": "https://liberapay.com/MEK/",
     },
     author=mozzarilla.__author__,
-    author_email='MosesBobadilla@gmail.com',
+    author_email='MoeMakesStuff@gmail.com',
     license='GPLv3',
     packages=[
         'mozzarilla',
