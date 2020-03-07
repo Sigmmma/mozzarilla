@@ -49,7 +49,7 @@ setup(
     package_data={
         'mozzarilla': [
             'styles/*.*', '*.[tT][xX][tT]', '*.MD', '*.pyw', '*.ico', '*.png',
-            'msg.dat',
+            'msg.dat','LICENSE',
             ]
         },
     platforms=["POSIX", "Windows"],
