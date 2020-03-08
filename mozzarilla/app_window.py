@@ -918,6 +918,8 @@ class Mozzarilla(Binilla):
                 return
             tag = self.selected_tag
 
+        old_filepath = tag.filepath
+
         if not hasattr(tag, "serialize"):
             return
 
@@ -961,6 +963,10 @@ class Mozzarilla(Binilla):
         except Exception:
             print(format_exc())
             raise IOError("Could not save: %s" % filepath)
+
+        if old_filepath != filepath:
+            tag.handler.delete_tag(filepath=old_filepath)
+            tag.filepath = filepath
 
         self.update_tag_window_title(w)
         return tag

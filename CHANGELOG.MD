@@ -6,9 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This project also inherits changes from [Binilla](https://github.com/Sigmmma/binilla).
 
-## [Unreleased]
+## [1.9.1]
 ### Changed
  - Fix missing license in distributions.
+ - Fix old tag paths not properly getting disposed during save_as events. (This bug made it so that you couldn't reopen a tag right after having opened and saved it to different file using save_as)
 
 ## [1.9.0]
 ### Added

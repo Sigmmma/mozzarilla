@@ -12,6 +12,6 @@
 # ##############
 __author__ = "Devin Bobadilla, Michelle van der Graaf"
 #           YYYY.MM.DD
-__date__ = "2020.02.29"
-__version__ = (1, 9, 0)
+__date__ = "2020.03.07"
+__version__ = (1, 9, 1)
 __website__ = "https://github.com/Sigmmma/mozzarilla"
