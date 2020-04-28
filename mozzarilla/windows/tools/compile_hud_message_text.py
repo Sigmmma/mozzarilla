@@ -8,6 +8,7 @@
 #
 
 import os
+import charset_normalizer
 
 from pathlib import Path
 from traceback import format_exc
@@ -44,12 +45,16 @@ def hud_message_text_from_hmt(app, fp=None):
 
         print("Creating hud_message_text from this hmt file:")
         print("    %s" % fp)
-        # Encoding here used to be "utf-16-le".
-        # However Python and our libraries are smart enough to handle the
-        # encoding conversion for us. So, we can avoid user bugs by not
-        # force interpreting this file as anything specific.
-        with fp.open("r") as f:
-            hmt_string_data = f.read()
+
+        encoding = "utf-16-le"
+        with fp.open("rb") as f:
+            contents = f.read()
+            guess = charset_normalizer.detect(contents)
+            hmt_string_data = contents.decode(guess['encoding'])
+            # Reading files this way doesn't remove carriage returns.
+            # We have to wipe them out like this.
+            hmt_string_data = hmt_string_data.replace("\r", "")
+
     except Exception:
         print(format_exc())
         print("    Could not load hmt file.")

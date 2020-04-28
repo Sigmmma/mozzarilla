@@ -2,3 +2,4 @@ supyr_struct
 binilla
 reclaimer
 arbytmap
+charset_normalizer
