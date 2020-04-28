@@ -50,7 +50,7 @@ def hud_message_text_from_hmt(app, fp=None):
             contents = f.read()
             guess = charset_normalizer.detect(contents)
             # utf-16 is our fallback as that is the proper encoding for
-            # these files and has the biggest failure rate for detection
+            # these files and has the biggest detection failure rate.
             hmt_string_data = contents.decode(guess['encoding'] or "utf-16")
             # Reading files this way doesn't remove carriage returns.
             # We have to wipe them out like this.
