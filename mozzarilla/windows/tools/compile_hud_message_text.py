@@ -44,7 +44,11 @@ def hud_message_text_from_hmt(app, fp=None):
 
         print("Creating hud_message_text from this hmt file:")
         print("    %s" % fp)
-        with fp.open("r", encoding="utf-16-le") as f:
+        # Encoding here used to be "utf-16-le".
+        # However Python and our libraries are smart enough to handle the
+        # encoding conversion for us. So, we can avoid user bugs by not
+        # force interpreting this file as anything specific.
+        with fp.open("r") as f:
             hmt_string_data = f.read()
     except Exception:
         print(format_exc())
