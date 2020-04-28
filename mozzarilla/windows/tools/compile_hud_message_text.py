@@ -46,11 +46,12 @@ def hud_message_text_from_hmt(app, fp=None):
         print("Creating hud_message_text from this hmt file:")
         print("    %s" % fp)
 
-        encoding = "utf-16-le"
         with fp.open("rb") as f:
             contents = f.read()
             guess = charset_normalizer.detect(contents)
-            hmt_string_data = contents.decode(guess['encoding'])
+            # utf-16 is our fallback as that is the proper encoding for
+            # these files and has the biggest failure rate for detection
+            hmt_string_data = contents.decode(guess['encoding'] or "utf-16")
             # Reading files this way doesn't remove carriage returns.
             # We have to wipe them out like this.
             hmt_string_data = hmt_string_data.replace("\r", "")
