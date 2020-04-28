@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This project also inherits changes from [Binilla](https://github.com/Sigmmma/binilla).
 
+## [1.9.2]
+### Changed
+ - Fix encoding problems with hmt files that aren't utf-16-le encoded.
+
 ## [1.9.1]
 ### Changed
  - Fix missing license in distributions.
