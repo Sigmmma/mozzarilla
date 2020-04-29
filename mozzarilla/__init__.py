@@ -10,8 +10,8 @@
 # ##############
 #   metadata   #
 # ##############
-__author__ = "Devin Bobadilla, Michelle van der Graaf"
+__author__ = "Sigmmma"
 #           YYYY.MM.DD
-__date__ = "2020.03.07"
-__version__ = (1, 9, 1)
+__date__ = "2020.04.28"
+__version__ = (1, 9, 2)
 __website__ = "https://github.com/Sigmmma/mozzarilla"
