@@ -21,17 +21,22 @@ def hacky_detect_encoding(fp):
     with fp.open("rb") as f:
         data = f.read(2)
 
+    # Check if the file contains any of the two utf-16 BOMs
     if data[0] == 255 and data[1] == 254:
         encoding = "utf-16-le"
     elif data[1] == 254 and data[0] == 255:
         encoding = "utf-16-be"
     else:
+        # If not we default to latin-1
         with fp.open("rb") as f:
             data = f.read()
-            encoding = 'utf-16-le'
+            encoding = "latin-1"
+
+            # But, if we find a null byte while checking every other byte,
+            # we assume utf-16 without BOM
             for i in range(1, len(data), 2):
-                if data[i] != 0:
-                    encoding = "latin-1"
+                if data[i] == 0:
+                    encoding = 'utf-16-le'
                     break
 
     return encoding
