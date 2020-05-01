@@ -8,7 +8,6 @@
 #
 
 import os
-import charset_normalizer
 
 from pathlib import Path
 from traceback import format_exc
@@ -17,6 +16,30 @@ from reclaimer.strings.strings_compilation import compile_hud_message_text
 from supyr_struct.util import is_path_empty
 from binilla.windows.filedialog import askopenfilename
 
+def hacky_detect_encoding(fp):
+    fp = Path(fp)
+    with fp.open("rb") as f:
+        data = f.read(2)
+
+    # Check if the file contains any of the two utf-16 BOMs
+    if data[0] == 255 and data[1] == 254:
+        encoding = "utf-16-le"
+    elif data[1] == 254 and data[0] == 255:
+        encoding = "utf-16-be"
+    else:
+        # If not we default to latin-1
+        with fp.open("rb") as f:
+            data = f.read()
+            encoding = "latin-1"
+
+            # But, if we find a null byte while checking every other byte,
+            # we assume utf-16 without BOM
+            for i in range(1, len(data), 2):
+                if data[i] == 0:
+                    encoding = 'utf-16-le'
+                    break
+
+    return encoding
 
 def hud_message_text_from_hmt(app, fp=None):
     load_dir = app.last_data_load_dir
@@ -46,15 +69,8 @@ def hud_message_text_from_hmt(app, fp=None):
         print("Creating hud_message_text from this hmt file:")
         print("    %s" % fp)
 
-        with fp.open("rb") as f:
-            contents = f.read()
-            guess = charset_normalizer.detect(contents)
-            # utf-16 is our fallback as that is the proper encoding for
-            # these files and has the biggest detection failure rate.
-            hmt_string_data = contents.decode(guess['encoding'] or "utf-16")
-            # Reading files this way doesn't remove carriage returns.
-            # We have to wipe them out like this.
-            hmt_string_data = hmt_string_data.replace("\r", "")
+        with fp.open("r", encoding=hacky_detect_encoding(fp)) as f:
+            hmt_string_data = f.read()
 
     except Exception:
         print(format_exc())

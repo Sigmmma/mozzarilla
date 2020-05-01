@@ -17,6 +17,8 @@ from reclaimer.strings.strings_compilation import compile_unicode_string_list,\
 from supyr_struct.util import is_path_empty
 from binilla.windows.filedialog import askopenfilename
 
+from mozzarilla.windows.tools.compile_hud_message_text import hacky_detect_encoding
+
 
 def strings_from_txt(app, fp=None):
     load_dir = app.last_data_load_dir
@@ -45,15 +47,9 @@ def strings_from_txt(app, fp=None):
         tag_ext = "unicode_string_list"
         tag_cls = "ustr"
 
-        with fp.open("rb") as f:
-            data = f.read(2)
+        encoding = hacky_detect_encoding(fp)
 
-        if data[0] == 255 and data[1] == 254:
-            encoding = "utf-16-le"
-        elif data[1] == 254 and data[0] == 255:
-            encoding = "utf-16-be"
-        else:
-            encoding = "latin-1"
+        if encoding == "latin-1":
             tag_ext = "string_list"
             tag_cls = "str#"
 
