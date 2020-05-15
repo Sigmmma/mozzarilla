@@ -51,7 +51,7 @@ WORKING_DIR = Path.cwd()
 MOZZLIB_DIR = Path(__file__).parent
 
 if b_e_c.IS_WIN:
-    SETTINGS_DIR = Path(WORKING_DIR, "mek_config")
+    SETTINGS_DIR = Path(Path.home(), "mek")
 else:
     SETTINGS_DIR = Path(Path.home(), ".local", "share", "mek")
 
