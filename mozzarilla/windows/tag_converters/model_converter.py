@@ -19,8 +19,9 @@ import threadsafe_tkinter as tk
 from math import sqrt
 from traceback import format_exc
 
-from reclaimer.hek.defs.mod2    import fast_mod2_def as mod2_def
-from reclaimer.stubbs.defs.mode import fast_mode_def as mode_def
+from reclaimer.hek.defs.mod2 import fast_mod2_def as mod2_def
+from reclaimer.hek.defs.mode import fast_mode_def as halo_mode_def
+from reclaimer.stubbs.defs.mode import fast_mode_def as stubbs_mode_def
 
 window_base_class = tk.Toplevel
 if __name__ == "__main__":
@@ -148,12 +149,15 @@ class ModelConverter(ConverterBase, window_base_class):
         window_base_class.destroy(self)
 
     def convert(self, tag_path):
+        # for compatibility with stubbs, we'll read as stubbs mode(since
+        # stubbs simply adds fields), but we'll write as halo mode(no one is
+        # creating stubbs models, so they'll want everything as halo models)
         if self.to_gbxmodel:
-            src_tag = mode_def.build(filepath=tag_path)
+            src_tag = stubbs_mode_def.build(filepath=tag_path)
             dst_tag = mod2_def.build()
         else:
             src_tag = mod2_def.build(filepath=tag_path)
-            dst_tag = mode_def.build()
+            dst_tag = halo_mode_def.build()
 
         dst_tag.filepath = PurePath(tag_path).with_suffix("." + self.dst_ext)
         convert_model(src_tag, dst_tag, self.to_gbxmodel)
