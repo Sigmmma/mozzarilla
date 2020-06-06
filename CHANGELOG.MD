@@ -6,6 +6,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This project also inherits changes from [Binilla](https://github.com/Sigmmma/binilla).
 
+## [1.9.5]
+### Changed
+ - Allow converting from stubbs in model converter.
+
 ## [1.9.4]
 ### Changed
  - Settings directory is for Windows is now in the user folder.
