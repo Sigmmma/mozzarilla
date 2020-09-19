@@ -356,6 +356,7 @@ def convert_bitmap_tag(tag, conv_flags, bitmap_info, use_stubbs_p8=False):
         tag.sanitize_bitmaps()
         tag.set_platform(conv_flags.platform)
         tag.add_bitmap_padding(conv_flags.platform)
+        tag.fix_top_format()
 
     return True
 
