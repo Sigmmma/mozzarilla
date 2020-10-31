@@ -12,6 +12,6 @@
 # ##############
 __author__ = "Sigmmma"
 #           YYYY.MM.DD
-__date__ = "2020.09.19"
-__version__ = (1, 9, 6)
+__date__ = "2020.10.30"
+__version__ = (1, 9, 7)
 __website__ = "https://github.com/Sigmmma/mozzarilla"
