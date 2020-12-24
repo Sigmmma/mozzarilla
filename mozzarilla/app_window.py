@@ -95,7 +95,7 @@ class Mozzarilla(Binilla):
     _bitmap_load_dir = Path("")
 
 
-    issue_tracker_url = mozzarilla.__website__ + "/issues"
+    issue_tracker_url = "https://discord.reclaimers.net"
 
     _mozzarilla_initialized = False
     guerilla_workspace_def  = None
@@ -247,7 +247,7 @@ class Mozzarilla(Binilla):
         self.main_menu.add_cascade(label="Tools", menu=self.tools_menu)
         self.main_menu.add_cascade(label="Compile Tag", menu=self.compile_menu)
         self.main_menu.add_command(label="About", command=self.show_about_window)
-        self.main_menu.add_command(label="Report Bug", command=self.open_issue_tracker)
+        self.main_menu.add_command(label="Discord", command=self.open_issue_tracker)
         try:
             if e_c.IS_WIN and not is_main_frozen():
                 import hek_pool
