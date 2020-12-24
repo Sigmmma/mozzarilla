@@ -7,6 +7,7 @@
 # See LICENSE for more information.
 #
 
+import sys
 import re
 import tkinter as tk
 import subprocess
@@ -344,6 +345,15 @@ class Mozzarilla(Binilla):
                 self.load_last_workspace()
         except AttributeError:
             pass
+
+        if (sys.version_info.minor > 8):
+            messagebox.showinfo(
+                "Unsupported Python version",
+                "Your Python version is newer than 3.8.\n"
+                "Right now Python 3.9 and up are not supported yet\n"
+                "because of a language change that breaks some of our code\n\n"
+                "Until this issue has been resolved please use Python 3.8",
+                parent=self)
 
         if self.config_made_anew:
             messagebox.showinfo(
