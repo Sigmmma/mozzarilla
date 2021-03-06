@@ -444,6 +444,7 @@ class Mozzarilla(Binilla):
 
             return self.handlers[index].get(tags_dir)
         except Exception:
+            print(format_exc())
             return None
 
     def create_handlers(self, tags_dir, handler_indices=()):
@@ -495,13 +496,15 @@ class Mozzarilla(Binilla):
                 raise TypeError("Invalid type for index argument. Must be of "
                                 "type %s or %s, not %s" % (str, int, type(index)))
 
-            handler = self.get_handler(index, tags_dir)
+            self.handler = self.get_handler(index, tags_dir)
 
         if None in (index, tags_dir):
             return
 
+        if self.handler is None:
+            raise TypeError("Handler is None for whatever reason")
+
         tags_dir_index = self.get_tags_dir_index(tags_dir)
-        self.handler = handler
         self._curr_handler_index = index
         if tags_dir_index is None:
             self.tags_dir = tags_dir
@@ -516,7 +519,7 @@ class Mozzarilla(Binilla):
                 menu_index = 0
 
         handler = self.get_handler(menu_index, create_if_not_exists=False)
-        if not handler or handler is not self.handler:
+        if (handler is None) or handler is not self.handler:
             if manual:
                 print("Changing tag set to %s" % self.handler_names[menu_index])
                 # The first time this function is called is before initialization is
@@ -528,7 +531,7 @@ class Mozzarilla(Binilla):
             try:
                 self.config_file.data.mozzarilla.selected_handler.data = menu_index
             except AttributeError:
-                pass
+                print(format_exc())
 
             if manual:
                 print("    Finished")
