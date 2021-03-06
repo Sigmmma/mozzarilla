@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This project also inherits changes from [Binilla](https://github.com/Sigmmma/binilla).
 
+## [1.9.8]
+### Changed
+ - Temporarily drop support for Python 3.9
+ - Replace report bug button with a discord button
+
 ## [1.9.7]
 ### Changed
  - Update build config for Python 3.9.

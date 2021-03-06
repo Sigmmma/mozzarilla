@@ -7,6 +7,7 @@
 # See LICENSE for more information.
 #
 
+import sys
 import re
 import tkinter as tk
 import subprocess
@@ -94,7 +95,7 @@ class Mozzarilla(Binilla):
     _bitmap_load_dir = Path("")
 
 
-    issue_tracker_url = mozzarilla.__website__ + "/issues"
+    issue_tracker_url = "https://discord.reclaimers.net"
 
     _mozzarilla_initialized = False
     guerilla_workspace_def  = None
@@ -246,7 +247,7 @@ class Mozzarilla(Binilla):
         self.main_menu.add_cascade(label="Tools", menu=self.tools_menu)
         self.main_menu.add_cascade(label="Compile Tag", menu=self.compile_menu)
         self.main_menu.add_command(label="About", command=self.show_about_window)
-        self.main_menu.add_command(label="Report Bug", command=self.open_issue_tracker)
+        self.main_menu.add_command(label="Discord", command=self.open_issue_tracker)
         try:
             if e_c.IS_WIN and not is_main_frozen():
                 import hek_pool
@@ -344,6 +345,15 @@ class Mozzarilla(Binilla):
                 self.load_last_workspace()
         except AttributeError:
             pass
+
+        if (sys.version_info.minor > 8):
+            messagebox.showinfo(
+                "Unsupported Python version",
+                "Your Python version is newer than 3.8.\n"
+                "Right now Python 3.9 and up are not supported yet\n"
+                "because of a language change that breaks some of our code\n\n"
+                "Until this issue has been resolved please use Python 3.8",
+                parent=self)
 
         if self.config_made_anew:
             messagebox.showinfo(
