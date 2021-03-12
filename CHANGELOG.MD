@@ -6,6 +6,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This project also inherits changes from [Binilla](https://github.com/Sigmmma/binilla).
 
+## [1.10.0]
+### Changed
+ - Bitmap source extractor now extracts to tiff rather than tga (Thanks [@SnowyMouse](https://github.com/SnowyMouse))
+ - Update tag loading logic to work better with Python 3.9
+
 ## [1.9.7]
 ### Changed
  - Update build config for Python 3.9.
