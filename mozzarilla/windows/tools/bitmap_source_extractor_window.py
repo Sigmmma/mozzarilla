@@ -162,7 +162,7 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
                 tag_path = os.path.join(root, tag_name)
 
                 source_path = data_dir + tag_path.split(tags_dir)[-1]
-                source_path = os.path.splitext(source_path)[0] + ".tga"
+                source_path = os.path.splitext(source_path)[0] + ".tif"
                 source_dir = os.path.dirname(source_path)
 
                 try:
@@ -216,19 +216,73 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
                     if not os.path.isdir(source_dir):
                         os.makedirs(source_dir)
                     with open(source_path, 'wb') as f:
-                        a_depth = len(data) // (width*height) - 3
-
-                        head = bytearray(18)
-                        pack_into('B',  head, 2,  2)
-                        pack_into('<H', head, 12, width)
-                        pack_into('<H', head, 14, height)
-                        pack_into('B',  head, 16, 32)
-                        pack_into('B',  head, 17, 32 + ((a_depth*8)&15))
+                        # Swap red and blue channels
+                        for i in range(0, height * width * 4, 4):
+                            c1 = data[i + 2]
+                            data[i + 2] = data[i + 0]
+                            data[i + 0] = c1
+                        
+                        # TIFF Header
+                        head = bytearray(8)
+                        pack_into('<H', head, 0, 0x4949) # magic
+                        pack_into('<H', head, 2, 42) # version
+                        pixel_offset = 8
+                        tag_offset = pixel_offset + width * height * 4
+                        pack_into('<i', head, 4, tag_offset) # tag offset
                         f.write(head)
+                        
+                        # Write the pixels
                         f.write(data)
+                        
+                        # Write the tag count
+                        tag_count_struct = bytearray(2)
+                        tag_count = 10
+                        pack_into('<H', tag_count_struct, 0, tag_count)
+                        f.write(tag_count_struct)
+                        
+                        # Bits per sample value (8 each, for 32 bits)
+                        bits_per_sample = bytearray(8)
+                        pack_into('<H', bits_per_sample, 0, 8)
+                        pack_into('<H', bits_per_sample, 2, 8)
+                        pack_into('<H', bits_per_sample, 4, 8)
+                        pack_into('<H', bits_per_sample, 6, 8)
+                        
+                        tag_struct_size = 12
+                        
+                        # Write TIFF tags
+                        def write_tag(type_val, data_offset, size, count):
+                            tag_struct = bytearray(tag_struct_size)
+                            pack_into('<H', tag_struct, 0, type_val)
+                            pack_into('<H', tag_struct, 2, size)
+                            pack_into('<i', tag_struct, 4, count)
+                            pack_into('<i', tag_struct, 8, data_offset)
+                            f.write(tag_struct)
+                        
+                        # Write the width and height
+                        write_tag(0x100, width, 4 if width >= 0xFFFF else 3, 1)
+                        write_tag(0x101, height, 4 if height >= 0xFFFF else 3, 1)
+                        
+                        # Write remaining tags
+                        write_tag(0x102, tag_offset + 2 + tag_struct_size * tag_count + 4, 3, 4) # offset to bits per sample (8888 as set up earlier)
+                        write_tag(0x103, 1, 3, 1) # compression (1 = uncompressed)
+                        write_tag(0x106, 2, 3, 1) # photometric interpretation (2 = RGB)
+                        write_tag(0x111, pixel_offset, 4, 1) # strips
+                        write_tag(0x112, 1, 3, 1) # orientation (1 = top-left)
+                        write_tag(0x115, 4, 3, 1) # samples per pixel (4, RGBA)
+                        write_tag(0x117, width * height * 4, 4, 1) # strip byte count
+                        write_tag(0x152, 2, 3, 1) # extra samples (2 = unassociated alpha)
+                        
+                        # Next directory
+                        next_directory = bytearray(4)
+                        pack_into('<i', next_directory, 0, 0)
+                        f.write(next_directory)
+                        
+                        # Bits per sample
+                        f.write(bits_per_sample)
+                        
                 except Exception:
                     #print(format_exc())
-                    print("    Couldn't make Tga file.")
+                    print("    Couldn't make Tif file.")
 
         print('\nFinished. Took %s seconds' % (time() - start))
 
