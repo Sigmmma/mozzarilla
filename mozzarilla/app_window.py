@@ -37,6 +37,7 @@ from reclaimer.hek.handler import HaloHandler
 from reclaimer.h3.handler import Halo3Handler
 from reclaimer.os_v3_hek.handler import OsV3HaloHandler
 from reclaimer.os_v4_hek.handler import OsV4HaloHandler
+from reclaimer.mcc_hek.handler import MCCHaloHandler
 from reclaimer.misc.handler import MiscHaloLoader
 from reclaimer.stubbs.handler import StubbsHandler
 from supyr_struct.util import tagpath_to_fullpath, path_split,\
@@ -104,6 +105,7 @@ class Mozzarilla(Binilla):
         HaloHandler,
         OsV3HaloHandler,
         OsV4HaloHandler,
+        MCCHaloHandler,
         MiscHaloLoader,
         StubbsHandler,
         Halo3Handler,
@@ -115,6 +117,7 @@ class Mozzarilla(Binilla):
         "Halo 1",
         "Halo 1 OS v3",
         "Halo 1 OS v4",
+        "Halo 1 MCC",
         "Halo 1 Misc",
         "Stubbs the Zombie",
         "Halo 3"
@@ -125,6 +128,7 @@ class Mozzarilla(Binilla):
         "Halo 1",
         "Halo 1 OS v3",
         "Halo 1 OS v4",
+        "Halo 1 MCC",
         "Stubbs the Zombie",
         "Halo 3"
         ))
