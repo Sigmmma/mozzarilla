@@ -194,7 +194,7 @@ class DependencyFrame(ContainerFrame):
             print(format_exc())
 
         try:
-            tag = handler.get_tag(filepath + ext)
+            tag = handler.get_tag(filepath)
         except Exception:
             try:
                 tag = handler.build_tag(filepath=filepath)
