@@ -402,7 +402,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                 for perm in pr.permutations.STEPTREE:
                     if perm.compression.enum_name != "ogg":
                         continue
-                    elif perm.ogg_sample_count == 0 and perm.samples.data:
+                    elif perm.buffer_size == 0 and perm.samples.data:
                         bad_ogg.append((pr.name, perm.name))
 
             if bad_ogg:
