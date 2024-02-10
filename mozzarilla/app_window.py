@@ -101,6 +101,8 @@ class Mozzarilla(Binilla):
     guerilla_workspace_def  = None
     config_version = 3
 
+    # NOTE: halo 3 stuff has been disabled since it was always experimental,
+    #       and people shouldn't think it works with official h3 mod tools.
     handler_classes = (
         HaloHandler,
         OsV3HaloHandler,
@@ -108,7 +110,7 @@ class Mozzarilla(Binilla):
         MCCHaloHandler,
         MiscHaloLoader,
         StubbsHandler,
-        Halo3Handler,
+        #Halo3Handler,
         )
 
     handlers = ()
@@ -120,7 +122,7 @@ class Mozzarilla(Binilla):
         "Halo 1 MCC",
         "Halo 1 Misc",
         "Stubbs the Zombie",
-        "Halo 3"
+        #"Halo 3"
         )
 
     # names of the handlers that MUST load tags from within their tags_dir
@@ -130,7 +132,7 @@ class Mozzarilla(Binilla):
         "Halo 1 OS v4",
         "Halo 1 MCC",
         "Stubbs the Zombie",
-        "Halo 3"
+        #"Halo 3"
         ))
 
     about_module_names = (

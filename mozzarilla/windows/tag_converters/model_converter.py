@@ -49,13 +49,6 @@ def convert_model(src_tag, dst_tag, to_gbxmodel):
         dst_tag_data.low_lod_cutoff       = tmp1
         dst_tag_data.superlow_lod_cutoff  = tmp0
 
-        tmp0 = dst_tag_data.superhigh_lod_nodes
-        tmp1 = dst_tag_data.high_lod_nodes
-        dst_tag_data.superhigh_lod_nodes = dst_tag_data.superlow_lod_nodes
-        dst_tag_data.high_lod_nodes      = dst_tag_data.low_lod_nodes
-        dst_tag_data.low_lod_nodes       = tmp1
-        dst_tag_data.superlow_lod_nodes  = tmp0
-
     # make all markers global ones
     if hasattr(src_tag, "globalize_local_markers"):
         src_tag.globalize_local_markers()

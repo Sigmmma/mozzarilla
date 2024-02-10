@@ -32,23 +32,30 @@ class HaloScriptTextFrame(ComputedTextFrame):
         if None in (self.strings, self.syntax):
             return
 
-        typ = "script"
-        if "global" in self.f_widget_parent.node.NAME:
-            typ = "global"
+        # figure out the engine so we can decompile the script data correctly.
+        # NOTE: refinery sets the tag window engine when it displays it.
+        #       we default to what the tag itself says though.
+        tag     = getattr(self.tag_window, "tag", None)
+        engine  = (getattr(tag, "engine", None) or
+                   getattr(self.tag_window, "engine", None))
+        kw      = dict(engine=engine) if engine else dict()
+
+        typ = "global" if "global" in self.f_widget_parent.node.NAME else "script"
 
         tag_data = self.parent.parent.parent.parent
         script_strings_by_type = ()
         try:
             if self.tag_window.use_scenario_names_for_script_names:
                 script_strings_by_type = reclaimer.halo_script.hsc.\
-                                         get_h1_scenario_script_object_type_strings(tag_data)
+                    get_scenario_script_object_type_strings(tag_data, **kw)
         except Exception:
             pass
 
         new_text = reclaimer.halo_script.hsc.hsc_bytecode_to_string(
-                self.syntax, self.strings, self.f_widget_parent.attr_index,
-                tag_data.scripts.STEPTREE, tag_data.globals.STEPTREE, typ,
-                hsc_node_strings_by_type=script_strings_by_type)
+            self.syntax, self.strings, self.f_widget_parent.attr_index,
+            tag_data.scripts.STEPTREE, tag_data.globals.STEPTREE, typ,
+            hsc_node_strings_by_type=script_strings_by_type,
+            )
         return new_text
 
 
