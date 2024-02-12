@@ -764,7 +764,7 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
                     if shdr_ref:
                         mat.shader_type = shdr_ref.shader.tag_class.enum_name
                         mat.shader_path = shdr_ref.shader.filepath
-                        mat.permutation_index = shdr_ref.shader.permutation_index
+                        mat.permutation_index = shdr_ref.permutation_index
 
             except Exception:
                 print(format_exc())

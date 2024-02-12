@@ -50,8 +50,8 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         window_base_class.__init__(self, app_root, *args, **kwargs)
         BinillaWidget.__init__(self, *args, **kwargs)
 
-        #self.title("Model_animations compressor/decompressor")
-        self.title("Model_animations decompressor")
+        #self.title("Model animations compressor/decompressor")
+        self.title("Model animations decompressor")
         #self.resizable(1, 1)
         self.resizable(0, 0)
         self.update()
@@ -74,10 +74,10 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
             self, text="Animations info")
 
         self.model_animations_path_frame = tk.LabelFrame(
-            self.main_frame, text="Model_animations path")
+            self.main_frame, text="model_animations path")
         self.model_animations_path_buttons_frame = tk.Frame(self.main_frame)
         self.model_animations_dir_frame = tk.LabelFrame(
-            self.main_frame, text="Model_animations dir")
+            self.main_frame, text="model_animations dir")
         self.model_animations_dir_buttons_frame  = tk.Frame(self.main_frame)
         self.settings_frame = tk.Frame(self.main_frame)
 
@@ -200,7 +200,7 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
             antr_dir = self.model_animations_dir.get()
 
         fp = askopenfilename(
-            initialdir=antr_dir, title="Model_animations to compress/decompress", parent=self,
+            initialdir=antr_dir, title="model_animations to compress/decompress", parent=self,
             filetypes=(("Model animations graph", "*.model_animations"), ('All', '*')))
 
         if not fp:
@@ -269,7 +269,7 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
             self.model_animations_dir_browse(True)
             antr_dir = self.model_animations_dir.get()
             if not antr_dir and self.warn_cancel():
-                print("    Model_animations %sion cancelled." % compress)
+                print("    model_animations %sion cancelled." % compress)
                 return
 
         for root, _, files in os.walk(antr_dir):
@@ -341,11 +341,11 @@ class AnimationsCompressionWindow(window_base_class, BinillaWidget):
         if errors:
             self.update()
             if not messagebox.askyesno(
-                    "Model_animations %sing failed" % state,
+                    "%sing model_animations failed" % state.capitalize(),
                     ("Errors occurred while %sing(check console). " % state) +
                      "Do you want to save the model_animations tag anyway?",
                     icon='warning', parent=self):
-                print("    Model_animations compilation failed.")
+                print("    Saving model_animations cancelled.")
                 return
 
         try:
