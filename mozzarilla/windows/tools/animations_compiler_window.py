@@ -54,7 +54,7 @@ ANIM_DEF_NAMES = (
     "Open Sauce (.model_animations)",
     "Open Sauce (.model_animations_yelo)",
     "MCC (.model_animations)",
-    #"Stubbs the Zombie (.model_animations)"
+    "Stubbs the Zombie (.model_animations)"
     )
 
 class AnimationsCompilerWindow(window_base_class, BinillaWidget):
@@ -159,6 +159,13 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             text=("Calculate biped limp body node vectors\n"
                   "(requires matching gbxmodel)"), anchor="w")
 
+        self.target_tag_type_menu.sel_index = (
+            0 if not hasattr(self.app_root, "handler_name")  else
+            1 if "OS"       in self.app_root.handler_name   else
+            3 if "MCC"      in self.app_root.handler_name   else
+            4 if "Stubbs"   in self.app_root.handler_name   else
+            0
+            )
 
         self.jma_info_tree = tk.ttk.Treeview(
             self.jma_info_frame, selectmode='browse', padding=(0, 0), height=4)
