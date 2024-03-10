@@ -316,7 +316,7 @@ class Mozzarilla(Binilla):
             label="Bitmap(s) from bitmap source", command=self.bitmap_from_bitmap_source)
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
-            label="Sound from wav", command=self.show_sound_compiler_window)
+            label="Sound from source files", command=self.show_sound_compiler_window)
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
             label="Model_animations from jma", command=self.show_animations_compiler_window)
@@ -826,7 +826,7 @@ class Mozzarilla(Binilla):
                 return ()
             elif isinstance(filepaths, str) and filepaths.startswith('{'):
                 # account for a stupid bug with certain versions of windows
-                filepaths = re.split("\}\W\{", filepaths[1:-1])
+                filepaths = re.split(r"\}\W\{", filepaths[1:-1])
 
         if isinstance(filepaths, (str, PurePath)):
             filepaths = (filepaths, )

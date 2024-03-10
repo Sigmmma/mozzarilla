@@ -10,16 +10,19 @@
 from pathlib import Path
 import copy
 import tkinter as tk
+import tkinter.ttk as ttk
 
 from traceback import format_exc
 
 from supyr_struct.buffer import get_rawdata
 from supyr_struct.defs.audio.wav import wav_def
+from supyr_struct.tag import Tag as SupyrTag
 
 from binilla.widgets.field_widgets import FieldWidget, RawdataFrame
 from binilla.windows.filedialog import askopenfilename, asksaveasfilename
-
+from mozzarilla.widgets.field_widgets.sound_player_frame import SoundPlayerMixin
 from reclaimer.meta.wrappers.byteswapping import byteswap_pcm16_samples
+from reclaimer.sounds import playback
 
 
 class HaloRawdataFrame(RawdataFrame):
@@ -71,7 +74,40 @@ class HaloScriptSourceFrame(HaloRawdataFrame):
     def field_ext(self): return '.hsc'
 
 
-class SoundSampleFrame(HaloRawdataFrame):
+class SoundSampleFrame(HaloRawdataFrame, SoundPlayerMixin):
+
+    def __init__(self, *args, **kwargs):
+        SoundPlayerMixin.__init__(self)
+        HaloRawdataFrame.__init__(self, *args, **kwargs)
+        self.sound_player.concatenate_perm_chain = False
+
+    @property
+    def big_endian_pcm(self):
+        # metadata pcm audio is little endian. we can detect 
+        # this based on whether or not the engine property 
+        # exists that Refinery's MetaWindow should have.
+        return not hasattr(getattr(self, "tag_window", None), "engine")
+    
+    def destroy(self):
+        try:
+            self.playback_action("stop_all")
+        except Exception:
+            pass
+        super().destroy()
+
+    def update_player(self):
+        try:
+            perm  = self.parent.parent
+            perms = perm.parent
+            pr    = perms.parent.parent
+            prs   = pr.parent
+            self.permutation_index = perms.index_by_id(perm)
+            self.pitch_range_index = prs.index_by_id(pr)
+        except (ValueError, AttributeError):
+            self.permutation_index = -1
+            self.pitch_range_index = -1
+
+        super().update_player()
 
     @property
     def field_ext(self):
@@ -82,6 +118,28 @@ class SoundSampleFrame(HaloRawdataFrame):
         except Exception:
             pass
         return '.wav'
+
+    def populate(self):
+        self.play_sound_btn = ttk.Button(
+            self, width=6, text='Play',
+            command=(lambda e=None: self.playback_action("play"))
+            )
+        self.stop_sound_btn = ttk.Button(
+            self, width=6, text='Stop',
+            command=(lambda e=None: self.playback_action("stop"))
+            )
+        self.stop_all_sounds_btn = ttk.Button(
+            self, width=8, text='Stop all',
+            command=(lambda e=None: self.playback_action("stop_all"))
+            )
+        super().populate()
+
+    def pose_fields(self):
+        super().pose_fields()
+        padx, pady = self.horizontal_padx, self.horizontal_pady
+        self.play_sound_btn.pack(side='left', fill="x", padx=padx, pady=pady)
+        self.stop_sound_btn.pack(side='left', fill="x", padx=padx, pady=pady)
+        self.stop_all_sounds_btn.pack(side='left', fill="x", padx=padx, pady=pady)
 
     def import_node(self):
         '''Prompts the user for an exported node file.
@@ -95,7 +153,11 @@ class SoundSampleFrame(HaloRawdataFrame):
 
         filepath = askopenfilename(
             initialdir=initialdir, defaultextension=ext,
-            filetypes=[(self.name, "*" + ext), ('All', '*')],
+            filetypes=[
+                (ext.lstrip(".").capitalize() + " file", "*" + ext),
+                ("Rawdata", "*.bin"),
+                ('All', '*')
+                ],
             title="Import sound data from...", parent=self)
 
         if not filepath:
@@ -201,7 +263,11 @@ class SoundSampleFrame(HaloRawdataFrame):
 
         filepath = asksaveasfilename(
             initialdir=initialdir, title="Export sound data to...",
-            parent=self, filetypes=[(self.name, '*' + def_ext), ('All', '*')])
+            parent=self, filetypes=[
+                (def_ext.lstrip(".").capitalize() + " file", "*" + def_ext),
+                ("Rawdata", "*.bin"),
+                ('All', '*')
+                ])
 
         if not filepath:
             return

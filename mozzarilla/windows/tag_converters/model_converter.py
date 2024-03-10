@@ -49,9 +49,10 @@ def convert_model(src_tag, dst_tag, to_gbxmodel):
         dst_tag_data.low_lod_cutoff       = tmp1
         dst_tag_data.superlow_lod_cutoff  = tmp0
 
+    # NOTE: not doing this as we don't need to support arsenic anymore
     # make all markers global ones
-    if hasattr(src_tag, "globalize_local_markers"):
-        src_tag.globalize_local_markers()
+    #if hasattr(src_tag, "globalize_local_markers"):
+    #    src_tag.globalize_local_markers()
 
     # move the markers, nodes, regions, and shaders, from mode into mod2
     dst_tag_data.markers = src_tag_data.markers
