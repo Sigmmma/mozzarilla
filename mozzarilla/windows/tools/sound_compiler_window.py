@@ -545,7 +545,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         self.stop_playback_button.pack(side="bottom", fill='x', padx=5, pady=5)
         self.sample_info_hsb.pack(side="bottom", fill='x')
         self.sample_info_vsb.pack(side="right",  fill='y')
-        self._pr_info_tree.pack(side='left', fill='both', expand=True)
+        self._pr_info_tree.pack(side='right', fill='both', expand=True)
 
         self.load_button.pack(side='left', fill='both', padx=3, expand=True)
         self.compile_button.pack(side='right', fill='both', padx=3, expand=True)
@@ -817,6 +817,9 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
 
                     iids = [perm_iid]
 
+                    iids.append(pr_tree.insert(
+                        perm_iid, 'end', text="Filename", tags=('item',),
+                        values=(perm.source_filename, )))
                     iids.append(pr_tree.insert(
                         perm_iid, 'end', text="Compression", tags=('item',),
                         values=(compression_names.get(
