@@ -37,6 +37,7 @@ from reclaimer.hek.handler import HaloHandler
 from reclaimer.h3.handler import Halo3Handler
 from reclaimer.os_v3_hek.handler import OsV3HaloHandler
 from reclaimer.os_v4_hek.handler import OsV4HaloHandler
+from reclaimer.mcc_hek.handler import MCCHaloHandler
 from reclaimer.misc.handler import MiscHaloLoader
 from reclaimer.stubbs.handler import StubbsHandler
 from supyr_struct.util import tagpath_to_fullpath, path_split,\
@@ -100,13 +101,16 @@ class Mozzarilla(Binilla):
     guerilla_workspace_def  = None
     config_version = 3
 
+    # NOTE: halo 3 stuff has been disabled since it was always experimental,
+    #       and people shouldn't think it works with official h3 mod tools.
     handler_classes = (
         HaloHandler,
         OsV3HaloHandler,
         OsV4HaloHandler,
+        MCCHaloHandler,
         MiscHaloLoader,
         StubbsHandler,
-        Halo3Handler,
+        #Halo3Handler,
         )
 
     handlers = ()
@@ -115,9 +119,10 @@ class Mozzarilla(Binilla):
         "Halo 1",
         "Halo 1 OS v3",
         "Halo 1 OS v4",
+        "Halo 1 MCC",
         "Halo 1 Misc",
         "Stubbs the Zombie",
-        "Halo 3"
+        #"Halo 3"
         )
 
     # names of the handlers that MUST load tags from within their tags_dir
@@ -125,8 +130,9 @@ class Mozzarilla(Binilla):
         "Halo 1",
         "Halo 1 OS v3",
         "Halo 1 OS v4",
+        "Halo 1 MCC",
         "Stubbs the Zombie",
-        "Halo 3"
+        #"Halo 3"
         ))
 
     about_module_names = (
@@ -310,7 +316,7 @@ class Mozzarilla(Binilla):
             label="Bitmap(s) from bitmap source", command=self.bitmap_from_bitmap_source)
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
-            label="Sound from wav", command=self.show_sound_compiler_window)
+            label="Sound from source files", command=self.show_sound_compiler_window)
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
             label="Model_animations from jma", command=self.show_animations_compiler_window)
@@ -820,7 +826,7 @@ class Mozzarilla(Binilla):
                 return ()
             elif isinstance(filepaths, str) and filepaths.startswith('{'):
                 # account for a stupid bug with certain versions of windows
-                filepaths = re.split("\}\W\{", filepaths[1:-1])
+                filepaths = re.split(r"\}\W\{", filepaths[1:-1])
 
         if isinstance(filepaths, (str, PurePath)):
             filepaths = (filepaths, )

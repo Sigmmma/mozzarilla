@@ -16,9 +16,14 @@ from tkinter import messagebox
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.widgets.scroll_menu import ScrollMenu
 from binilla.windows.filedialog import askdirectory, asksaveasfilename
 
 from reclaimer.hek.defs.antr import antr_def
+from reclaimer.os_hek.defs.magy import magy_def
+from reclaimer.os_hek.defs.antr import antr_def as os_antr_def
+from reclaimer.mcc_hek.defs.antr import antr_def as mcc_antr_def
+from reclaimer.stubbs.defs.antr import antr_def as stubbs_antr_def
 from reclaimer.animation.jma import read_jma, write_jma,\
      JmaAnimation, JmaAnimationSet, JMA_ANIMATION_EXTENSIONS
 from reclaimer.animation.animation_compilation import \
@@ -36,6 +41,21 @@ if __name__ == "__main__":
 else:
     window_base_class = tk.Toplevel
 
+
+ANIM_DEFS = (
+    antr_def,
+    os_antr_def,
+    magy_def,
+    mcc_antr_def,
+    #stubbs_antr_def,
+    )
+ANIM_DEF_NAMES = (
+    "Xbox/PC/CE (.model_animations)",
+    "Open Sauce (.model_animations)",
+    "Open Sauce (.model_animations_yelo)",
+    "MCC (.model_animations)",
+    "Stubbs the Zombie (.model_animations)"
+    )
 
 class AnimationsCompilerWindow(window_base_class, BinillaWidget):
     app_root = None
@@ -62,7 +82,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         window_base_class.__init__(self, app_root, *args, **kwargs)
         BinillaWidget.__init__(self, *args, **kwargs)
 
-        self.title("Model_animations compiler")
+        self.title("Model animations compiler")
         self.resizable(1, 1)
         self.update()
         try:
@@ -76,7 +96,6 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.jma_dir = tk.StringVar(self)
         self.model_animations_path = tk.StringVar(self)
 
-        self.animation_count_limit = tk.IntVar(self, 256)
         self.calculate_limp_limb_vectors = tk.IntVar(self, 0)
         self.update_mode = tk.IntVar(self, ANIMATION_COMPILE_MODE_PRESERVE)
         self.animation_delta_tolerance_string = tk.StringVar(
@@ -100,12 +119,14 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.tags_dir_frame = tk.LabelFrame(
             self.dirs_frame, text="Tags directory root folder")
         self.model_animations_path_frame = tk.LabelFrame(
-            self.dirs_frame, text="Model_animations output path")
+            self.dirs_frame, text="model_animations output path")
 
         self.animation_delta_tolerance_frame = tk.LabelFrame(
             self.settings_frame, text="Animation delta tolerance")
         self.update_mode_frame = tk.LabelFrame(
             self.settings_frame, text="What to do with existing model_animations tag")
+        self.target_tag_type_frame = tk.LabelFrame(
+            self.settings_frame, text="Target engine and tag type(affects tag limits)")
 
         self.compile_mode_replace_rbtn = tk.Radiobutton(
             self.update_mode_frame, anchor="w",
@@ -130,15 +151,21 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             to=100, width=25, increment=self.animation_delta_tolerance,
             textvariable=self.animation_delta_tolerance_string, justify="right")
 
-        self.use_os_animation_count_limit_cbtn = tk.Checkbutton(
-            self.settings_frame, onvalue=2048, offvalue=256,
-            variable=self.animation_count_limit, anchor="w",
-            text="Use Open Sauce animation count limit")
+        self.target_tag_type_menu = ScrollMenu(
+            self.target_tag_type_frame, menu_width=40, options=ANIM_DEF_NAMES
+            )
         self.calculate_limp_limb_vectors_cbtn = tk.Checkbutton(
             self.settings_frame, variable=self.calculate_limp_limb_vectors,
             text=("Calculate biped limp body node vectors\n"
                   "(requires matching gbxmodel)"), anchor="w")
 
+        self.target_tag_type_menu.sel_index = (
+            0 if not hasattr(self.app_root, "handler_name")  else
+            1 if "OS"       in self.app_root.handler_name   else
+            3 if "MCC"      in self.app_root.handler_name   else
+            4 if "Stubbs"   in self.app_root.handler_name   else
+            0
+            )
 
         self.jma_info_tree = tk.ttk.Treeview(
             self.jma_info_frame, selectmode='browse', padding=(0, 0), height=4)
@@ -215,20 +242,22 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.compile_button.pack(side='right', fill='both', padx=3, expand=True)
 
         for w in (self.update_mode_frame,
-                  self.animation_delta_tolerance_frame):
+                  self.animation_delta_tolerance_frame,
+                  self.target_tag_type_frame,
+                  ):
             w.pack(expand=True, fill='both')
 
         for w in (self.compile_mode_replace_rbtn,
                   self.compile_mode_preserve_rbtn,
-                  self.compile_mode_additive_rbtn,):
+                  self.compile_mode_additive_rbtn,
+                  ):
             w.pack(expand=True, fill='both')
 
         self.animation_delta_tolerance_info.pack(fill='both', expand=True,
                                                  padx=5, pady=5)
         self.animation_delta_tolerance_spinbox.pack(padx=5, pady=5, anchor="w")
-
-        self.use_os_animation_count_limit_cbtn.pack(expand=True, fill='both')
-	# TODO: Uncomment this once this works
+        self.target_tag_type_menu.pack(expand=True, fill='both')
+        # TODO: Uncomment this once this works
         #self.calculate_limp_limb_vectors_cbtn.pack(expand=True, fill='both')
 
 
@@ -281,6 +310,8 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         for jma_anim in self.jma_anims:
             iid = jma_tree.insert(anims_iid, 'end', tags=('item',),
                                   text=jma_anim.name + jma_anim.ext)
+            jma_tree.insert(iid, 'end', text="Version", tags=('item',),
+                            values=(jma_anim.version, ))
             jma_tree.insert(iid, 'end', text="Node list checksum", tags=('item',),
                             values=(jma_anim.node_list_checksum, ))
             jma_tree.insert(iid, 'end', text="World relative", tags=('item',),
@@ -467,12 +498,16 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
         fp = asksaveasfilename(
             initialdir=antr_dir, title="Save model_animations to...", parent=self,
-            filetypes=(("Model animations graph", "*.model_animations"), ('All', '*')))
+            filetypes=(
+                ("Model animations graph", "*.model_animations"),
+                ("Yelo model animations graph", "*.model_animations_yelo"),
+                ('All', '*')
+                ))
 
         if not fp:
             return
-
-        fp = Path(fp).with_suffix(".model_animations")
+        
+        fp = Path(fp).with_suffix(self.get_model_animations_tagdef().ext)
 
         self.app_root.last_load_dir = str(fp.parent)
         self.model_animations_path.set(str(fp))
@@ -507,6 +542,10 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         except AttributeError:
             pass
         window_base_class.destroy(self)
+    
+    def get_model_animations_tagdef(self):
+        i = self.target_tag_type_menu.sel_index
+        return ANIM_DEFS[i] if i in range(len(ANIM_DEFS)) else antr_def
 
     def load_animations(self):
         if not self._compiling and not self._loading and not self._saving:
@@ -643,11 +682,13 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         while not self.model_animations_path.get():
             self.model_animations_path_browse(True)
             if (not self.model_animations_path.get()) and self.warn_cancel():
-                print("    Model_animations compilation cancelled.")
+                print("    Compiling model_animations cancelled.")
                 return
 
         try:
-            antr_tag = antr_def.build(filepath=self.model_animations_path.get())
+            antr_tag = self.get_model_animations_tagdef().build(
+                filepath=self.model_animations_path.get()
+                )
         except Exception:
             antr_tag = None
 
@@ -671,10 +712,11 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                     filetypes=(("Gearbox model", "*.gbxmodel"), ('All', '*')))
 
                 if (not mod2_path) and self.warn_cancel():
-                    print("    Model_animations compilation cancelled.")
+                    print("    Compiling model_animations cancelled.")
                     return
 
         updating = antr_tag is not None
+        antr_def = antr_tag = self.get_model_animations_tagdef()
         if updating:
             print("Updating existing model_animations tag.")
         else:
@@ -682,10 +724,12 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             antr_tag = antr_def.build()
 
         antr_tag.filepath = self.model_animations_path.get()
+        antr_tag.filepath = "".join((
+            os.path.splitext(antr_tag.filepath)[0], antr_def.ext
+            ))
 
         self.update()
         errors = compile_model_animations(antr_tag, self.jma_anim_set, False,
-                                          self.animation_count_limit.get(),
                                           self.animation_delta_tolerance,
                                           self.update_mode.get(), mod2_nodes)
         if errors:
@@ -694,11 +738,11 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
             self.update()
             if not messagebox.askyesno(
-                    "Model_animations compilation failed",
+                    "Compiling model_animations failed",
                     "Errors occurred while compiling animations(check console). "
                     "Do you want to save the model_animations tag anyway?",
                     icon='warning', parent=self):
-                print("    Model_animations compilation failed.")
+                print("    Saving model_animations cancelled.")
                 return
 
         try:

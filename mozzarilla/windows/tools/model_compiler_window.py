@@ -729,21 +729,19 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
 
             self.app_root.update()
 
-        mod2_path = self.gbxmodel_path.get()
-        tags_dir = self.tags_dir.get().replace('/', '\\')
+        mod2_path = Path(self.gbxmodel_path.get())
+        tags_dir = Path(self.tags_dir.get())
         self.shader_names_menu.max_index = len(merged_jms.materials) - 1
 
+        # NOTE: stripping off permutation index.rstrip("0123456789")
 
-        shaders_dir = ""
-        if mod2_path:
-            shaders_dir = os.path.join(os.path.dirname(mod2_path), "shaders", '')
-        tags_dir = self.tags_dir.get()
-        has_local_shaders = os.path.exists(shaders_dir) and os.path.exists(tags_dir)
+        shaders_dir = mod2_path.parent.joinpath("shaders")
+
         if errors_occurred:
             print("    Errors occurred while loading jms files.")
-        elif os.path.isfile(mod2_path):
+        elif mod2_path.is_file():
             try:
-                self.mod2_tag = mod2_def.build(filepath=mod2_path)
+                self.mod2_tag = mod2_def.build(filepath=str(mod2_path))
 
                 tagdata = self.mod2_tag.data.tagdata
                 self.merged_jms.node_list_checksum = tagdata.node_list_checksum
@@ -766,32 +764,7 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
                     if shdr_ref:
                         mat.shader_type = shdr_ref.shader.tag_class.enum_name
                         mat.shader_path = shdr_ref.shader.filepath
-
-
-                local_shaders = {}
-                if has_local_shaders and is_in_dir(shaders_dir, tags_dir):
-                    # fill in any missing shader paths with ones found nearby
-                    for _, __, files in os.walk(shaders_dir):
-                        for filename in files:
-                            name, ext = os.path.splitext(filename)
-                            ext = ext.lower()
-                            if ext.startswith(".shader"):
-                                local_shaders.setdefault(
-                                    name.split("\\")[-1].lower(), []).append(
-                                        os.path.join(shaders_dir, filename))
-                        break
-
-                    for mat in merged_jms.materials:
-                        shader_path = local_shaders.get(mat.name, [""]).pop(0)
-                        if "shader_" in mat.shader_type or not shader_path:
-                            continue
-
-                        # shader type isnt set. Try to detect its location and
-                        # type if possible, or set it to a default value if not
-                        shader_path = shader_path.lower().replace("/", "\\")
-                        name, ext = os.path.splitext(shader_path)
-                        mat.shader_path = os.path.relpath(name, tags_dir).strip("\\")
-                        mat.shader_type = ext.strip(".")
+                        mat.permutation_index = shdr_ref.permutation_index
 
             except Exception:
                 print(format_exc())
@@ -802,6 +775,32 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
             self.low_lod_cutoff.set("0.0")
             self.superlow_lod_cutoff.set("0.0")
 
+
+        local_shaders = {}
+        if shaders_dir.is_dir():
+            # fill in any missing shader paths with ones found nearby
+            for _, __, files in os.walk(str(shaders_dir)):
+                for filename in files:
+                    name, ext = os.path.splitext(filename)
+                    ext = ext.lower()
+                    if ext.startswith(".shader"):
+                        local_shaders.setdefault(name, []).append(
+                            shaders_dir.joinpath(filename)
+                            )
+                break
+
+            for mat in merged_jms.materials:
+                shader_path = local_shaders.get(mat.name, [""])[0]
+                if "shader_" in mat.shader_type or not shader_path:
+                    continue
+
+                # shader type isnt set. Try to detect its location and
+                # type if possible, or set it to a default value if not
+                name, ext = os.path.splitext(
+                    str(shader_path.relative_to(tags_dir)).replace("/", "\\")
+                    )
+                mat.shader_path = name
+                mat.shader_type = ext.strip(".")
 
         for mat in merged_jms.materials:
             shader_path = mat.shader_path
