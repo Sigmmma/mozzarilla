@@ -130,11 +130,6 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
         if self.f_widget_parent is None:
             self.pack_padx = self.pack_pady = 0
 
-        if 'a' in self.desc['COLOR_CHANNELS']:
-            self.has_alpha = True
-        else:
-            self.has_alpha = False
-
         tk.Frame.__init__(self, *args, **e_c.fix_kwargs(**kwargs))
 
         self._initialized = True
@@ -260,11 +255,13 @@ class HaloUInt32ColorPickerFrame(ColorPickerFrame):
         for wid in self.f_widget_ids:
             self.f_widgets[wid].reload()
 
-    apply_style = FieldWidget.apply_style
-
     def pose_fields(self):
         ContainerFrame.pose_fields(self)
         self.color_btn.pack(side='left')
+
+    @property
+    def has_alpha(self):
+        return 'a' in self.desc.get('COLOR_CHANNELS', '')
 
     @property
     def alpha(self):
