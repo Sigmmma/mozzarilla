@@ -24,8 +24,9 @@ import arbytmap as ab
 
 from reclaimer.bitmaps.p8_palette import HALO_P8_PALETTE, STUBBS_P8_PALETTE
 from reclaimer.hek.defs.bitm import bitm_def
-from reclaimer.constants import TYPE_NAME_MAP, FORMAT_NAME_MAP,\
-     I_FORMAT_NAME_MAP
+from reclaimer.constants import TYPE_NAME_MAP,\
+    MCC_FORMAT_NAME_MAP as FORMAT_NAME_MAP,\
+    I_MCC_FORMAT_NAME_MAP as I_FORMAT_NAME_MAP
 
 from binilla.util import do_subprocess, ProcController
 from binilla.widgets.binilla_widget import BinillaWidget

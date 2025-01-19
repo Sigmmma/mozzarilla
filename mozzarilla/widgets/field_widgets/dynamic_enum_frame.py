@@ -38,6 +38,11 @@ def halo_dynamic_enum_generate_options(self, opt_index=None):
         if p_out.startswith('..'): p_out = p_out.split('.', 1)[-1]
         array = self.parent.get_neighbor(p_out)
 
+        if array is None:
+            if opt_index is None:
+                return options
+            return None
+
         options_to_generate = range(len(array))
         if opt_index is not None:
             options_to_generate = (

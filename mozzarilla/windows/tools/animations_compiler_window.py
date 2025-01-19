@@ -16,15 +16,20 @@ from tkinter import messagebox
 from traceback import format_exc
 
 from binilla.widgets.binilla_widget import BinillaWidget
+from binilla.widgets.scroll_menu import ScrollMenu
 from binilla.windows.filedialog import askdirectory, asksaveasfilename
 
 from reclaimer.hek.defs.antr import antr_def
+from reclaimer.os_hek.defs.magy import magy_def
+from reclaimer.os_hek.defs.antr import antr_def as os_antr_def
+from reclaimer.mcc_hek.defs.antr import antr_def as mcc_antr_def
+from reclaimer.stubbs.defs.antr import antr_def as stubbs_antr_def
 from reclaimer.animation.jma import read_jma, write_jma,\
-     JmaAnimation, JmaAnimationSet, JMA_ANIMATION_EXTENSIONS
+     JmaAnimation, JmaAnimationSet
+from reclaimer.animation import constants as const
 from reclaimer.animation.animation_compilation import \
-     compile_model_animations, ANIMATION_COMPILE_MODE_NEW,\
-     ANIMATION_COMPILE_MODE_PRESERVE, ANIMATION_COMPILE_MODE_ADDITIVE
-from reclaimer.animation.util import partial_mod2_def
+     compile_model_animations
+from reclaimer.animation.structs import partial_mod2_def
 
 from supyr_struct.util import is_in_dir, path_normalize,\
      path_split, path_replace
@@ -36,6 +41,50 @@ if __name__ == "__main__":
 else:
     window_base_class = tk.Toplevel
 
+ANIM_DEF_NAMES = (
+    "Xbox/PC/CE",
+    "OpenSauce",
+    "OpenSauce (animations_yelo)",
+    "MCC",
+    "Stubbs the Zombie"
+    )
+ANIM_DEFS = {
+    0: antr_def,
+    1: os_antr_def,
+    2: magy_def,
+    3: mcc_antr_def,
+    #4: stubbs_antr_def,
+    }
+COMPILE_MODE_NAMES = (
+    "Preserve nothing (erase and rebuild tag)",
+    "Preserve all used animations/tag values",
+    "Preserve everything (non-destructive)"
+    )
+COMPILE_MODES = {
+    0: const.ANIMATION_COMPILE_MODE_NEW,
+    1: const.ANIMATION_COMPILE_MODE_PRESERVE,
+    2: const.ANIMATION_COMPILE_MODE_ADDITIVE,
+    }
+PHYSICS_CALC_MODE_NAMES = (
+    "Calculate if biped animations are detected",
+    "Calculate",
+    "Do not calculate",
+    )
+PHYSICS_CALC_MODES = {
+    0: const.PHYSICS_CALC_MODE_GUESS,
+    1: const.PHYSICS_CALC_MODE_ALWAYS,
+    2: const.PHYSICS_CALC_MODE_NEVER,
+    }
+COMPRESS_MODE_NAMES = (
+    "Use tag compression fields",
+    "Always try (overrides tag fields)",
+    "Never  try (overrides tag fields)",
+    )
+COMPRESS_MODES = {
+    0: const.ANIMATION_COMPRESS_MODE_USE_FLAG,
+    1: const.ANIMATION_COMPRESS_MODE_IF_BETTER,
+    2: const.ANIMATION_COMPRESS_MODE_NEVER,
+    }
 
 class AnimationsCompilerWindow(window_base_class, BinillaWidget):
     app_root = None
@@ -50,7 +99,8 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
     _jma_tree_iids = ()
 
-    animation_delta_tolerance = 0.00001
+    delta_tolerance = 1.0
+    compression_quality = 100*const.COMPRESS_RATIO_GOOD_CUTOFF
 
     def __init__(self, app_root, *args, **kwargs):
         if window_base_class == tk.Toplevel:
@@ -62,7 +112,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         window_base_class.__init__(self, app_root, *args, **kwargs)
         BinillaWidget.__init__(self, *args, **kwargs)
 
-        self.title("Model_animations compiler")
+        self.title("Model animations compiler")
         self.resizable(1, 1)
         self.update()
         try:
@@ -76,14 +126,15 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.jma_dir = tk.StringVar(self)
         self.model_animations_path = tk.StringVar(self)
 
-        self.animation_count_limit = tk.IntVar(self, 256)
-        self.calculate_limp_limb_vectors = tk.IntVar(self, 0)
-        self.update_mode = tk.IntVar(self, ANIMATION_COMPILE_MODE_PRESERVE)
-        self.animation_delta_tolerance_string = tk.StringVar(
-            self, str(self.animation_delta_tolerance))
-        self.animation_delta_tolerance_string.trace(
-            "w", lambda *a, s=self: s.set_animation_delta_tolerance())
-
+        self.fix_anim_types = tk.IntVar(self, 0)
+        self.delta_tolerance_string = tk.StringVar(
+            self, str(self.delta_tolerance))
+        self.compression_quality_string = tk.StringVar(
+            self, f"{self.compression_quality} %")
+        self.delta_tolerance_string.trace(
+            "w", lambda *a, s=self: s.set_delta_tolerance())
+        self.compression_quality_string.trace(
+            "w", lambda *a, s=self: s.set_compression_quality())
 
         # make the frames
         self.main_frame = tk.Frame(self)
@@ -100,45 +151,77 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.tags_dir_frame = tk.LabelFrame(
             self.dirs_frame, text="Tags directory root folder")
         self.model_animations_path_frame = tk.LabelFrame(
-            self.dirs_frame, text="Model_animations output path")
+            self.dirs_frame, text="model_animations output path")
 
-        self.animation_delta_tolerance_frame = tk.LabelFrame(
-            self.settings_frame, text="Animation delta tolerance")
-        self.update_mode_frame = tk.LabelFrame(
-            self.settings_frame, text="What to do with existing model_animations tag")
+        self.enum_frame = tk.Frame(self.settings_frame)
+        self.advanced_frame = tk.LabelFrame(
+            self.settings_frame, text="Advanced settings")
+        self.spinbox_frame = tk.Frame(self.advanced_frame)
+        self.delta_tolerance_frame = tk.LabelFrame(
+            self.spinbox_frame, text="Animation delta")
+        self.compression_quality_frame = tk.LabelFrame(
+            self.spinbox_frame, text="Compression quality")
+        self.target_tag_type_frame = tk.LabelFrame(
+            self.enum_frame, text="Target engine")
+        self.compress_mode_frame = tk.LabelFrame(
+            self.enum_frame, text="Compression mode")
+        self.compile_mode_frame = tk.LabelFrame(
+            self.enum_frame, text="Tag update mode")
+        self.physics_mode_frame = tk.LabelFrame(
+            self.enum_frame, text=(
+                "Calculate biped limp node vectors"
+                " (used in death settle physics)"
+                )
+            )
 
-        self.compile_mode_replace_rbtn = tk.Radiobutton(
-            self.update_mode_frame, anchor="w",
-            variable=self.update_mode, value=ANIMATION_COMPILE_MODE_NEW,
-            text="Erase all animations/tag values")
-        self.compile_mode_preserve_rbtn = tk.Radiobutton(
-            self.update_mode_frame, anchor="w",
-            variable=self.update_mode, value=ANIMATION_COMPILE_MODE_PRESERVE,
-            text="Preserve any used animations/tag values")
-        self.compile_mode_additive_rbtn = tk.Radiobutton(
-            self.update_mode_frame, anchor="w",
-            variable=self.update_mode, value=ANIMATION_COMPILE_MODE_ADDITIVE,
-            text="Erase nothing(only add/update animations and values)")
+        self.delta_tolerance_info = tk.Label(
+            self.delta_tolerance_frame, justify='left', anchor="w",
+            text=("Tweaks the tolerances used to\n"
+                  "detect if a node is animated.\n"
+                  "Higher values result in smaller,\n"
+                  "but less accurate animation tags."))
+        self.compression_quality_info = tk.Label(
+            self.compression_quality_frame, justify='left', anchor="w",
+            text=("Tweaks the tolerances used to\n"
+                  "determine compression keyframes.\n"
+                  "Lower values result in smaller,\n"
+                  "but less accurate animation tags."))
+        self.delta_tolerance_spinbox = tk.Spinbox(
+            self.delta_tolerance_frame, from_=0, to=100, width=25,
+            increment=1, justify="right",
+            textvariable=self.delta_tolerance_string)
+        self.compression_quality_spinbox = tk.Spinbox(
+            self.compression_quality_frame, from_=0, to=100, width=25,
+            increment=1, justify="right",
+            textvariable=self.compression_quality_string)
 
-        self.animation_delta_tolerance_info = tk.Label(
-            self.animation_delta_tolerance_frame, justify='left', anchor="w",
-            text=("How much a nodes position, rotation, or scale\n"
-                  "must change from the starting frame for that\n"
-                  "type of transform to be considered animated."))
-        self.animation_delta_tolerance_spinbox = tk.Spinbox(
-            self.animation_delta_tolerance_frame, from_=0,
-            to=100, width=25, increment=self.animation_delta_tolerance,
-            textvariable=self.animation_delta_tolerance_string, justify="right")
+        self.target_tag_type_menu = ScrollMenu(
+            self.target_tag_type_frame, menu_width=11, options=ANIM_DEF_NAMES
+            )
+        self.compress_mode_menu = ScrollMenu(
+            self.compress_mode_frame, menu_width=11, options=COMPRESS_MODE_NAMES
+            )
+        self.compile_mode_menu = ScrollMenu(
+            self.compile_mode_frame, menu_width=11, options=COMPILE_MODE_NAMES
+            )
+        self.physics_mode_menu = ScrollMenu(
+            self.physics_mode_frame, menu_width=11, options=PHYSICS_CALC_MODE_NAMES
+            )
 
-        self.use_os_animation_count_limit_cbtn = tk.Checkbutton(
-            self.settings_frame, onvalue=2048, offvalue=256,
-            variable=self.animation_count_limit, anchor="w",
-            text="Use Open Sauce animation count limit")
-        self.calculate_limp_limb_vectors_cbtn = tk.Checkbutton(
-            self.settings_frame, variable=self.calculate_limp_limb_vectors,
-            text=("Calculate biped limp body node vectors\n"
-                  "(requires matching gbxmodel)"), anchor="w")
+        self.fix_anim_types_cbtn = tk.Checkbutton(
+            self.advanced_frame, variable=self.fix_anim_types,
+            text=("Fix animation types (i.e. is base, but must be overlay)"), anchor="w")
 
+        self.compress_mode_menu.sel_index   = 0
+        self.physics_mode_menu.sel_index    = 0
+        self.compile_mode_menu.sel_index    = 1
+        self.target_tag_type_menu.sel_index = (
+            0 if not hasattr(self.app_root, "handler_name") else
+            1 if "OS"       in self.app_root.handler_name   else
+            3 if "MCC"      in self.app_root.handler_name   else
+            4 if "Stubbs"   in self.app_root.handler_name   else
+            0
+            )
 
         self.jma_info_tree = tk.ttk.Treeview(
             self.jma_info_frame, selectmode='browse', padding=(0, 0), height=4)
@@ -185,52 +268,60 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.populate_animations_info_tree()
 
         # pack everything
-        self.main_frame.pack(fill="both", side='left', pady=3, padx=3)
-        self.jma_info_frame.pack(fill="both", side='left', pady=3, padx=3,
+        self.main_frame.pack(fill="both", side='left', pady=4, padx=4)
+        self.jma_info_frame.pack(fill="both", side='left', pady=4, padx=4,
                                  expand=True)
 
-        self.dirs_frame.pack(fill="x")
-        self.buttons_frame.pack(fill="x", pady=3, padx=3)
+        self.dirs_frame.pack(fill="x", padx=4, pady=4)
+        self.buttons_frame.pack(fill="x", padx=4, pady=4)
         self.settings_frame.pack(fill="both")
 
-        self.jma_dir_frame.pack(fill='x')
-        self.tags_dir_frame.pack(fill='x')
-        self.model_animations_path_frame.pack(fill='x')
+        self.jma_dir_frame.pack(fill='x', padx=4, pady=4)
+        self.tags_dir_frame.pack(fill='x', padx=4, pady=4)
+        self.model_animations_path_frame.pack(fill='x', padx=4, pady=4)
 
         self.jma_dir_entry.pack(side='left', fill='x', expand=True)
         self.jma_dir_browse_button.pack(side='left')
 
-        self.model_animations_path_entry.pack(side='left', fill='x', expand=True)
+        self.model_animations_path_entry.pack(side='left', fill='x', expand=True, padx=2)
         self.model_animations_path_browse_button.pack(side='left')
 
-        self.tags_dir_entry.pack(side='left', fill='x', expand=True)
+        self.tags_dir_entry.pack(side='left', fill='x', expand=True, padx=2)
         self.tags_dir_browse_button.pack(side='left')
 
         self.jma_info_hsb.pack(side="bottom", fill='x')
         self.jma_info_vsb.pack(side="right",  fill='y')
         self.jma_info_tree.pack(side='left', fill='both', expand=True)
 
-        self.load_button.pack(side='left', fill='both', padx=3, expand=True)
-        self.save_button.pack(side='left', fill='both', padx=3, expand=True)
-        self.compile_button.pack(side='right', fill='both', padx=3, expand=True)
+        self.load_button.pack(side='left', fill='both', padx=4, expand=True)
+        self.save_button.pack(side='left', fill='both', padx=4, expand=True)
+        self.compile_button.pack(side='right', fill='both', padx=4, expand=True)
 
-        for w in (self.update_mode_frame,
-                  self.animation_delta_tolerance_frame):
-            w.pack(expand=True, fill='both')
+        for w in (self.enum_frame, self.advanced_frame):
+            w.pack(expand=True, fill='both', pady=4, padx=4)
 
-        for w in (self.compile_mode_replace_rbtn,
-                  self.compile_mode_preserve_rbtn,
-                  self.compile_mode_additive_rbtn,):
-            w.pack(expand=True, fill='both')
+        for w in (self.fix_anim_types_cbtn, self.spinbox_frame):
+            w.pack(expand=True, fill='both', pady=2, padx=4)
 
-        self.animation_delta_tolerance_info.pack(fill='both', expand=True,
-                                                 padx=5, pady=5)
-        self.animation_delta_tolerance_spinbox.pack(padx=5, pady=5, anchor="w")
+        for w in (self.delta_tolerance_frame, self.compression_quality_frame):
+            w.pack(expand=True, side="left", fill='both')
 
-        self.use_os_animation_count_limit_cbtn.pack(expand=True, fill='both')
-	# TODO: Uncomment this once this works
-        #self.calculate_limp_limb_vectors_cbtn.pack(expand=True, fill='both')
+        self.enum_frame.columnconfigure(1, weight=1)
+        self.enum_frame.columnconfigure(0, weight=1)
+        self.enum_frame.rowconfigure(1, weight=1)
+        self.compile_mode_frame.grid(row=0, column=0, columnspan=2, sticky="ew")
+        self.target_tag_type_frame.grid(row=1, column=0, sticky="ew")
+        self.compress_mode_frame.grid(row=1, column=1, sticky="ew")
+        self.physics_mode_frame.grid(row=2, column=0, columnspan=3, sticky="ew")
 
+        self.delta_tolerance_info.pack(fill='both', expand=True, padx=4, pady=4)
+        self.delta_tolerance_spinbox.pack(padx=4, pady=4, anchor="w")
+        self.compression_quality_info.pack(fill='both', expand=True, padx=4, pady=4)
+        self.compression_quality_spinbox.pack(padx=4, pady=4, anchor="w")
+        self.target_tag_type_menu.pack(expand=True, fill='both', padx=4, pady=4)
+        self.compress_mode_menu.pack(expand=True, fill='both', padx=4, pady=4)
+        self.compile_mode_menu.pack(expand=True, fill='both', padx=4, pady=4)
+        self.physics_mode_menu.pack(expand=True, fill='both', padx=4, pady=4)
 
         self.apply_style()
         if self.app_root is not self:
@@ -242,8 +333,8 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             jma_tree['columns'] = ('data', )
             jma_tree.heading("#0")
             jma_tree.heading("data")
-            jma_tree.column("#0", minwidth=100, width=100)
-            jma_tree.column("data", minwidth=80, width=80, stretch=False)
+            jma_tree.column("#0", minwidth=100, width=180)
+            jma_tree.column("data", minwidth=80, width=130, stretch=False)
 
         for iid in self._jma_tree_iids:
             jma_tree.delete(iid)
@@ -253,19 +344,25 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if not self.jma_anims or not self.jma_anim_set:
             return
 
+        # always calculate for informational purposes, and then
+        # clear them so they don't get forced into the antr tag
+        print("Generating preview node physics values...")
+        self.jma_anim_set.calculate_limp_node_data()
+        limp_infos  = self.jma_anim_set.limp_node_infos
+        self.jma_anim_set.limp_node_infos = []
+
         nodes_iid = jma_tree.insert('', 'end', text="Nodes", tags=('item',),
                                     values=(len(self.jma_anim_set.nodes),))
         self._jma_tree_iids.append(nodes_iid)
-        nodes = self.jma_anim_set.nodes
-        for node in nodes:
+        for n, node in enumerate(self.jma_anim_set.nodes):
             iid = jma_tree.insert(nodes_iid, 'end', text=node.name, tags=('item',))
             parent_name = child_name = sibling_name = "NONE"
             if node.sibling_index >= 0:
-                sibling_name = nodes[node.sibling_index].name
+                sibling_name = self.jma_anim_set.nodes[node.sibling_index].name
             if node.first_child >= 0:
-                child_name = nodes[node.first_child].name
+                child_name = self.jma_anim_set.nodes[node.first_child].name
             if node.parent_index >= 0:
-                parent_name = nodes[node.parent_index].name
+                parent_name = self.jma_anim_set.nodes[node.parent_index].name
 
             jma_tree.insert(iid, 'end', text="Next sibling",
                             values=(sibling_name, ), tags=('item',),)
@@ -274,6 +371,30 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             jma_tree.insert(iid, 'end', text="Parent",
                             values=(parent_name, ), tags=('item',),)
 
+            info = limp_infos[n] if n < len(limp_infos) else None
+            joint_type = (""      if not(info and info.axes_free) else
+                          "Hinge" if info.axes_free == 1          else
+                          "Socket")
+
+            if joint_type:
+                jma_tree.insert(iid, 'end', text=f"{joint_type} base i",
+                                values=(info.i, ), tags=('item',),)
+                jma_tree.insert(iid, 'end', text=f"{joint_type} base j",
+                                values=(info.j, ), tags=('item',),)
+                jma_tree.insert(iid, 'end', text=f"{joint_type} base k",
+                                values=(info.k, ), tags=('item',),)
+                jma_tree.insert(iid, 'end', text=f"{joint_type} range",
+                                values=(info.vector_range*const.RAD_TO_DEG, ),
+                                tags=('item',),)
+
+            if joint_type == "Socket":
+                jma_tree.insert(iid, 'end', text=f"Socket pitch range",
+                                values=(info.delta*const.RAD_TO_DEG, ),
+                                tags=('item',),)
+                jma_tree.insert(iid, 'end', text=f"Socket roll range",
+                                values=(info.cross_delta*const.RAD_TO_DEG, ),
+                                tags=('item',),)
+
 
         anims_iid = jma_tree.insert('', 'end', text="Animations", tags=('item',),
                                     values=(len(self.jma_anims),))
@@ -281,12 +402,18 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         for jma_anim in self.jma_anims:
             iid = jma_tree.insert(anims_iid, 'end', tags=('item',),
                                   text=jma_anim.name + jma_anim.ext)
+            jma_tree.insert(iid, 'end', text="Version", tags=('item',),
+                            values=(jma_anim.version, ))
             jma_tree.insert(iid, 'end', text="Node list checksum", tags=('item',),
                             values=(jma_anim.node_list_checksum, ))
             jma_tree.insert(iid, 'end', text="World relative", tags=('item',),
                             values=(jma_anim.world_relative, ))
             jma_tree.insert(iid, 'end', text="Type", tags=('item',),
                             values=(jma_anim.anim_type, ))
+            jma_tree.insert(iid, 'end', text="Frame count", tags=('item',),
+                            values=(jma_anim.frame_count, ))
+            jma_tree.insert(iid, 'end', text="Node count", tags=('item',),
+                            values=(jma_anim.node_count, ))
             jma_tree.insert(iid, 'end', text="Frame info", tags=('item',),
                             values=(jma_anim.frame_info_type, ))
 
@@ -297,15 +424,15 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             node_flags_iid = jma_tree.insert(
                 iid, 'end', text="Transform flags", tags=('item',),
                 values=(len(jma_anim.nodes),))
-            for n in range(len(jma_anim.nodes)):
+            for n, node in enumerate(jma_anim.nodes):
                 node_iid = jma_tree.insert(
-                    node_flags_iid, 'end', text=jma_anim.nodes[n].name,
-                    tags=('item',), values=(
-                        "*" if (rot_flags[n] or
-                                trans_flags[n] or
-                                scale_flags[n])
-                        else "",))
-
+                    node_flags_iid, 'end', text=node.name,
+                    tags=('item',), values=("".join((
+                        "R" if rot_flags[n]   else "-",
+                        "T" if trans_flags[n] else "-",
+                        "S" if scale_flags[n] else "-",
+                        ))))
+                continue
                 jma_tree.insert(node_iid, 'end', text="Rotation",
                                 values=(rot_flags[n], ), tags=('item',))
                 jma_tree.insert(node_iid, 'end', text="Position",
@@ -313,10 +440,10 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                 jma_tree.insert(node_iid, 'end', text="Scale",
                                 values=(scale_flags[n], ), tags=('item',))
 
-            # code below is very CPU and RAM intensive.
-            # don't remove this continue unless debugging
             continue
             print("REMINDER TO REMOVE THIS DEBUG IN COMPILER WINDOW")
+            # code below is very CPU and RAM intensive.
+            # don't remove this continue unless debugging
 
             has_dxdy = "dx" in jma_anim.frame_info_type
             has_dz   = "dz" in jma_anim.frame_info_type
@@ -324,12 +451,12 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
             root_data_iid = jma_tree.insert(
                 iid, 'end', text="Root node data", tags=('item',),
-                values=(len(jma_anim.root_node_info),))
-            for f in range(len(jma_anim.root_node_info)):
-                if not has_dxdy and not has_dz and not has_dyaw:
+                values=(len(jma_anim.root_node_info),)
+                ) if jma_anim.has_frame_info else None
+            for f, state in enumerate(jma_anim.root_node_info):
+                if not root_data_iid:
                     break
 
-                state = jma_anim.root_node_info[f]
                 frame_iid = jma_tree.insert(
                     root_data_iid, 'end', tags=('item',),
                     text="frame%s" % f
@@ -367,13 +494,13 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             nodes_iid = jma_tree.insert(
                 iid, 'end', text="Frame data", tags=('item',),
                 values=(len(jma_anim.nodes),))
-            for n in range(len(jma_anim.nodes)):
+            for n, node in enumerate(jma_anim.nodes):
                 states_iid = jma_tree.insert(
-                    nodes_iid, 'end', text=jma_anim.nodes[n].name,
+                    nodes_iid, 'end', text=node.name,
                     tags=('item',))
 
-                for f in range(len(jma_anim.frames)):
-                    state = jma_anim.frames[f][n]
+                for f, frame in enumerate(jma_anim.frames):
+                    state = frame[n]
                     node_iid = jma_tree.insert(
                         states_iid, 'end', tags=('item',),
                         text="frame%s" % f
@@ -418,21 +545,22 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             return
 
         dirpath = str(Path(dirpath))
+        if not self.tags_dir.get():
+            work_dir = path_split(dirpath, "data")
+            data_dir = os.path.join(work_dir, "data")
+            tags_dir = os.path.join(work_dir, "tags")
+            self.tags_dir.set(tags_dir)
+
         if tags_dir and data_dir and os.path.basename(dirpath).lower() == "animations":
             object_dir = os.path.dirname(dirpath)
 
             if object_dir and is_in_dir(object_dir, data_dir):
-                tag_path = os.path.join(object_dir, os.path.basename(object_dir))
-                tag_path = os.path.join(tags_dir, os.path.relpath(tag_path, data_dir))
+                rel_dir  = os.path.relpath(object_dir, data_dir)
+                tag_path = os.path.join(tags_dir, rel_dir, os.path.basename(object_dir))
                 self.model_animations_path.set(tag_path + ".model_animations")
 
         self.app_root.last_load_dir = os.path.dirname(dirpath)
         self.jma_dir.set(dirpath)
-        if not self.tags_dir.get():
-            self.tags_dir.set(
-                os.path.join(
-                    path_split(self.app_root.last_load_dir, "data"),
-                    "tags"))
 
     def tags_dir_browse(self):
         if self._compiling or self._loading or self._saving:
@@ -467,12 +595,16 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
         fp = asksaveasfilename(
             initialdir=antr_dir, title="Save model_animations to...", parent=self,
-            filetypes=(("Model animations graph", "*.model_animations"), ('All', '*')))
+            filetypes=(
+                ("Model animations graph", "*.model_animations"),
+                ("Yelo model animations graph", "*.model_animations_yelo"),
+                ('All', '*')
+                ))
 
         if not fp:
             return
-
-        fp = Path(fp).with_suffix(".model_animations")
+        
+        fp = Path(fp).with_suffix(self.get_model_animations_tagdef().ext)
 
         self.app_root.last_load_dir = str(fp.parent)
         self.model_animations_path.set(str(fp))
@@ -487,19 +619,32 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.geometry("%sx%s" % (w, h))
         self.minsize(width=w, height=h)
 
-    def set_animation_delta_tolerance(self):
+    def set_delta_tolerance(self):
         try:
-            new_tolerance = float(self.animation_delta_tolerance_string.get())
-            if new_tolerance >= 0:
-                self.animation_delta_tolerance = new_tolerance
-                return
+            val_str = self.delta_tolerance_string.get().replace(" ", "")
+            val     = max(0.00001, min(100, float(val_str)))
 
-            self.animation_delta_tolerance = 0
+            new_val_str = str("%.10f" % val).rstrip("0").rstrip(".")
+            if self.delta_tolerance != val:
+                self.delta_tolerance = val
+                self.delta_tolerance_string.set(new_val_str)
+
         except Exception:
             return
 
-        self.animation_delta_tolerance_string.set(
-            str(("%.20f" % self.animation_delta_tolerance)).rstrip("0").rstrip("."))
+    def set_compression_quality(self):
+        try:
+            val_str = self.compression_quality_string.get()\
+                      .replace(" ", "").split("%")[0].split(".")[0]
+            val     = max(0, min(100, int(float(val_str))))
+
+            new_val_str = f"{val} %"
+            if self.compression_quality != val or new_val_str != val_str:
+                self.compression_quality = val
+                self.compression_quality_string.set(new_val_str)
+
+        except Exception:
+            pass
 
     def destroy(self):
         try:
@@ -507,6 +652,21 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         except AttributeError:
             pass
         window_base_class.destroy(self)
+    
+    def get_model_animations_tagdef(self):
+        return ANIM_DEFS.get(self.target_tag_type_menu.sel_index, antr_def)
+    
+    def get_compression_mode(self):
+        return COMPRESS_MODES.get(self.compress_mode_menu.sel_index,
+                                  const.ANIMATION_COMPRESS_MODE_NEVER)
+    
+    def get_compile_mode(self):
+        return COMPILE_MODES.get(self.compile_mode_menu.sel_index,
+                                 const.ANIMATION_COMPILE_MODE_PRESERVE)
+    
+    def get_physics_calc_mode(self):
+        return PHYSICS_CALC_MODES.get(self.physics_mode_menu.sel_index,
+                                      const.PHYSICS_CALC_MODE_GUESS)
 
     def load_animations(self):
         if not self._compiling and not self._loading and not self._saving:
@@ -550,7 +710,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         for _, __, files in os.walk(animations_dir):
             for fname in files:
                 ext = os.path.splitext(fname)[-1].lower()
-                if ext in JMA_ANIMATION_EXTENSIONS:
+                if ext in const.JMA_ANIMATION_EXTENSIONS:
                     fps.append(os.path.join(animations_dir, fname))
 
             break
@@ -573,7 +733,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                 ext = os.path.splitext(fp)[-1].lower()
 
                 jma_anim = None
-                if ext in JMA_ANIMATION_EXTENSIONS:
+                if ext in const.JMA_ANIMATION_EXTENSIONS:
                     with open(fp, "r") as f:
                         jma_anim = read_jma(f.read(), '', anim_name)
 
@@ -643,69 +803,52 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         while not self.model_animations_path.get():
             self.model_animations_path_browse(True)
             if (not self.model_animations_path.get()) and self.warn_cancel():
-                print("    Model_animations compilation cancelled.")
+                print("    Compiling model_animations cancelled.")
                 return
 
         try:
-            antr_tag = antr_def.build(filepath=self.model_animations_path.get())
+            antr_tag = self.get_model_animations_tagdef().build(
+                filepath=self.model_animations_path.get()
+                )
         except Exception:
             antr_tag = None
 
-        mod2_nodes = None
-        if self.calculate_limp_limb_vectors.get():
-            antr_path = self.model_animations_path.get()
-            antr_dir = os.path.dirname(antr_path)
-            mod2_path = os.path.join(
-                antr_dir, os.path.splitext(os.path.basename(antr_path))[0] + ".gbxmodel")
-            while mod2_nodes is None:
-                try:
-                    mod2_nodes = partial_mod2_def.build(filepath=mod2_path).\
-                                 data.tagdata.nodes.STEPTREE
-                    break
-                except Exception:
-                    print("Could not load the selected gbxmodel.")
-
-                mod2_path = asksaveasfilename(
-                    initialdir=antr_dir, parent=self,
-                    title="Select the gbxmodel to get nodes from",
-                    filetypes=(("Gearbox model", "*.gbxmodel"), ('All', '*')))
-
-                if (not mod2_path) and self.warn_cancel():
-                    print("    Model_animations compilation cancelled.")
-                    return
-
         updating = antr_tag is not None
+        filepath = Path(self.model_animations_path.get())
+        antr_def = self.get_model_animations_tagdef()
         if updating:
             print("Updating existing model_animations tag.")
+            antr_tag = antr_def.build(filepath=filepath)
         else:
             print("Creating new model_animations tag.")
             antr_tag = antr_def.build()
-
-        antr_tag.filepath = self.model_animations_path.get()
+            antr_tag.filepath = filepath.with_suffix(antr_def.ext)
 
         self.update()
-        errors = compile_model_animations(antr_tag, self.jma_anim_set, False,
-                                          self.animation_count_limit.get(),
-                                          self.animation_delta_tolerance,
-                                          self.update_mode.get(), mod2_nodes)
+        errors = compile_model_animations(
+            antr_tag, self.jma_anim_set, False,
+            self.get_compile_mode(), self.get_compression_mode(),
+            self.delta_tolerance, self.compression_quality/100,
+            ">", self.fix_anim_types.get(), self.get_physics_calc_mode()
+            )
         if errors:
             for error in errors:
                 print(error)
 
             self.update()
             if not messagebox.askyesno(
-                    "Model_animations compilation failed",
+                    "Compiling model_animations failed",
                     "Errors occurred while compiling animations(check console). "
                     "Do you want to save the model_animations tag anyway?",
                     icon='warning', parent=self):
-                print("    Model_animations compilation failed.")
+                print("    Saving model_animations cancelled.")
                 return
 
         try:
             antr_tag.calc_internal_data()
             antr_tag.serialize(temp=False, backup=False, calc_pointers=False,
                                int_test=False)
-            print("    Finished")
+            print("    Finished\n")
         except Exception:
             print(format_exc())
             print("    Could not save compiled model_animations.")

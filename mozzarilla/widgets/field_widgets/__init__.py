@@ -19,7 +19,7 @@ __all__ = (
     "Halo3BitmapDisplayButton", "Halo3BitmapTagFrame", "HaloColorEntry",
     "HaloUInt32ColorPickerFrame", "MeterImageDisplayFrame", "MeterImageFrame",
     "HaloRawdataFrame", "HaloScriptSourceFrame", "SoundSampleFrame",
-    "ReflexiveFrame",
+    "ReflexiveFrame", "SoundPlayerFrame",
     ) + tuple(field_widgets.__all__)
 
 from binilla.widgets.field_widgets import *
@@ -27,6 +27,7 @@ from binilla.widgets.field_widgets import *
 from mozzarilla.widgets.field_widgets.computed_text_frames import \
      HaloScriptTextFrame, HaloHudMessageTextFrame
 from mozzarilla.widgets.field_widgets.dependency_frame import DependencyFrame
+from mozzarilla.widgets.field_widgets.sound_player_frame import SoundPlayerFrame
 from mozzarilla.widgets.field_widgets.font_display_frame import \
      FontCharacterDisplayFrame, FontCharacterFrame
 from mozzarilla.widgets.field_widgets.halo_1_bitmap_display import \
