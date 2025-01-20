@@ -488,10 +488,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
             command=self._pr_info_tree.xview)
         self.stop_playback_button = tk.Button(
             self.sample_info_frame, text="Stop audio playback",
-            command=lambda s=self: (
-                self.src_player.stop_all_sounds() or
-                self.tag_player.stop_all_sounds()
-                )
+            command=self.stop_all_sound_playback
             )
 
         self._pr_info_tree.config(yscrollcommand=self.sample_info_vsb.set,
@@ -708,6 +705,10 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
     def target_sample_rate(self): return self.target_settings[1]
     @property
     def target_encoding(self):    return self.target_settings[2]
+
+    def stop_all_sound_playback(self):
+        self.src_player.stop_all_sounds()
+        self.tag_player.stop_all_sounds()
 
     @property
     def selected_compression(self):
@@ -937,6 +938,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
 
     def destroy(self):
         try:
+            self.stop_all_sound_playback()
             self.app_root.tool_windows.pop(self.window_name, None)
         except AttributeError:
             pass
