@@ -860,7 +860,7 @@ class Mozzarilla(Binilla):
         windows = Binilla.load_tags(self, filepaths, def_id)
         self.last_load_dir = last_load_dir
 
-        if not windows:
+        if not(windows or self._shutting_down):
             print("You might need to change the tag set to load these tag(s).")
             return ()
 
@@ -1150,7 +1150,6 @@ class Mozzarilla(Binilla):
                         pass
             except AttributeError: print(format_exc())
             except Exception: print(format_exc())
-            except Exception: print(format_exc())
 
     def make_tag_window(self, tag, *, focus=True, window_cls=None,
                         is_new_tag=False):
@@ -1297,18 +1296,40 @@ class Mozzarilla(Binilla):
             self.about_window = None
 
         if not hasattr(AboutWindow, "orig_pressed"):
+            def destroy(self):
+                master   = self.master
+                replaced = hasattr(master, "orig_app_name")
+                if replaced:
+                    master.app_name = master.orig_app_name
+                    master.version  = master.orig_version
+                    del master.orig_app_name
+                    del master.orig_version
+
+                    master.update_title()
+
+                self.orig_destroy()
+
+            def _pressed(self):
+                master = self.master
+                if not hasattr(master, "orig_app_name"):
+                    master.orig_app_name = master.app_name
+                    master.orig_version  = master.version
+
+                    val = "734531alli6dgrwretsaM"
+                    master.app_name = val[::-1][:6]+val[::-1][11:11+4]
+                    master.version  = val[::-1][-6:len(val)-4]+val[::-1][-2:]
+                    master.update_title()
+
+                self.orig_pressed()
+
             AboutWindow.orig_pressed = AboutWindow._pressed
-            AboutWindow._pressed = self.some_func
+            AboutWindow.orig_destroy = AboutWindow.destroy
+            AboutWindow._pressed = _pressed
+            AboutWindow.destroy  = destroy
 
         self.about_window = AboutWindow(
             self, module_names=self.about_module_names,
             iconbitmap=self.icon_filepath, appbitmap=self.app_bitmap_filepath,
             app_name=self.app_name, messages=self.about_messages)
         self.place_window_relative(self.about_window, 30, 50)
-
-    def some_func(self):
-        val = "734531alli6dgrwretsaM"
-        self.app_name = val[::-1][:6]+val[::-1][11:11+4]
-        self.version = val[::-1][-6:len(val)-4]+val[::-1][-2:]
-        self.update_title()
-        AboutWindow.orig_pressed(self.about_window)
+        self.about_window.focus_set()
