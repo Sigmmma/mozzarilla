@@ -20,16 +20,17 @@ def halo_dynamic_enum_generate_options(self, opt_index=None):
     options = {0: "-1. NONE"}
 
     dyn_name_path = desc.get(DYN_NAME_PATH)
+    ret_val = None
     if self.node is None:
         if opt_index is None:
-            return options
-        return None
+            ret_val = options
+        return ret_val
     elif not dyn_name_path:
         print("Missing DYN_NAME_PATH path in dynamic enumerator.")
         print(self.parent.get_root().def_id, self.name)
         if opt_index is None:
-            return options
-        return None
+            ret_val = options
+        return ret_val
 
     try:
         p_out, p_in = dyn_name_path.split(DYN_I)
@@ -40,8 +41,8 @@ def halo_dynamic_enum_generate_options(self, opt_index=None):
 
         if array is None:
             if opt_index is None:
-                return options
-            return None
+                ret_val = options
+            return ret_val
 
         options_to_generate = range(len(array))
         if opt_index is not None:
@@ -69,13 +70,14 @@ def halo_dynamic_enum_generate_options(self, opt_index=None):
         print(format_exc())
         last_option_index = 0
 
+    ret_val = options.get(opt_index, options)
     if opt_index is None:
         self.option_cache = options
         self.options_sane = True
         if self.sel_menu is not None:
             self.sel_menu.options_menu_sane = False
             self.sel_menu.max_index = last_option_index
-        return options
-    return options.get(opt_index, None)
+
+    return ret_val
 
 DynamicEnumFrame.generate_options = halo_dynamic_enum_generate_options

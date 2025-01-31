@@ -15,7 +15,7 @@ from binilla.widgets.binilla_widget import BinillaWidget
 from mozzarilla import editor_constants as e_c
 from mozzarilla.widgets.field_widgets import DependencyFrame, EntryFrame
 from reclaimer.field_types import StrTagRef, TagRef, ZoneAsset, StringID, \
-     StrUtf16, FlStrUTF16Data, StrLatin1Enum, FlFloat, FlStrUTF16,\
+     FlStrUTF16Data, StrLatin1Enum, FlFloat, FlStrUTF16,\
      FlUInt16, FlSInt16, FlUEnum16, FlSEnum16, FlBool16,\
      FlUInt32, FlSInt32, FlUEnum32, FlSEnum32, FlBool32,\
      TagIndex, RawdataRef, Reflexive, RawReflexive

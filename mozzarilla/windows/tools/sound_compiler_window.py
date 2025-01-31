@@ -1062,7 +1062,7 @@ class SoundCompilerWindow(window_base_class, BinillaWidget):
         # check validity of settings
         errors = []
         if sound_bank.compression != constants.COMPRESSION_OGG:
-             pass
+            pass
         elif use_bounds:
             if sound_bank.ogg_bitrate_lower > sound_bank.ogg_bitrate_upper:
                 errors.append("Error: vorbis min bitrate is higher than max.")

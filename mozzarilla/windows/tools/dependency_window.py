@@ -19,8 +19,7 @@ from binilla.widgets.binilla_widget import BinillaWidget
 from binilla.windows.filedialog import askopenfilename, asksaveasfilename
 
 from supyr_struct.util import path_normalize, is_in_dir, tagpath_to_fullpath
-from mozzarilla.widgets.directory_frame import DirectoryFrame,\
-     HierarchyFrame, DependencyFrame
+from mozzarilla.widgets.directory_frame import DependencyFrame
 from mozzarilla import editor_constants as e_c
 
 
@@ -30,6 +29,7 @@ class DependencyWindow(tk.Toplevel, BinillaWidget):
 
     _zipping = False
     stop_zipping = False
+    zip_thread = None
 
     def __init__(self, app_root, *args, **kwargs):
         self.handler = app_root.handler

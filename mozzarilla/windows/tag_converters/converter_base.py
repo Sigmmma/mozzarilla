@@ -102,7 +102,7 @@ class ConverterBase(BinillaWidget):
         self.stop_conversion = True
 
     def apply_style(self, seen=None):
-        super(ConverterBase, self).apply_style(seen)
+        super().apply_style(seen)
         self.update()
         w, h = self.winfo_reqwidth(), self.winfo_reqheight()
         self.geometry("%sx%s" % (w, h))

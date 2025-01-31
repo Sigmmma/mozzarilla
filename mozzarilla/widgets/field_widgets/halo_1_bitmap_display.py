@@ -35,6 +35,7 @@ SPRITE_CENTER_TAG = "SPRITE_CENTER"
 
 class HaloBitmapDisplayBase:
     cubemap_padding = CUBEMAP_PADDING
+    master = None
 
     @property
     def engine(self):

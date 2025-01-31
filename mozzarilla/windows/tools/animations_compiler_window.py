@@ -388,10 +388,10 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                                 tags=('item',),)
 
             if joint_type == "Socket":
-                jma_tree.insert(iid, 'end', text=f"Socket pitch range",
+                jma_tree.insert(iid, 'end', text="Socket pitch range",
                                 values=(info.delta*const.RAD_TO_DEG, ),
                                 tags=('item',),)
-                jma_tree.insert(iid, 'end', text=f"Socket roll range",
+                jma_tree.insert(iid, 'end', text="Socket roll range",
                                 values=(info.cross_delta*const.RAD_TO_DEG, ),
                                 tags=('item',),)
 
@@ -630,7 +630,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                 self.delta_tolerance_string.set(new_val_str)
 
         except Exception:
-            return
+            pass
 
     def set_compression_quality(self):
         try:
@@ -815,14 +815,14 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
         updating = antr_tag is not None
         filepath = Path(self.model_animations_path.get())
-        antr_def = self.get_model_animations_tagdef()
+        tag_def = self.get_model_animations_tagdef()
         if updating:
             print("Updating existing model_animations tag.")
-            antr_tag = antr_def.build(filepath=filepath)
+            antr_tag = tag_def.build(filepath=filepath)
         else:
             print("Creating new model_animations tag.")
-            antr_tag = antr_def.build()
-            antr_tag.filepath = filepath.with_suffix(antr_def.ext)
+            antr_tag = tag_def.build()
+            antr_tag.filepath = filepath.with_suffix(tag_def.ext)
 
         self.update()
         errors = compile_model_animations(

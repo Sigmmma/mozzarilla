@@ -151,31 +151,31 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
     def del_root_dir(self, root_dir):
         self.tags_tree.delete(root_dir)
 
-    def destroy_subitems(self, directory):
+    def destroy_subitems(self, iid):
         '''
         Destroys all the given items subitems and creates an empty
         subitem so as to give the item the appearance of being expandable.
         '''
         dir_tree = self.tags_tree
 
-        for child in dir_tree.get_children(directory):
+        for child in dir_tree.get_children(iid):
             dir_tree.delete(child)
 
         # add an empty node to make an "expand" button appear
-        dir_tree.insert(directory, 'end')
+        dir_tree.insert(iid, 'end')
 
-    def generate_subitems(self, directory):
+    def generate_subitems(self, parent_iid):
         dir_tree = self.tags_tree
 
-        directory = str(directory)
-        for root, subdirs, files in os.walk(directory):
+        directory = str(parent_iid)
+        for root, subdirs, files in os.walk(parent_iid):
             for subdir in sorted(subdirs, key=str.casefold):
                 folderpath = os.path.join(root, subdir)
 
                 dir_info_str = "%s items" % len(list(os.scandir(folderpath)))
 
                 dir_tree.insert(
-                    directory, 'end', text=subdir,
+                    parent_iid, 'end', text=subdir,
                     iid=folderpath, tags=('item',),
                     values=(dir_info_str, ))
 
@@ -195,7 +195,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
                         filesize = "%.2f MiB" % (filesize/1024**2)
                 except Exception:
                     filesize = 'ERROR'
-                dir_tree.insert(directory, 'end', text=file,
+                dir_tree.insert(parent_iid, 'end', text=file,
                                 iid=fullpath, tags=('item',),
                                 values=(filesize, ))
 
@@ -236,7 +236,7 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         app = self.app_root
         dir_tree = self.tags_tree
         if tags_dir is None:
-              tags_dir = self.app_root.tags_dir
+            tags_dir = self.app_root.tags_dir
 
         tags_dir = Path(tags_dir)
         for td in app.tags_dirs:
@@ -430,17 +430,10 @@ class DependencyFrame(HierarchyFrame):
             return
 
         tag_path = Path(dir_tree.item(active)['values'][-1])
-        try:
-            app = self.app_root
-            tags_dir = self.get_item_tags_dir(tag_path)
-            self.highlight_tags_dir(tags_dir)
-        except Exception:
-            print(format_exc())
-
         if tag_path.is_dir():
             return
 
         try:
-            app.load_tags(filepaths=tag_path)
+            self.app_root.load_tags(filepaths=tag_path)
         except Exception:
             print(format_exc())

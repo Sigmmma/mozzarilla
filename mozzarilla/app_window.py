@@ -550,7 +550,7 @@ class Mozzarilla(Binilla):
         for i in range(len(self.handler_names)):
             label = self.handler_names[i]
             if i == self._curr_handler_index:
-                label += u' \u2713'
+                label += ' \u2713'
             self.defs_menu.add_command(label=label, command=lambda i=i:
                                        self.select_defs(i, manual=True))
 

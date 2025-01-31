@@ -45,6 +45,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
     print_interval = 5
 
     listbox_index_to_def_id = ()
+    scan_thread = None
 
     def __init__(self, app_root, *args, **kwargs):
         self.handler = handler = app_root.handler

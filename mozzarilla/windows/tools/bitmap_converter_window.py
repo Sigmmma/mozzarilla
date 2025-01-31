@@ -393,6 +393,8 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
     menus = ()
 
     bitm_def = bitm_def
+    scan_thread = None
+    convert_thread = None
 
     def __init__(self, app_root, *args, **kwargs):
         if isinstance(self, tk.Toplevel):
@@ -777,7 +779,7 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
             self.app_root.tool_windows.pop(self.window_name, None)
         except AttributeError:
             pass
-        super(type(self), self).destroy()
+        super().destroy()
 
     def apply_style(self, seen=None):
         BinillaWidget.apply_style(self, seen)
@@ -1135,8 +1137,8 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
 
             tag_paths = self.tag_list_frame.selected_paths
             if len(tag_paths) == 1:
-                for tag_path in tag_paths:
-                    bitm_tag_info = self.bitmap_tag_infos.get(tag_path)
+                tag_path = next(iter(tag_paths))
+                bitm_tag_info = self.bitmap_tag_infos.get(tag_path)
 
                 if bitm_tag_info:
                     bitm_ct = len(bitm_tag_info.bitmap_infos)
@@ -1218,9 +1220,9 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
             if not flags:
                 continue
 
-            flags.extract_path = dirpath.join_path(
+            flags.extract_path = dirpath.joinpath(
                 Path(flags.extract_path).relative_to(curr_data_dir)
-            )
+                )
 
         self.data_dir_path.set(dirpath)
 
@@ -1416,7 +1418,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             self.toggle_types_allowed(0, -1))
         for typ in range(len(BITMAP_TYPES)):
             self.types_menu.add_command(
-                label=BITMAP_TYPES[typ] + u' \u2713',
+                label=BITMAP_TYPES[typ] + ' \u2713',
                 command=lambda t=typ: self.toggle_types_allowed(t + 1, t))
 
         self.formats_menu.add_command(
@@ -1425,7 +1427,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
         i = 1
         for fmt in VALID_FORMAT_ENUMS:
             self.formats_menu.add_command(
-                label=BITMAP_FORMATS[fmt] + u' \u2713',
+                label=BITMAP_FORMATS[fmt] + ' \u2713',
                 command=lambda i=i, f=fmt:self.toggle_formats_allowed(i, f))
             i += 1
 
@@ -1538,23 +1540,23 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             except Exception:
                 label = ""
 
-            sort_menu_strs.append(label.rstrip(u' \u2713'))
+            sort_menu_strs.append(label.rstrip(' \u2713'))
 
         sort_menu_strs[0] = "Toggle all to %s" % BITMAP_PLATFORMS[int(self.toggle_to)]
 
         if self.reverse_listbox:
-            sort_menu_strs[4] += u' \u2713'
+            sort_menu_strs[4] += ' \u2713'
         else:
-            sort_menu_strs[3] += u' \u2713'
+            sort_menu_strs[3] += ' \u2713'
 
         if self.sort_method == 'path':
-            sort_menu_strs[6] += u' \u2713'
+            sort_menu_strs[6] += ' \u2713'
         elif self.sort_method == 'size':
-            sort_menu_strs[7] += u' \u2713'
+            sort_menu_strs[7] += ' \u2713'
         elif self.sort_method == 'format':
-            sort_menu_strs[8] += u' \u2713'
+            sort_menu_strs[8] += ' \u2713'
         elif self.sort_method == 'type':
-            sort_menu_strs[9] += u' \u2713'
+            sort_menu_strs[9] += ' \u2713'
 
         for i in range(len(sort_menu_strs)):
             if sort_menu_strs[i]:
@@ -1582,8 +1584,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
         if len(self.selected_paths) != 1 or not self.master.loaded_tags_dir:
             return
 
-        for tag_path in self.selected_paths:
-            break
+        tag_path = next(iter(self.selected_paths))
 
         display_frame = self.master.bitmap_display_windows.get(tag_path)
         if display_frame is None or display_frame() is None:
@@ -1631,7 +1632,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
             for typ in range(HALO_1_TYPE_COUNT):
                 self.types_shown[typ] = not self.types_shown[typ]
                 typ_str = BITMAP_TYPES[typ]
-                if self.types_shown[typ]: typ_str += u' \u2713'
+                if self.types_shown[typ]: typ_str += ' \u2713'
 
                 self.types_menu.entryconfig(typ + 1, label=typ_str)
             self.display_sorted_tags()
@@ -1639,7 +1640,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
         typ_str = BITMAP_TYPES[typ]
         self.types_shown[typ] = not self.types_shown[typ]
-        if self.types_shown[typ]: typ_str += u' \u2713'
+        if self.types_shown[typ]: typ_str += ' \u2713'
 
         self.types_menu.entryconfig(menu_idx, label=typ_str)
         self.display_sorted_tags()
@@ -1651,7 +1652,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
                 if fmt in VALID_FORMAT_ENUMS:
                     self.formats_shown[fmt] = not self.formats_shown[fmt]
                     fmt_str = BITMAP_FORMATS[fmt]
-                    if self.formats_shown[fmt]: fmt_str += u' \u2713'
+                    if self.formats_shown[fmt]: fmt_str += ' \u2713'
 
                     self.formats_menu.entryconfig(i, label=fmt_str)
                     i += 1
@@ -1660,7 +1661,7 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
         fmt_str = BITMAP_FORMATS[fmt]
         self.formats_shown[fmt] = not self.formats_shown[fmt]
-        if self.formats_shown[fmt]: fmt_str += u' \u2713'
+        if self.formats_shown[fmt]: fmt_str += ' \u2713'
 
         self.formats_menu.entryconfig(menu_idx, label=fmt_str)
         self.display_sorted_tags()
@@ -1678,16 +1679,17 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
         remove = set()
         for fp, info in self.master.bitmap_tag_infos.items():
+            typ, fmt, size = info.type, info.format, info.pixel_data_size
             if not info.pixel_data_size in self.size_map:
                 self.size_map[info.pixel_data_size] = []
 
-            try:
-                self.type_format_map[info.type][info.format]
-                self.size_map[info.pixel_data_size]
-
-                self.type_format_map[info.type][info.format].append(fp)
-                self.size_map[info.pixel_data_size].append(fp)
-            except IndexError:
+            if (self.size_map[size] and
+                self.type_format_map[typ] and
+                self.type_format_map[typ][fmt]):
+            
+                self.type_format_map[typ][fmt].append(fp)
+                self.size_map[size].append(fp)
+            else:
                 remove.add(fp)
 
         for fp in remove:
