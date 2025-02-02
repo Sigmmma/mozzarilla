@@ -926,17 +926,18 @@ class BitmapConverterWindow(window_base_class, BinillaWidget):
 
                     self.bitmap_tag_infos[rel_filepath] = BitmapTagInfo(bitm_tag)
 
-            print("    Finished in %s seconds." % int(time() - s_time))
-
+            print("Found %d bitmaps." % len(self.bitmap_tag_infos))
+            print("Initializing conversions and UI...")
             self.initialize_conversion_flags()
             self.tag_list_frame.build_tag_sort_mappings()
             self.tag_list_frame.display_sorted_tags()
             self.populate_settings()
             self.populate_bitmap_info()
+            print("Finished in %s seconds." % int(time() - s_time))
         except BaseException:
             print(format_exc())
         finally:
-            self._processing = False
+            self._processing = self._cancel_processing = False
 
     def convert_pressed(self):
         if self._processing or not self.bitmap_tag_infos:
@@ -1566,8 +1567,15 @@ class BitmapConverterList(tk.Frame, BinillaWidget, HaloBitmapDisplayBase):
 
     def synchronize_selection(self):
         self.path_listbox.selection_clear(0, tk.END)
+        chunksize = 200
+        # NOTE: we do this in chunks so it doesn't take forever, but
+        #       also doesn't have a chance to eat a ton of memory
         for i in range(self.path_listbox.size()):
-            if self.path_listbox.get(i) in self.selected_paths:
+            if not i%chunksize:
+                items = self.path_listbox.get(i, i+chunksize)
+
+            path = items[i%chunksize]
+            if path in self.selected_paths:
                 self.path_listbox.selection_set(i)
 
     def display_selected_tag(self, src_listbox_index=0):
