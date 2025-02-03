@@ -21,7 +21,6 @@ from binilla.windows.filedialog import askdirectory, asksaveasfilename
 
 from reclaimer.hek.defs.mod2 import mod2_def
 from reclaimer.model.jms import read_jms, write_jms, MergedJmsModel, JmsModel
-from reclaimer.model.dae import jms_model_from_dae
 from reclaimer.model.obj import jms_model_from_obj
 from reclaimer.model.model_compilation import compile_gbxmodel
 from reclaimer.model.util import generate_shader
@@ -665,8 +664,6 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
                 elif ext == ".obj":
                     with open(fp, "r") as f:
                         jms_model = jms_model_from_obj(f.read(), model_name)
-                elif ext == ".dae":
-                    jms_model = jms_model_from_dae(fp, model_name)
 
                 if not jms_model:
                     continue
