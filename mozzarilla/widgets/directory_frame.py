@@ -275,12 +275,11 @@ class HierarchyFrame(BinillaWidget, tk.Frame):
         tag_path = Path(tag_path)
         if tag_path.is_dir():
             app.last_load_dir = tag_path
-            return
-
-        try:
-            app.load_tags(filepaths=tag_path)
-        except Exception:
-            print(format_exc())
+        elif tag_path.exists():
+            try:
+                app.load_tags(filepaths=tag_path)
+            except Exception:
+                print(format_exc())
 
 
 class DependencyFrame(HierarchyFrame):
@@ -430,7 +429,7 @@ class DependencyFrame(HierarchyFrame):
             return
 
         tag_path = Path(dir_tree.item(active)['values'][-1])
-        if tag_path.is_dir():
+        if tag_path.is_dir() or not tag_path.exists():
             return
 
         try:

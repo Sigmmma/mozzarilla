@@ -29,6 +29,7 @@ from reclaimer.animation.jma import read_jma, write_jma,\
 from reclaimer.animation import constants as const
 from reclaimer.animation.animation_compilation import \
      compile_model_animations
+from reclaimer.animation.util import get_anim_rename_map
 from reclaimer.animation.structs import partial_mod2_def
 
 from supyr_struct.util import is_in_dir, path_normalize,\
@@ -87,6 +88,7 @@ COMPRESS_MODES = {
     }
 
 class AnimationsCompilerWindow(window_base_class, BinillaWidget):
+    debug = 0
     app_root = None
     tags_dir = ''
 
@@ -395,7 +397,6 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                                 values=(info.cross_delta*const.RAD_TO_DEG, ),
                                 tags=('item',),)
 
-
         anims_iid = jma_tree.insert('', 'end', text="Animations", tags=('item',),
                                     values=(len(self.jma_anims),))
         self._jma_tree_iids.append(anims_iid)
@@ -440,8 +441,9 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                 jma_tree.insert(node_iid, 'end', text="Scale",
                                 values=(scale_flags[n], ), tags=('item',))
 
-            continue
-            print("REMINDER TO REMOVE THIS DEBUG IN COMPILER WINDOW")
+            if self.debug < 1:
+                continue
+
             # code below is very CPU and RAM intensive.
             # don't remove this continue unless debugging
 
@@ -490,7 +492,9 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                                     values=(state.yaw, ), tags=('item',),)
 
             # even more CPU / RAM intensive code past here
-            continue
+            if self.debug < 2:
+                continue
+
             nodes_iid = jma_tree.insert(
                 iid, 'end', text="Frame data", tags=('item',),
                 values=(len(jma_anim.nodes),))
@@ -523,6 +527,13 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
                     jma_tree.insert(node_iid, 'end', text="scale",
                                     values=(state.scale, ), tags=('item',),)
+
+        renames_iid = jma_tree.insert('', 'end', text="Renames", tags=('item',),
+                                      values=(len(self.rename_map),))
+        self._jma_tree_iids.append(renames_iid)
+        for dst_name in sorted(self.rename_map):
+            jma_tree.insert(renames_iid, 'end', tags=('item',),
+                            text=dst_name, values=(self.rename_map[dst_name], ))
 
 
     def jma_dir_browse(self):
@@ -756,6 +767,8 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                 print("    Warning, not all node list checksums match.")
                 break
 
+        print("Loading rename map...")
+        self.rename_map = get_anim_rename_map(animations_dir)
 
         print("Merging jma data...")
         self.app_root.update()
@@ -799,6 +812,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if not self.jma_anim_set:
             return
 
+        compile_mode = self.get_compile_mode()
         print("Compiling...")
         while not self.model_animations_path.get():
             self.model_animations_path_browse(True)
@@ -816,8 +830,13 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         updating = antr_tag is not None
         filepath = Path(self.model_animations_path.get())
         tag_def = self.get_model_animations_tagdef()
+
         if updating:
-            print("Updating existing model_animations tag.")
+            if compile_mode == const.ANIMATION_COMPILE_MODE_NEW:
+                print("Replacing existing model_animations tag.")
+            else:
+                print("Updating existing model_animations tag.")
+
             antr_tag = tag_def.build(filepath=filepath)
         else:
             print("Creating new model_animations tag.")
@@ -827,9 +846,10 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         self.update()
         errors = compile_model_animations(
             antr_tag, self.jma_anim_set, False,
-            self.get_compile_mode(), self.get_compression_mode(),
+            compile_mode, self.get_compression_mode(),
             self.delta_tolerance, self.compression_quality/100,
-            ">", self.fix_anim_types.get(), self.get_physics_calc_mode()
+            ">", self.fix_anim_types.get(), self.get_physics_calc_mode(),
+            self.rename_map
             )
         if errors:
             for error in errors:
