@@ -43,7 +43,7 @@ def physics_from_jms(app, fp=None):
     try:
         app.jms_load_dir = fp.parent
         with fp.open("r") as f:
-            jms_model = read_jms(f.read(), "regions")
+            jms_model = read_jms(f, "regions")
     except Exception:
         print(format_exc())
         print("    Could not parse jms file")

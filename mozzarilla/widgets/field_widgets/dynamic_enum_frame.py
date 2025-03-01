@@ -70,14 +70,13 @@ def halo_dynamic_enum_generate_options(self, opt_index=None):
         print(format_exc())
         last_option_index = 0
 
-    ret_val = options.get(opt_index, options)
     if opt_index is None:
         self.option_cache = options
         self.options_sane = True
         if self.sel_menu is not None:
             self.sel_menu.options_menu_sane = False
             self.sel_menu.max_index = last_option_index
-
-    return ret_val
+        return options
+    return options.get(opt_index, None)
 
 DynamicEnumFrame.generate_options = halo_dynamic_enum_generate_options

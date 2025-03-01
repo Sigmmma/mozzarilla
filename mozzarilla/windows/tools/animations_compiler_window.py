@@ -88,9 +88,10 @@ COMPRESS_MODES = {
     }
 
 class AnimationsCompilerWindow(window_base_class, BinillaWidget):
-    debug = 0
+    debug = 2
     app_root = None
     tags_dir = ''
+    pos_scale = 1.0
 
     jma_anims = ()
     jma_anim_set = None
@@ -332,11 +333,14 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
     def populate_animations_info_tree(self):
         jma_tree = self.jma_info_tree
         if not jma_tree['columns']:
-            jma_tree['columns'] = ('data', )
+            jma_tree['columns'] = [f"data{i}" for i in range(4)]
             jma_tree.heading("#0")
-            jma_tree.heading("data")
-            jma_tree.column("#0", minwidth=100, width=180)
-            jma_tree.column("data", minwidth=80, width=130, stretch=False)
+            jma_tree.column("#0", minwidth=130, width=180)
+            for name in jma_tree['columns']:
+                jma_tree.heading(name)
+                jma_tree.column(name, minwidth=10, width=40, stretch=False)
+
+            jma_tree.column("data0", minwidth=50, width=80, stretch=False)
 
         for iid in self._jma_tree_iids:
             jma_tree.delete(iid)
@@ -356,90 +360,69 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         nodes_iid = jma_tree.insert('', 'end', text="Nodes", tags=('item',),
                                     values=(len(self.jma_anim_set.nodes),))
         self._jma_tree_iids.append(nodes_iid)
-        for n, node in enumerate(self.jma_anim_set.nodes):
+        nodes = self.jma_anim_set.nodes
+        for n, node in enumerate(nodes):
             iid = jma_tree.insert(nodes_iid, 'end', text=node.name, tags=('item',))
-            parent_name = child_name = sibling_name = "NONE"
-            if node.sibling_index >= 0:
-                sibling_name = self.jma_anim_set.nodes[node.sibling_index].name
-            if node.first_child >= 0:
-                child_name = self.jma_anim_set.nodes[node.first_child].name
-            if node.parent_index >= 0:
-                parent_name = self.jma_anim_set.nodes[node.parent_index].name
-
-            jma_tree.insert(iid, 'end', text="Next sibling",
-                            values=(sibling_name, ), tags=('item',),)
-            jma_tree.insert(iid, 'end', text="First child",
-                            values=(child_name, ), tags=('item',),)
-            jma_tree.insert(iid, 'end', text="Parent",
-                            values=(parent_name, ), tags=('item',),)
-
             info = limp_infos[n] if n < len(limp_infos) else None
             joint_type = (""      if not(info and info.axes_free) else
                           "Hinge" if info.axes_free == 1          else
                           "Socket")
 
-            if joint_type:
-                jma_tree.insert(iid, 'end', text=f"{joint_type} base i",
-                                values=(info.i, ), tags=('item',),)
-                jma_tree.insert(iid, 'end', text=f"{joint_type} base j",
-                                values=(info.j, ), tags=('item',),)
-                jma_tree.insert(iid, 'end', text=f"{joint_type} base k",
-                                values=(info.k, ), tags=('item',),)
-                jma_tree.insert(iid, 'end', text=f"{joint_type} range",
-                                values=(info.vector_range*const.RAD_TO_DEG, ),
-                                tags=('item',),)
+            items = [
+                (name, "NONE" if idx < 0 else nodes[idx].name)
+                for name, idx in [
+                    ("Next sibling", getattr(node, "sibling_name", -1)),
+                    ("First child",  getattr(node, "child_name",   -1)),
+                    ("Parent",       getattr(node, "parent_name",  -1)),
+                    ]
+                ]
+            joint_type and items.extend([
+                (f"{joint_type} I-J-K", [info.i, info.j, info.k]),
+                (f"{joint_type} range", [info.vector_range*const.RAD_TO_DEG]),
+                ])
+            joint_type == "Socket" and items.append((
+                "Socket pitch/roll range", [info.delta*const.RAD_TO_DEG,
+                                            info.cross_delta*const.RAD_TO_DEG]
+                ))
 
-            if joint_type == "Socket":
-                jma_tree.insert(iid, 'end', text="Socket pitch range",
-                                values=(info.delta*const.RAD_TO_DEG, ),
-                                tags=('item',),)
-                jma_tree.insert(iid, 'end', text="Socket roll range",
-                                values=(info.cross_delta*const.RAD_TO_DEG, ),
-                                tags=('item',),)
+            for text, vals in items:
+                jma_tree.insert(iid, 'end', text=text, values=vals, tags=['item'],)
 
         anims_iid = jma_tree.insert('', 'end', text="Animations", tags=('item',),
                                     values=(len(self.jma_anims),))
         self._jma_tree_iids.append(anims_iid)
         for jma_anim in self.jma_anims:
-            iid = jma_tree.insert(anims_iid, 'end', tags=('item',),
-                                  text=jma_anim.name + jma_anim.ext)
-            jma_tree.insert(iid, 'end', text="Version", tags=('item',),
-                            values=(jma_anim.version, ))
-            jma_tree.insert(iid, 'end', text="Node list checksum", tags=('item',),
-                            values=(jma_anim.node_list_checksum, ))
-            jma_tree.insert(iid, 'end', text="World relative", tags=('item',),
-                            values=(jma_anim.world_relative, ))
-            jma_tree.insert(iid, 'end', text="Type", tags=('item',),
-                            values=(jma_anim.anim_type, ))
-            jma_tree.insert(iid, 'end', text="Frame count", tags=('item',),
-                            values=(jma_anim.frame_count, ))
-            jma_tree.insert(iid, 'end', text="Node count", tags=('item',),
-                            values=(jma_anim.node_count, ))
-            jma_tree.insert(iid, 'end', text="Frame info", tags=('item',),
-                            values=(jma_anim.frame_info_type, ))
+            anim_iid = jma_tree.insert(anims_iid, 'end', tags=('item',),
+                                       text=jma_anim.name + jma_anim.ext)
+            items = [
+                ("Version",            [jma_anim.version]),
+                ("Node list checksum", [jma_anim.node_list_checksum]),
+                ("World relative",     [jma_anim.world_relative]),
+                ("Type",               [jma_anim.anim_type]),
+                ("Frame count",        [jma_anim.frame_count]),
+                ("Node count",         [jma_anim.node_count]),
+                ("Frame info",         [jma_anim.frame_info_type]),
+                ]
+            for text, vals in items:
+                jma_tree.insert(anim_iid, 'end', text=text, values=vals, tags=['item'],)
 
             rot_flags   = jma_anim.rot_flags
             trans_flags = jma_anim.trans_flags
             scale_flags = jma_anim.scale_flags
 
             node_flags_iid = jma_tree.insert(
-                iid, 'end', text="Transform flags", tags=('item',),
+                anim_iid, 'end', text="Transform flags", tags=('item',),
                 values=(len(jma_anim.nodes),))
+            flag_strs = []
             for n, node in enumerate(jma_anim.nodes):
+                flag_strs.append("".join((
+                    "R" if rot_flags[n]   else "-",
+                    "T" if trans_flags[n] else "-",
+                    "S" if scale_flags[n] else "-",
+                    )))
                 node_iid = jma_tree.insert(
                     node_flags_iid, 'end', text=node.name,
-                    tags=('item',), values=("".join((
-                        "R" if rot_flags[n]   else "-",
-                        "T" if trans_flags[n] else "-",
-                        "S" if scale_flags[n] else "-",
-                        ))))
-                continue
-                jma_tree.insert(node_iid, 'end', text="Rotation",
-                                values=(rot_flags[n], ), tags=('item',))
-                jma_tree.insert(node_iid, 'end', text="Position",
-                                values=(trans_flags[n], ), tags=('item',))
-                jma_tree.insert(node_iid, 'end', text="Scale",
-                                values=(scale_flags[n], ), tags=('item',))
+                    tags=('item',), values=(flag_strs[-1], ))
 
             if self.debug < 1:
                 continue
@@ -452,81 +435,60 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             has_dyaw = "dyaw" in jma_anim.frame_info_type
 
             root_data_iid = jma_tree.insert(
-                iid, 'end', text="Root node data", tags=('item',),
+                anim_iid, 'end', text="Root node data", tags=('item',),
                 values=(len(jma_anim.root_node_info),)
                 ) if jma_anim.has_frame_info else None
             for f, state in enumerate(jma_anim.root_node_info):
                 if not root_data_iid:
                     break
 
-                frame_iid = jma_tree.insert(
+                iid = jma_tree.insert(
                     root_data_iid, 'end', tags=('item',),
                     text="frame%s" % f
                     )
-                if has_dxdy:
-                    jma_tree.insert(frame_iid, 'end', text="dx",
-                                    values=(state.dx, ), tags=('item',),)
-                    jma_tree.insert(frame_iid, 'end', text="dy",
-                                    values=(state.dy, ), tags=('item',),)
+                dxname  = "-".join(s for s, v in [
+                    ("dX", has_dxdy), ("dY",   has_dxdy),
+                    ("dZ", has_dz),   ("dYAW", has_dyaw)
+                    ] if v)
+                name = dxname.replace("d", "")
+                items = [
+                    (dxname, [state.dx, state.dy, state.dz, state.dyaw]),
+                    (name,   [state.x,  state.y,  state.z,  state.yaw])
+                    ]
+                for i, flag in reversed(list(enumerate([
+                        has_dxdy, has_dxdy, has_dz, has_dyaw
+                        ]))):
+                    flag or items[0][1].pop(i)
+                    flag or items[1][1].pop(i)
 
-                if has_dz:
-                    jma_tree.insert(frame_iid, 'end', text="dz",
-                                    values=(state.dz, ), tags=('item',),)
-
-                if has_dyaw:
-                    jma_tree.insert(frame_iid, 'end', text="dyaw",
-                                    values=(state.dyaw, ), tags=('item',),)
-
-                if has_dxdy:
-                    jma_tree.insert(frame_iid, 'end', text="x",
-                                    values=(state.x, ), tags=('item',),)
-                    jma_tree.insert(frame_iid, 'end', text="y",
-                                    values=(state.y, ), tags=('item',),)
-
-                if has_dz:
-                    jma_tree.insert(frame_iid, 'end', text="z",
-                                    values=(state.z, ), tags=('item',),)
-
-                if has_dyaw:
-                    jma_tree.insert(frame_iid, 'end', text="yaw",
-                                    values=(state.yaw, ), tags=('item',),)
+                for text, vals in items:
+                    jma_tree.insert(iid, 'end', text=text, values=vals, tags=['item'],)
 
             # even more CPU / RAM intensive code past here
             if self.debug < 2:
                 continue
 
             nodes_iid = jma_tree.insert(
-                iid, 'end', text="Frame data", tags=('item',),
+                anim_iid, 'end', text="Frame data", tags=('item',),
                 values=(len(jma_anim.nodes),))
             for n, node in enumerate(jma_anim.nodes):
                 states_iid = jma_tree.insert(
                     nodes_iid, 'end', text=node.name,
-                    tags=('item',))
+                    tags=('item',), values=(flag_strs[n], ))
 
                 for f, frame in enumerate(jma_anim.frames):
                     state = frame[n]
-                    node_iid = jma_tree.insert(
-                        states_iid, 'end', tags=('item',),
-                        text="frame%s" % f
+                    iid = jma_tree.insert(
+                        states_iid, 'end', tags=('item',), text=f"frame{f}"
                         )
-                    jma_tree.insert(node_iid, 'end', text="i",
-                                    values=(state.rot_i, ), tags=('item',),)
-                    jma_tree.insert(node_iid, 'end', text="j",
-                                    values=(state.rot_j, ), tags=('item',),)
-                    jma_tree.insert(node_iid, 'end', text="k",
-                                    values=(state.rot_k, ), tags=('item',),)
-                    jma_tree.insert(node_iid, 'end', text="w",
-                                    values=(state.rot_w, ), tags=('item',),)
-
-                    jma_tree.insert(node_iid, 'end', text="x",
-                                    values=(state.pos_x, ), tags=('item',),)
-                    jma_tree.insert(node_iid, 'end', text="y",
-                                    values=(state.pos_y, ), tags=('item',),)
-                    jma_tree.insert(node_iid, 'end', text="z",
-                                    values=(state.pos_z, ), tags=('item',),)
-
-                    jma_tree.insert(node_iid, 'end', text="scale",
-                                    values=(state.scale, ), tags=('item',),)
+                    items = [
+                        ("I-J-K-W", [state.rot_i, state.rot_j,
+                                     state.rot_k, state.rot_w]),
+                        ("X-Y-Z",   [state.pos_x, state.pos_y, state.pos_z]),
+                        ("Scale",   [state.scale]),
+                        ]
+                    for text, vals in items:
+                        jma_tree.insert(iid, 'end', text=text, values=vals, tags=['item'],)
 
         renames_iid = jma_tree.insert('', 'end', text="Renames", tags=('item',),
                                       values=(len(self.rename_map),))
@@ -585,7 +547,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         if not tags_dir:
             return
 
-        tags_dir = str(Path(tags_dir))
+        tags_dir = path_normalize(tags_dir)
 
         antr_path = self.model_animations_path.get()
         if old_tags_dir and antr_path and not is_in_dir(antr_path, tags_dir):
@@ -614,7 +576,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
 
         if not fp:
             return
-        
+
         fp = Path(fp).with_suffix(self.get_model_animations_tagdef().ext)
 
         self.app_root.last_load_dir = str(fp.parent)
@@ -849,7 +811,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
             compile_mode, self.get_compression_mode(),
             self.delta_tolerance, self.compression_quality/100,
             ">", self.fix_anim_types.get(), self.get_physics_calc_mode(),
-            self.rename_map
+            self.rename_map, self.pos_scale
             )
         if errors:
             for error in errors:
