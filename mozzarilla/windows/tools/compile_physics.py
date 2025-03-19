@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from traceback import format_exc
 
-from reclaimer.model.jms import read_jms
+from reclaimer.jm.jms import read_jms
 from reclaimer.physics.physics_compilation import compile_physics
 from supyr_struct.util import is_path_empty
 from binilla.windows.filedialog import askopenfilename

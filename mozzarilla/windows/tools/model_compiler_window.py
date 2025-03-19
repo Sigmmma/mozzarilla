@@ -20,7 +20,7 @@ from binilla.widgets.scroll_menu import ScrollMenu
 from binilla.windows.filedialog import askdirectory, asksaveasfilename
 
 from reclaimer.hek.defs.mod2 import mod2_def
-from reclaimer.model.jms import read_jms, write_jms, MergedJmsModel, JmsModel
+from reclaimer.jm.jms import read_jms, write_jms, MergedJmsModel, JmsModel
 from reclaimer.model.obj import jms_model_from_obj
 from reclaimer.model.model_compilation import compile_gbxmodel
 from reclaimer.model.util import generate_shader
@@ -827,12 +827,18 @@ class ModelCompilerWindow(window_base_class, BinillaWidget):
         start = time.time()
         print("Saving jms models...")
         for jms_model in self.jms_models:
-            if isinstance(jms_model, JmsModel):
-                fname = "%s %s.jms" % (jms_model.perm_name, jms_model.lod_level)
-                if not jms_model.is_random_perm:
-                    fname = "~" + fname
+            if not isinstance(jms_model, JmsModel):
+                continue
 
-                write_jms(os.path.join(models_dir, fname), jms_model)
+            jms_filename = "%s%s %s.jms" % (
+                "" if jms_model.is_random_perm else "~",
+                jms_model.perm_name, jms_model.lod_level
+                )
+
+            jms_filepath = os.path.join(models_dir, jms_filename)
+
+            print("Writing:", jms_filename)
+            write_jms(jms_filepath, jms_model)
 
         print("Finished saving models. Took %s seconds.\n" %
               str(time.time() - start).split('.')[0])

@@ -24,7 +24,8 @@ from reclaimer.os_hek.defs.magy import magy_def
 from reclaimer.os_hek.defs.antr import antr_def as os_antr_def
 from reclaimer.mcc_hek.defs.antr import antr_def as mcc_antr_def
 from reclaimer.stubbs.defs.antr import antr_def as stubbs_antr_def
-from reclaimer.animation.jma import read_jma, write_jma,\
+from reclaimer.jm import constants as jm_const
+from reclaimer.jm.jma import read_jma, write_jma,\
      JmaAnimation, JmaAnimationSet
 from reclaimer.animation import constants as const
 from reclaimer.animation.animation_compilation import \
@@ -88,7 +89,7 @@ COMPRESS_MODES = {
     }
 
 class AnimationsCompilerWindow(window_base_class, BinillaWidget):
-    debug = 2
+    debug = 1
     app_root = None
     tags_dir = ''
     pos_scale = 1.0
@@ -103,7 +104,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
     _jma_tree_iids = ()
 
     delta_tolerance = 1.0
-    compression_quality = 100*const.COMPRESS_RATIO_GOOD_CUTOFF
+    compression_quality = 100*jm_const.COMPRESS_RATIO_GOOD_CUTOFF
 
     def __init__(self, app_root, *args, **kwargs):
         if window_base_class == tk.Toplevel:
@@ -378,11 +379,11 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                 ]
             joint_type and items.extend([
                 (f"{joint_type} I-J-K", [info.i, info.j, info.k]),
-                (f"{joint_type} range", [info.vector_range*const.RAD_TO_DEG]),
+                (f"{joint_type} range", [info.vector_range*jm_const.RAD_TO_DEG]),
                 ])
             joint_type == "Socket" and items.append((
-                "Socket pitch/roll range", [info.delta*const.RAD_TO_DEG,
-                                            info.cross_delta*const.RAD_TO_DEG]
+                "Socket pitch/roll range", [info.delta*jm_const.RAD_TO_DEG,
+                                            info.cross_delta*jm_const.RAD_TO_DEG]
                 ))
 
             for text, vals in items:
@@ -683,7 +684,7 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         for _, __, files in os.walk(animations_dir):
             for fname in files:
                 ext = os.path.splitext(fname)[-1].lower()
-                if ext in const.JMA_ANIMATION_EXTENSIONS:
+                if ext in jm_const.JMA_EXTENSIONS:
                     fps.append(os.path.join(animations_dir, fname))
 
             break
@@ -706,9 +707,9 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
                 ext = os.path.splitext(fp)[-1].lower()
 
                 jma_anim = None
-                if ext in const.JMA_ANIMATION_EXTENSIONS:
+                if ext in jm_const.JMA_EXTENSIONS:
                     with open(fp, "r") as f:
-                        jma_anim = read_jma(f.read(), '', anim_name)
+                        jma_anim = read_jma(f, '', anim_name)
 
                 if jma_anim:
                     jma_anims.append(jma_anim)
@@ -762,10 +763,14 @@ class AnimationsCompilerWindow(window_base_class, BinillaWidget):
         print("Saving jma animations...")
         self.update()
         for jma_anim in self.jma_anims:
-            if isinstance(jma_anim, JmaAnimation):
-                jma_filepath = os.path.join(
-                    animations_dir, jma_anim.name + jma_anim.ext)
-                write_jma(jma_filepath, jma_anim)
+            if not isinstance(jma_anim, JmaAnimation):
+                continue
+
+            jma_filename = jma_anim.name + jma_anim.ext
+            jma_filepath = os.path.join(animations_dir, jma_filename)
+
+            print("Writing:", jma_filename)
+            write_jma(jma_filepath, jma_anim)
 
         print("Finished saving animations. Took %s seconds.\n" %
               str(time.time() - start).split('.')[0])
