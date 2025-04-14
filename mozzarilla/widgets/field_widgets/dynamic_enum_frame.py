@@ -20,16 +20,17 @@ def halo_dynamic_enum_generate_options(self, opt_index=None):
     options = {0: "-1. NONE"}
 
     dyn_name_path = desc.get(DYN_NAME_PATH)
+    ret_val = None
     if self.node is None:
         if opt_index is None:
-            return options
-        return None
+            ret_val = options
+        return ret_val
     elif not dyn_name_path:
         print("Missing DYN_NAME_PATH path in dynamic enumerator.")
         print(self.parent.get_root().def_id, self.name)
         if opt_index is None:
-            return options
-        return None
+            ret_val = options
+        return ret_val
 
     try:
         p_out, p_in = dyn_name_path.split(DYN_I)
@@ -37,6 +38,11 @@ def halo_dynamic_enum_generate_options(self, opt_index=None):
         # We are ALWAYS going to go to the parent, so we need to slice
         if p_out.startswith('..'): p_out = p_out.split('.', 1)[-1]
         array = self.parent.get_neighbor(p_out)
+
+        if array is None:
+            if opt_index is None:
+                ret_val = options
+            return ret_val
 
         options_to_generate = range(len(array))
         if opt_index is not None:

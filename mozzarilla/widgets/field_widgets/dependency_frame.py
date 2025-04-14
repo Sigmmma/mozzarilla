@@ -45,12 +45,12 @@ class DependencyFrame(ContainerFrame):
 
             try:
                 init_dir = Path(tagpath_to_fullpath(
-                        tags_dir, self.node.filepath,
-                        extension=self.tag_window.tag.ext, force_windows=True)
-                    ).parent
+                        tags_dir, Path(self.node.filepath).parent,
+                        force_windows=True, folder=True)
+                    )
             except Exception:
                 # This path is not valid, so use our earlier assignment instead.
-                pass
+                print(format_exc())
 
             filetypes = []
             for ext in sorted(self.node.tag_class.NAME_MAP):
@@ -194,7 +194,7 @@ class DependencyFrame(ContainerFrame):
             print(format_exc())
 
         try:
-            tag = handler.get_tag(filepath + ext)
+            tag = handler.get_tag(filepath)
         except Exception:
             try:
                 tag = handler.build_tag(filepath=filepath)
@@ -245,20 +245,22 @@ class DependencyFrame(ContainerFrame):
             ext = '.' + self.node.tag_class.enum_name
 
             # Get full path with proper capitalization if it points to a file.
-            filepath = tagpath_to_fullpath(
+            full_filepath = tagpath_to_fullpath(
                 tags_dir, PureWindowsPath(filepath), extension=ext)
 
-            if filepath is None and (
-            self.tag_window.handler.treat_mode_as_mod2 and ext == '.model'):
-                filepath = tagpath_to_fullpath(
-                    tags_dir, PureWindowsPath(filepath), extension='.gbxmodel')
+            if full_filepath is None and (
+                self.tag_window.handler.treat_mode_as_mod2 and ext == '.model'
+                ):
+                full_filepath = tagpath_to_fullpath(
+                    tags_dir, PureWindowsPath(filepath), extension='.gbxmodel'
+                    )
 
         except Exception:
-            filepath = None
+            full_filepath = None
             print("Validation of a filepath failed unexpectedly.")
             print(format_exc())
 
-        if filepath is not None:
+        if full_filepath is not None:
             widget.data_entry.config(fg=self.text_normal_color)
         else:
             widget.data_entry.config(fg=self.invalid_path_color)

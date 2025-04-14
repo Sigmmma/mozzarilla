@@ -45,6 +45,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
     print_interval = 5
 
     listbox_index_to_def_id = ()
+    scan_thread = None
 
     def __init__(self, app_root, *args, **kwargs):
         self.handler = handler = app_root.handler
@@ -402,7 +403,7 @@ class TagScannerWindow(tk.Toplevel, BinillaWidget):
                 for perm in pr.permutations.STEPTREE:
                     if perm.compression.enum_name != "ogg":
                         continue
-                    elif perm.ogg_sample_count == 0 and perm.samples.data:
+                    elif perm.buffer_size == 0 and perm.samples.data:
                         bad_ogg.append((pr.name, perm.name))
 
             if bad_ogg:

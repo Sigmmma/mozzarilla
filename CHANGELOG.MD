@@ -6,6 +6,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 This project also inherits changes from [Binilla](https://github.com/Sigmmma/binilla).
 
+## [1.15.1]
+### Changed
+ - Bitmap preview button next to dependency threw exceptions
+ - Color picker frame for UInt32 colors failed to populate with correct color
+ - Model converter used to make concessions on cutoff ordering and global markers for arsenic
+
+### Added:
+ - Sound playback of entire permutation chains in tag window and sound compiler(requires pyogg and simpleaudio)
+ - Ability to compile sound tags from wav, ogg, opus, and flac files
+ - Ability to compile sound tags to ogg(full quality configuration support)
+ - Ability to compile model_animations targeting all platforms
+ - Ability to compress model_animations with a quality selector
+ - Support for shader permutations in model compilation
+
+### Removed:
+ - Removed h3 definitions from tag set selection(was experimental, and not compatible with official H3 tags)
+    
+
 ## [1.10.0]
 ### Changed
  - Bitmap source extractor now extracts to tiff rather than tga (Thanks [@SnowyMouse](https://github.com/SnowyMouse))

@@ -35,6 +35,7 @@ SPRITE_CENTER_TAG = "SPRITE_CENTER"
 
 class HaloBitmapDisplayBase:
     cubemap_padding = CUBEMAP_PADDING
+    master = None
 
     @property
     def engine(self):
@@ -72,10 +73,11 @@ class HaloBitmapDisplayBase:
         bitmap = tag.data.tagdata.bitmaps.STEPTREE[bitmap_index]
         is_xbox = self.is_xbox_bitmap(bitmap)
         is_meta_tag = not hasattr(tag, "tags_dir")
+        format_name_map = getattr(tag, "format_name_map", FORMAT_NAME_MAP)
 
         pixel_data = tag.data.tagdata.processed_pixel_data.data
         w, h, d = bitmap.width, bitmap.height, bitmap.depth
-        fmt = FORMAT_NAME_MAP[bitmap.format.data]
+        fmt = format_name_map[bitmap.format.data]
 
         off = bitmap.pixels_offset
         if is_meta_tag:
@@ -111,25 +113,31 @@ class HaloBitmapDisplayBase:
 
     def get_textures(self, tag):
         if tag is None: return ()
+        format_name_map = getattr(tag, "format_name_map", FORMAT_NAME_MAP)
 
         bitmaps = tag.data.tagdata.bitmaps.STEPTREE
         textures = []
         for i in range(len(bitmaps)):
             b = bitmaps[i]
             typ = TYPE_NAME_MAP[0]
-            fmt = FORMAT_NAME_MAP[0]
+            fmt = format_name_map[0]
             if b.type.data in range(len(TYPE_NAME_MAP)):
                 typ = TYPE_NAME_MAP[b.type.data]
 
-            if b.format.data in range(len(FORMAT_NAME_MAP)):
-                fmt = FORMAT_NAME_MAP[b.format.data]
+            if b.format.data in range(len(format_name_map)):
+                fmt = format_name_map[b.format.data]
+
+            if fmt == "BC7":
+                print("WARNING: BC7 viewing is currently unsupported")
+                continue
 
             tex_info = dict(
                 width=b.width, height=b.height, depth=b.depth,
                 format=fmt, texture_type=typ,
                 sub_bitmap_count=6 if typ == "CUBE" else 1,
                 swizzled=b.flags.swizzled, mipmap_count=b.mipmaps,
-                reswizzler="MORTON", deswizzler="MORTON")
+                reswizzler="MORTON", deswizzler="MORTON"
+                )
 
             mipmap_count = b.mipmaps + 1
             if fmt == arbytmap.FORMAT_P8_BUMP:

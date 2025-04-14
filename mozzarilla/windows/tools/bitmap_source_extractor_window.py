@@ -96,10 +96,10 @@ class BitmapSourceExtractorWindow(BinillaWidget, window_base_class):
         except AttributeError:
             pass
         self.stop_extraction = True
-        super(BitmapSourceExtractorWindow, self).destroy()
+        super().destroy()
 
     def apply_style(self, seen=None):
-        super(BitmapSourceExtractorWindow, self).apply_style(seen)
+        super().apply_style(seen)
         self.update()
         w, h = self.winfo_reqwidth(), self.winfo_reqheight()
         self.geometry("%sx%s" % (w, h))

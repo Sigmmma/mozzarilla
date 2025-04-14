@@ -37,6 +37,7 @@ from reclaimer.hek.handler import HaloHandler
 from reclaimer.h3.handler import Halo3Handler
 from reclaimer.os_v3_hek.handler import OsV3HaloHandler
 from reclaimer.os_v4_hek.handler import OsV4HaloHandler
+from reclaimer.mcc_hek.handler import MCCHaloHandler
 from reclaimer.misc.handler import MiscHaloLoader
 from reclaimer.stubbs.handler import StubbsHandler
 from supyr_struct.util import tagpath_to_fullpath, path_split,\
@@ -100,13 +101,16 @@ class Mozzarilla(Binilla):
     guerilla_workspace_def  = None
     config_version = 3
 
+    # NOTE: halo 3 stuff has been disabled since it was always experimental,
+    #       and people shouldn't think it works with official h3 mod tools.
     handler_classes = (
         HaloHandler,
         OsV3HaloHandler,
         OsV4HaloHandler,
+        MCCHaloHandler,
         MiscHaloLoader,
         StubbsHandler,
-        Halo3Handler,
+        #Halo3Handler,
         )
 
     handlers = ()
@@ -115,9 +119,10 @@ class Mozzarilla(Binilla):
         "Halo 1",
         "Halo 1 OS v3",
         "Halo 1 OS v4",
+        "Halo 1 MCC",
         "Halo 1 Misc",
         "Stubbs the Zombie",
-        "Halo 3"
+        #"Halo 3"
         )
 
     # names of the handlers that MUST load tags from within their tags_dir
@@ -125,8 +130,9 @@ class Mozzarilla(Binilla):
         "Halo 1",
         "Halo 1 OS v3",
         "Halo 1 OS v4",
+        "Halo 1 MCC",
         "Stubbs the Zombie",
-        "Halo 3"
+        #"Halo 3"
         ))
 
     about_module_names = (
@@ -310,7 +316,7 @@ class Mozzarilla(Binilla):
             label="Bitmap(s) from bitmap source", command=self.bitmap_from_bitmap_source)
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
-            label="Sound from wav", command=self.show_sound_compiler_window)
+            label="Sound from source files", command=self.show_sound_compiler_window)
         self.compile_menu.add_separator()
         self.compile_menu.add_command(
             label="Model_animations from jma", command=self.show_animations_compiler_window)
@@ -544,7 +550,7 @@ class Mozzarilla(Binilla):
         for i in range(len(self.handler_names)):
             label = self.handler_names[i]
             if i == self._curr_handler_index:
-                label += u' \u2713'
+                label += ' \u2713'
             self.defs_menu.add_command(label=label, command=lambda i=i:
                                        self.select_defs(i, manual=True))
 
@@ -820,7 +826,7 @@ class Mozzarilla(Binilla):
                 return ()
             elif isinstance(filepaths, str) and filepaths.startswith('{'):
                 # account for a stupid bug with certain versions of windows
-                filepaths = re.split("\}\W\{", filepaths[1:-1])
+                filepaths = re.split(r"\}\W\{", filepaths[1:-1])
 
         if isinstance(filepaths, (str, PurePath)):
             filepaths = (filepaths, )
@@ -854,7 +860,7 @@ class Mozzarilla(Binilla):
         windows = Binilla.load_tags(self, filepaths, def_id)
         self.last_load_dir = last_load_dir
 
-        if not windows:
+        if not(windows or self._shutting_down):
             print("You might need to change the tag set to load these tag(s).")
             return ()
 
@@ -1144,7 +1150,6 @@ class Mozzarilla(Binilla):
                         pass
             except AttributeError: print(format_exc())
             except Exception: print(format_exc())
-            except Exception: print(format_exc())
 
     def make_tag_window(self, tag, *, focus=True, window_cls=None,
                         is_new_tag=False):
@@ -1291,18 +1296,40 @@ class Mozzarilla(Binilla):
             self.about_window = None
 
         if not hasattr(AboutWindow, "orig_pressed"):
+            def destroy(self):
+                master   = self.master
+                replaced = hasattr(master, "orig_app_name")
+                if replaced:
+                    master.app_name = master.orig_app_name
+                    master.version  = master.orig_version
+                    del master.orig_app_name
+                    del master.orig_version
+
+                    master.update_title()
+
+                self.orig_destroy()
+
+            def _pressed(self):
+                master = self.master
+                if not hasattr(master, "orig_app_name"):
+                    master.orig_app_name = master.app_name
+                    master.orig_version  = master.version
+
+                    val = "734531alli6dgrwretsaM"
+                    master.app_name = val[::-1][:6]+val[::-1][11:11+4]
+                    master.version  = val[::-1][-6:len(val)-4]+val[::-1][-2:]
+                    master.update_title()
+
+                self.orig_pressed()
+
             AboutWindow.orig_pressed = AboutWindow._pressed
-            AboutWindow._pressed = self.some_func
+            AboutWindow.orig_destroy = AboutWindow.destroy
+            AboutWindow._pressed = _pressed
+            AboutWindow.destroy  = destroy
 
         self.about_window = AboutWindow(
             self, module_names=self.about_module_names,
             iconbitmap=self.icon_filepath, appbitmap=self.app_bitmap_filepath,
             app_name=self.app_name, messages=self.about_messages)
         self.place_window_relative(self.about_window, 30, 50)
-
-    def some_func(self):
-        val = "734531alli6dgrwretsaM"
-        self.app_name = val[::-1][:6]+val[::-1][11:11+4]
-        self.version = val[::-1][-6:len(val)-4]+val[::-1][-2:]
-        self.update_title()
-        AboutWindow.orig_pressed(self.about_window)
+        self.about_window.focus_set()

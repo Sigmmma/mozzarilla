@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from traceback import format_exc
 
-from reclaimer.model.jms import read_jms
+from reclaimer.jm.jms import read_jms
 from reclaimer.physics.physics_compilation import compile_physics
 from supyr_struct.util import is_path_empty
 from binilla.windows.filedialog import askopenfilename
@@ -43,7 +43,7 @@ def physics_from_jms(app, fp=None):
     try:
         app.jms_load_dir = fp.parent
         with fp.open("r") as f:
-            jms_model = read_jms(f.read(), "regions")
+            jms_model = read_jms(f, "regions")
     except Exception:
         print(format_exc())
         print("    Could not parse jms file")

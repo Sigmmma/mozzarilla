@@ -20,9 +20,9 @@ from copy import deepcopy
 from struct import Struct as PyStruct
 from traceback import format_exc
 
-from reclaimer.model.jms import ( JmsNode, JmsMaterial, JmsMarker,
+from reclaimer.jm.jms import ( JmsNode, JmsMaterial, JmsMarker,
      JmsVertex, JmsTriangle, JmsModel, MergedJmsModel, )
-from reclaimer.model.jms.util import edge_loop_to_tris
+from reclaimer.jm.jms.util import edge_loop_to_tris
 from reclaimer.model.model_compilation import compile_gbxmodel
 from reclaimer.util.matrices import euler_to_quaternion, Ray
 from reclaimer.util.geometry import planes_to_verts_and_edge_loops
@@ -36,10 +36,10 @@ if __name__ == "__main__":
     window_base_class = tk.Tk
 
 
-def planes_to_verts_and_tris(planes, center, region=0, mat_id=0,
+def planes_to_verts_and_tris(planes, region=0, mat_id=0,
                              make_fans=False, round_adjust=0.000001):
     raw_verts, edge_loops = planes_to_verts_and_edge_loops(
-        planes, center, round_adjust=round_adjust)
+        planes, round_adjust=round_adjust)
 
     verts = [JmsVertex(0, v[0]*100, v[1]*100, v[2]*100, tex_v=1.0) for v in raw_verts]
     tris = []
@@ -223,8 +223,7 @@ def make_weather_polyhedra_jms_models(polyhedras, nodes, make_fans=True,
     polyhedra_index = 0
     for polyhedra in polyhedras:
         verts, tris = planes_to_verts_and_tris(
-            polyhedra.planes.STEPTREE, polyhedra.bounding_sphere_center,
-            make_fans=make_fans,
+            polyhedra.planes.STEPTREE, make_fans=make_fans,
             round_adjust=Ray(polyhedra.bounding_sphere_center).mag * tolerance)
 
         jms_models.append(JmsModel(
